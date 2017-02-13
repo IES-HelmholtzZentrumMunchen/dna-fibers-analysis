@@ -370,20 +370,24 @@ if __name__ == '__main__':
     fibers_group = parser.add_argument_group('Fibers')
     fibers_group.add_argument('--number', type=int, default=30,
                               help='Number of fiber segments to simulate.')
-    fibers_group.add_argument('--orientation', type=tuple, default=(-0.3, -0.5),
+    fibers_group.add_argument('--orientation', type=float, nargs=2,
+                              default=[-0.3, -0.5],
                               help='Orientation range of fibers.')
-    fibers_group.add_argument('--thickness', type=tuple, default=(2, 3),
+    fibers_group.add_argument('--thickness', type=float, nargs=2,
+                              default=[2, 3],
                               help='Thickness range of fibers.')
-    fibers_group.add_argument('--length', type=tuple, default=(50, 200),
+    fibers_group.add_argument('--length', type=float, nargs=2,
+                              default=[50, 200],
                               help='Total length range of fibers.')
-    fibers_group.add_argument('--location', type=tuple, default=(-500, 500),
+    fibers_group.add_argument('--location', type=float, nargs=2,
+                              default=[-500, 500],
                               help='Coordinates range of fiber center.')
     image_group = parser.add_argument_group('Image degradations')
-    image_group.add_argument('psf_file', type=str, default='',
+    image_group.add_argument('psf_file', type=str, default=None,
                              help='Path to 3D PSF file.')
-    image_group.add_argument('--shape', type=tuple, default=(512, 512),
+    image_group.add_argument('--shape', type=int, nargs=2, default=[512, 512],
                              help='Resolution of image output.')
-    image_group.add_argument('--z_index', type=tuple, default=(-10, 10),
+    image_group.add_argument('--z_index', type=int, nargs=2, default=[-10, 10],
                              help='Z-index of fiber objects.')
     image_group.add_argument('--snr', type=float, default=0,
                              help='SNR in decibels.')
