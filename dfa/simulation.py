@@ -13,8 +13,7 @@ from skimage import transform
 from skimage import io
 
 
-# TODO simulate fibers by properties
-def fiber(theta, rho, imshape, thickness=1.0, length=100, shift=0):
+def fiber(theta, rho, imshape, pattern, lengths, thickness=1.0, shift=0):
     """
     Simulate a straight fiber image (with no acquisition deterioration).
 
@@ -32,11 +31,14 @@ def fiber(theta, rho, imshape, thickness=1.0, length=100, shift=0):
     :param imshape: Shape of the generated image of fiber (2D image only).
     :type imshape: tuple of int with 2 elements
 
+    :param pattern: Channel pattern of the simulated fiber.
+    :type pattern: list of int with same size as length
+
+    :param lengths: Lengths of the branches of the simulated fiber.
+    :type lengths: list of strictly positive float or int
+
     :param thickness: Thickness of the generated fiber (default is 1).
     :type thickness: strictly positive float or int
-
-    :param length: Length of the generated fiber (default is 100).
-    :type length: strictly positive float or int
 
     :param shift: Shift of the generated fiber toward a direction or another.
     :type shift: float or int
@@ -48,18 +50,30 @@ def fiber(theta, rho, imshape, thickness=1.0, length=100, shift=0):
     cos_theta = np.cos(theta)
     sin_theta = np.sin(theta)
 
+    # Create a centered coordinate system
     x, y = np.meshgrid(range(-imshape[0]//2, imshape[0]//2),
                        range(-imshape[1]//2, imshape[1]//2))
 
-    distanceto_line = np.abs(rho - (x*cos_theta + y*sin_theta))
-    distanceto_linecenter = np.sqrt(
-        np.power(x - (-shift*sin_theta + rho*cos_theta), 2) +
-        np.power(y - (shift*cos_theta + rho*sin_theta), 2))
-    select_points = np.bitwise_and(distanceto_line < thickness,
-                                   distanceto_linecenter <= length/2.0)
+    # Use distance maps to handle segments' localizations
+    distance_to_line = np.abs(rho - (x * cos_theta + y * sin_theta))
+    distance_on_line = (x * np.cos(theta + np.pi/2.0) +
+                        y * np.sin(theta + np.pi/2.0)) + shift
 
+    select_line = distance_to_line < thickness
+
+    # Compute the branches points from lengths
+    lengths = np.array(lengths)
+    points = np.append([0], lengths.cumsum()) - lengths.sum()/2.0
+
+    # Compute simulated image
     fiber_image = np.zeros(imshape)
-    fiber_image[select_points] = 1.0
+
+    for index, channel in enumerate(pattern):
+        select_branch = np.bitwise_and(
+            distance_on_line >= points[index],
+            distance_on_line <= points[index+1])
+        select_segments = np.bitwise_and(select_line, select_branch)
+        fiber_image[select_segments] = 1.0 + channel
 
     return fiber_image
 
