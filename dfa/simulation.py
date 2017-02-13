@@ -10,6 +10,7 @@ from scipy import signal
 
 import skimage as ski
 from skimage import transform
+from skimage import io
 
 
 # TODO simulate fibers by properties
@@ -55,7 +56,7 @@ def fiber(theta, rho, imshape, thickness=1.0, length=100, shift=0):
         np.power(x - (-shift*sin_theta + rho*cos_theta), 2) +
         np.power(y - (shift*cos_theta + rho*sin_theta), 2))
     select_points = np.bitwise_and(distanceto_line < thickness,
-                                   distanceto_linecenter < length)
+                                   distanceto_linecenter <= length/2.0)
 
     fiber_image = np.zeros(imshape)
     fiber_image[select_points] = 1.0
