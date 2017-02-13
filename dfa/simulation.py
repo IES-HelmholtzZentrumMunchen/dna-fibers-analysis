@@ -416,5 +416,9 @@ if __name__ == '__main__':
     degraded_image = rimage(fibers_images, zindex_range=args.z_index,
                             psf=simulated_psf, snr=args.snr,
                             outshape=args.shape)
-    ski.io.imshow(degraded_image, cmap='gray')
-    ski.io.show()
+
+    if args.output is None:
+        ski.io.imshow(degraded_image, cmap='gray')
+        ski.io.show()
+    else:
+        ski.io.imsave(args.output, degraded_image.astype('int8'))
