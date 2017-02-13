@@ -129,10 +129,12 @@ def fibers(thetas, rhos, imshape, thickness, lengths, shifts):
     return fiber_images
 
 
+# TODO simulate fibers by properties
+# e.g. frequency of modes and lengths described by a Gaussian curve
 def rfibers(imshape, number, theta_range, rho_range, thickness_range,
             length_range, shift_range):
     """
-    Randomely simulate straight fibers images (with no acquisition
+    Randomly simulate straight fibers images (with no acquisition
     deterioration).
 
     .. seealso:: dfa.simulate.fiber, dfa.simulate.fibers
@@ -301,14 +303,23 @@ def image(fiber_objects, zindices, psf, outshape=None, snr=50):
     assert type(snr) == float or type(snr) == int
 
     final = np.zeros(fiber_objects[0].shape)
+    most_centered_zindex = max(zindices)
+    normalizing_constant = 1.0
 
     for fiber_object, zindex in zip(fiber_objects, zindices):
-        # When poisson noise, we have lambda = 10^(SNR_dB / 5)
-        final += focus(fiber_object*np.power(10, snr/5), psf, zindex)
+        diffracted_image = focus(fiber_object, psf, zindex)
+        final += diffracted_image
 
+        if most_centered_zindex > abs(zindex):
+            most_centered_zindex = abs(zindex)
+            normalizing_constant = diffracted_image.max()
+
+    final /= normalizing_constant
     final[final < 0] = 0
 
-    # FIXME regarder le comportement de cette fonction (gestion intensité)
+    # When poisson noise, we have parameter lambda = 10^(SNR_dB / 5)
+    final = np.round(final * np.power(10, snr/5))
+
     return pnoise(ski.transform.resize(final, outshape).astype(int))
 
 
@@ -387,9 +398,9 @@ if __name__ == '__main__':
                              help='Path to 3D PSF file.')
     image_group.add_argument('--shape', type=int, nargs=2, default=[512, 512],
                              help='Resolution of image output.')
-    image_group.add_argument('--z_index', type=int, nargs=2, default=[-10, 10],
+    image_group.add_argument('--z_index', type=int, nargs=2, default=[-15, 15],
                              help='Z-index of fiber objects.')
-    image_group.add_argument('--snr', type=float, default=0,
+    image_group.add_argument('--snr', type=float, default=5,
                              help='SNR in decibels.')
     args = parser.parse_args()
 
@@ -403,6 +414,7 @@ if __name__ == '__main__':
                             length_range=args.length,
                             shift_range=args.location)
     degraded_image = rimage(fibers_images, zindex_range=args.z_index,
-                            psf=simulated_psf, snr=args.snr, outshape=args.shape)
+                            psf=simulated_psf, snr=args.snr,
+                            outshape=args.shape)
     ski.io.imshow(degraded_image, cmap='gray')
     ski.io.show()
