@@ -202,7 +202,7 @@ def rfibers(imshape, number, theta_range, rho_range, thickness_range,
             shift_range)).tolist())
 
 
-def focus(input_image, psf, pos=0):
+def diffraction(input_image, psf, pos=0):
     """
     Simulate an out of focus effect on a single section with the specified PSF.
 
@@ -242,7 +242,7 @@ def focus(input_image, psf, pos=0):
                                  mode='same')
 
 
-def pnoise(input_image):
+def photon_noise(input_image):
     """
     Simulate photon noise on input noise-free image.
 
@@ -260,6 +260,8 @@ def pnoise(input_image):
 def image(fiber_objects, zindices, psf, outshape=None, snr=50):
     """
     Simulate image acquisition conditions of fiber objects.
+
+    .. seealso:: dfa.simulation.diffraction, dfa.simulation.photon_noise
 
     The fiber objects need to be first simulated using the appropriate
     functions. With each object is associated a z-index giving the relative
@@ -307,7 +309,7 @@ def image(fiber_objects, zindices, psf, outshape=None, snr=50):
     normalizing_constant = 1.0
 
     for fiber_object, zindex in zip(fiber_objects, zindices):
-        diffracted_image = focus(fiber_object, psf, zindex)
+        diffracted_image = diffraction(fiber_object, psf, zindex)
         final += diffracted_image
 
         if most_centered_zindex > abs(zindex):
@@ -320,13 +322,15 @@ def image(fiber_objects, zindices, psf, outshape=None, snr=50):
     # When poisson noise, we have parameter lambda = 10^(SNR_dB / 5)
     final = np.round(final * np.power(10, snr/5))
 
-    return pnoise(ski.transform.resize(final, outshape).astype(int))
+    return photon_noise(ski.transform.resize(final, outshape).astype(int))
 
 
 def rimage(fiber_objects, zindex_range, psf, outshape=None, snr=50):
     """
     Simulate image acquisition conditions of fiber objects with random
     out-of-focus effects.
+
+    .. seealso:: dfa.simulation.image
 
     :param fiber_objects: Input simulated fiber objects.
     :type fiber_objects: list of numpy.ndarray
