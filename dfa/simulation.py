@@ -12,6 +12,7 @@ import skimage as ski
 from skimage import transform
 
 
+# TODO simulate fibers by properties
 def fiber(theta, rho, imshape, thickness=1.0, length=100, shift=0):
     """
     Simulate a straight fiber image (with no acquisition deterioration).
@@ -28,7 +29,7 @@ def fiber(theta, rho, imshape, thickness=1.0, length=100, shift=0):
     :type rho: float or int
 
     :param imshape: Shape of the generated image of fiber (2D image only).
-    :type imshape: tuple of ints
+    :type imshape: tuple of int with 2 elements
 
     :param thickness: Thickness of the generated fiber (default is 1).
     :type thickness: strictly positive float or int
@@ -41,26 +42,8 @@ def fiber(theta, rho, imshape, thickness=1.0, length=100, shift=0):
 
     :return: A 2D image of the simulated fiber without acquisition
     deterioration.
-    :rtype: numpy.ndarray
+    :rtype: numpy.ndarray with shape imshape
     """
-    assert type(theta) == float
-    assert theta >= -np.pi/2
-    assert theta < np.pi/2
-
-    assert type(rho) == float or type(rho) == int
-
-    assert type(imshape) == tuple
-    assert all(type(n) == int for n in imshape)
-    assert len(imshape) == 2
-
-    assert type(thickness) == int or type(thickness) == float
-    assert thickness > 0
-
-    assert type(length) == int or type(length) == float
-    assert length > 0
-
-    assert type(shift) == int or type(shift) == float
-
     cos_theta = np.cos(theta)
     sin_theta = np.sin(theta)
 
@@ -80,7 +63,7 @@ def fiber(theta, rho, imshape, thickness=1.0, length=100, shift=0):
     return fiber_image
 
 
-def fibers(thetas, rhos, imshape, thickness, lengths, shifts):
+def fibers(thetas, rhos, imshape, thicknesses, lengths, shifts):
     """
     Simulate straight fibers images (with no acquisition deterioration).
 
@@ -90,47 +73,34 @@ def fibers(thetas, rhos, imshape, thickness, lengths, shifts):
     :type thetas: list of floats between -pi/2 and pi/2
 
     :param rhos: Distances to origin of the Hesse normal form parametrization.
-    :type rhos: list float or int
+    :type rhos: list of float, list of int
 
     :param imshape: Shape of the generated image of fiber (2D image only).
-    :type imshape: tuple of ints
+    :type imshape: tuple of int with 2 elements
 
-    :param thickness: Thickness of the generated fibers.
-    :type thickness: list of strictly positive float or int
+    :param thicknesses: Thickness of the generated fibers.
+    :type thicknesses: list of strictly positive float or int
 
     :param lengths: Lengths of the generated fibers.
     :type lengths: list of strictly positive float or int
 
     :param shifts: Shifts of the generated fibers toward a direction or another.
-    :type shifts: list of floats or ints
+    :type shifts: list of float, list of int
 
     :return: A list of 2D images of the simulated fibers without acquisition
     deterioration.
-    :rtype: list of numpy.ndarray
+    :rtype: list of numpy.ndarray with shape imshape
     """
-    assert type(thetas) == list
-    assert type(rhos) == list
-
-    assert type(imshape) == tuple
-    assert all(type(n) == int for n in imshape)
-    assert len(imshape) == 2
-
-    assert type(thickness) == list
-    assert type(lengths) == list
-    assert type(shifts) == list
-
     fiber_images = []
 
-    for theta, rho, thicknes, length, shift in zip(thetas, rhos, thickness,
-                                                   lengths, shifts):
+    for theta, rho, thickness, length, shift in zip(thetas, rhos, thicknesses,
+                                                    lengths, shifts):
         fiber_images.append(
-            fiber(theta, rho, imshape, thicknes, length, shift))
+            fiber(theta, rho, imshape, thickness, length, shift))
 
     return fiber_images
 
 
-# TODO simulate fibers by properties
-# e.g. frequency of modes and lengths described by a Gaussian curve
 def rfibers(imshape, number, theta_range, rho_range, thickness_range,
             length_range, shift_range):
     """
@@ -140,23 +110,23 @@ def rfibers(imshape, number, theta_range, rho_range, thickness_range,
     .. seealso:: dfa.simulate.fiber, dfa.simulate.fibers
 
     :param imshape: Shape of the generated image of fiber (2D image only).
-    :type imshape: tuple of ints
+    :type imshape: tuple of int with 2 elements
 
-    :param number: Number of fibers to simulate randomely.
+    :param number: Number of fibers to simulate randomly.
     :type number: strictly positive integer
 
     :param theta_range: Angle rangle of the Hesse normal form parametrization.
-    :type theta_range: list or tuple with 2 elements.
+    :type theta_range: list or tuple with 2 elements
 
     :param rho_range: Distance range to origin of the Hesse normal form
     parametrization.
-    :type rho_range: list or tuple with 2 elements.
+    :type rho_range: list or tuple with 2 elements
 
     :param thickness_range: Thickness range of fibers to simulate.
     :type thickness_range: list or tuple with 2 elements
 
     :param length_range: Length range of fibers to simulate.
-    :type length_range: list or tuple with 2 elements.
+    :type length_range: list or tuple with 2 elements
 
     :param shift_range: Shift range of fibers to simulate toward a direction
     or another.
@@ -164,29 +134,8 @@ def rfibers(imshape, number, theta_range, rho_range, thickness_range,
 
     :return: A list of 2D images of the simulated fibers without acquisition
     deterioration.
-    :rtype: list of numpy.ndarray
+    :rtype: list of numpy.ndarray with shapes imshape
     """
-    assert type(imshape) == tuple
-    assert all(type(n) == int for n in imshape)
-    assert len(imshape) == 2
-
-    assert type(number) == int
-    assert number > 0
-
-    assert type(theta_range) == list or type(theta_range) == tuple
-    assert len(theta_range) == 2
-
-    assert type(rho_range) == list or type(rho_range) == tuple
-    assert len(rho_range) == 2
-
-    assert type(thickness_range) == list or type(thickness_range) == tuple
-    assert len(thickness_range) == 2
-
-    assert type(length_range) == list or type(length_range) == tuple
-    assert len(length_range) == 2
-
-    assert type(shift_range) == list or type(shift_range) == tuple
-    assert len(shift_range) == 2
 
     return fibers(
         (np.abs(np.diff(theta_range)) * np.random.rand(number) + np.min(
@@ -215,28 +164,18 @@ def diffraction(input_image, psf, pos=0):
     computation.
 
     :param input_image: Input single section image.
-    :type input_image: numpy.ndarray
+    :type input_image: numpy.ndarray with 2 dimensions
 
     :param psf: PSF used to simulate the microscope's diffraction of light.
-    :type psf: numpy.ndarray
+    :type psf: numpy.ndarray with 3 dimensions
 
     :param pos: Relative position of input single section against the center of
     the PSF (default is 0, i.e. in focal plane).
-    :type pos: int
+    :type pos: int between -psf.shape[0]//2 and psf.shape[0]//2
 
     :return: The input single section with the requested out of focus.
-    :rtype: numpy.ndarray
+    :rtype: numpy.ndarray with same shape as input_image
     """
-    assert type(input_image) == np.ndarray
-    assert len(input_image.shape) == 2
-
-    assert type(psf) == np.ndarray
-    assert len(psf.shape) == 3
-
-    assert type(pos) == int
-    assert pos <= psf.shape[0]//2
-    assert pos >= -psf.shape[0]//2
-
     return sc.signal.fftconvolve(input_image,
                                  psf[psf.shape[0] // 2 - pos, :, :],
                                  mode='same')
@@ -247,13 +186,11 @@ def photon_noise(input_image):
     Simulate photon noise on input noise-free image.
 
     :param input_image: Input noise-free image.
-    :type input_image: numpy.ndarray
+    :type input_image: numpy.ndarray with 2 dimensions
 
     :return: Image corrupted with photon-noise (Poisson distribution).
-    :rtype: numpy.ndarray
+    :rtype: numpy.ndarray with same shape as input_image
     """
-    assert type(input_image) == np.ndarray
-
     return np.random.poisson(input_image)
 
 
@@ -268,41 +205,26 @@ def image(fiber_objects, zindices, psf, outshape=None, snr=50):
     position of the fiber object plane to the focal plane of the final image.
 
     :param fiber_objects: Input simulated fiber objects.
-    :type fiber_objects: list of numpy.ndarray
+    :type fiber_objects: list of numpy.ndarray with 2 dimensions
 
     :param zindices: Plane positions of fibers relative to the focal plane.
-    :type zindices: list of ints or Iteratable
+    :type zindices: list of int (or iterable)
 
     :param psf: PSF used to simulate the microscope's diffraction of light.
-    :type psf: numpy.ndarray
+    :type psf: numpy.ndarray with 3 dimensions
 
     :param outshape: Output shape of final image, i.e. quantization (default is
     the same as input).
-    :type outshape: list or tuple
+    :type outshape: list of int or tuple of int
 
     :param snr: Signal-to-noise ratio of the simulated image (in dB).
     :type snr: float
 
     :return: Final simulated image of fibers with acquisition artefacts.
-    :rtype: numpy.ndarray
+    :rtype: numpy.ndarray with 2 dimensions and shape outshape
     """
-    assert type(fiber_objects) == list
-    assert all(type(fiber_object) == np.ndarray
-               for fiber_object in fiber_objects)
-
-    assert type(zindices) == list
-    assert all(type(zindex) == int for zindex in zindices)
-
-    assert type(psf) == np.ndarray
-    assert len(psf.shape) == 3
-
     if outshape is None:
         outshape = fiber_objects[0].shape
-
-    assert type(outshape) == list or type(outshape) == tuple
-    assert len(outshape) == 2
-
-    assert type(snr) == float or type(snr) == int
 
     final = np.zeros(fiber_objects[0].shape)
     most_centered_zindex = max(zindices)
@@ -333,42 +255,27 @@ def rimage(fiber_objects, zindex_range, psf, outshape=None, snr=50):
     .. seealso:: dfa.simulation.image
 
     :param fiber_objects: Input simulated fiber objects.
-    :type fiber_objects: list of numpy.ndarray
+    :type fiber_objects: list of numpy.ndarray with 2 dimensions
 
     :param zindex_range: Plane positions range of fibers relative to the
     focal plane.
-    :type zindex_range: tuple of ints
+    :type zindex_range: tuple of int
 
     :param psf: PSF used to simulate the microscope's diffraction of light.
-    :type psf: numpy.ndarray
+    :type psf: numpy.ndarray with 3 dimensions
 
     :param outshape: Output shape of final image, i.e. quantization (default is
     the same as input).
-    :type outshape: list or tuple
+    :type outshape: list of int or tuple of int
 
     :param snr: Signal-to-noise ratio of the simulated image (in dB).
     :type snr: float
 
     :return: Final simulated image of fibers with acquisition artefacts.
-    :rtype: numpy.ndarray
+    :rtype: numpy.ndarray with 2 dimensions and shape outshape
     """
-    assert type(fiber_objects) == list
-    assert all(type(fiber_object) == np.ndarray
-               for fiber_object in fiber_objects)
-
-    assert type(zindex_range) == list or type(zindex_range) == tuple
-    assert len(zindex_range) == 2
-
-    assert type(psf) == np.ndarray
-    assert len(psf.shape) == 3
-
     if outshape is None:
         outshape = fiber_objects[0].shape
-
-    assert type(outshape) == list or type(outshape) == tuple
-    assert len(outshape) == 2
-
-    assert type(snr) == float or type(snr) == int
 
     zindices = np.random.randint(min(zindex_range), max(zindex_range),
                                  size=len(fiber_objects))
@@ -379,9 +286,11 @@ def rimage(fiber_objects, zindex_range, psf, outshape=None, snr=50):
 if __name__ == '__main__':
     import argparse
 
+    # TODO available models and their frequencies + lengths description inputs
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=str, default=None,
                         help='Output path for saving simulation.')
+
     fibers_group = parser.add_argument_group('Fibers')
     fibers_group.add_argument('--number', type=int, default=30,
                               help='Number of fiber segments to simulate.')
@@ -397,6 +306,7 @@ if __name__ == '__main__':
     fibers_group.add_argument('--location', type=float, nargs=2,
                               default=[-500, 500],
                               help='Coordinates range of fiber center.')
+
     image_group = parser.add_argument_group('Image degradations')
     image_group.add_argument('psf_file', type=str, default=None,
                              help='Path to 3D PSF file.')
@@ -406,17 +316,20 @@ if __name__ == '__main__':
                              help='Z-index of fiber objects.')
     image_group.add_argument('--snr', type=float, default=5,
                              help='SNR in decibels.')
+
     args = parser.parse_args()
 
     from skimage import io
 
     simulated_psf = ski.io.imread(args.psf_file)
+
     fibers_images = rfibers(imshape=(1024, 1024), number=args.number,
                             theta_range=args.orientation,
                             rho_range=args.location,
                             thickness_range=args.thickness,
                             length_range=args.length,
                             shift_range=args.location)
+
     degraded_image = rimage(fibers_images, zindex_range=args.z_index,
                             psf=simulated_psf, snr=args.snr,
                             outshape=args.shape)
