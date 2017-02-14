@@ -386,4 +386,4 @@ if __name__ == '__main__':
         ski.io.imshow(degraded_image, cmap='gray')
         ski.io.show()
     else:
-        ski.io.imsave(args.output, degraded_image.astype('int8'))
+        ski.io.imsave(args.output, degraded_image.astype('int16'))
