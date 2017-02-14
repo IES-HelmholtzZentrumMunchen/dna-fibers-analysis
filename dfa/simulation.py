@@ -45,7 +45,7 @@ def fiber(theta, rho, imshape, pattern, lengths, thickness=1.0, shift=0):
 
     :return: A 2D image of the simulated fiber without acquisition
     deterioration.
-    :rtype: numpy.ndarray with shape imshape
+    :rtype: numpy.ndarray with shape (np.unique(pattern).size, imshape)
     """
     cos_theta = np.cos(theta)
     sin_theta = np.sin(theta)
@@ -65,15 +65,17 @@ def fiber(theta, rho, imshape, pattern, lengths, thickness=1.0, shift=0):
     lengths = np.array(lengths)
     points = np.append([0], lengths.cumsum()) - lengths.sum()/2.0
 
-    # Compute simulated image
-    fiber_image = np.zeros(imshape)
+    # Compute simulated image (in multiple channels)
+    full_shape = list(imshape)
+    full_shape.insert(0, np.unique(pattern).size)
+    fiber_image = np.zeros(full_shape)
 
     for index, channel in enumerate(pattern):
         select_branch = np.bitwise_and(
             distance_on_line >= points[index],
             distance_on_line <= points[index+1])
         select_segments = np.bitwise_and(select_line, select_branch)
-        fiber_image[select_segments] = 1.0 + channel
+        fiber_image[channel, select_segments] = 1.0
 
     return fiber_image
 
