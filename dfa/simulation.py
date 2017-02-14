@@ -257,15 +257,26 @@ def image(fiber_objects, zindices, psf, outshape=None, snr=50):
         outshape = fiber_objects[0].shape
 
     final = np.zeros(fiber_objects[0].shape)
-    most_centered_zindex = max(zindices)
+    zindices = np.array(zindices)
+    fiber_objects = np.array(fiber_objects)
+
+    # The most in-focus section is used to normalize intensities
+    most_centered_zindex = np.abs(zindices)
+    most_centered_zindex.sort()
+    most_centered_zindex = most_centered_zindex[0]
     normalizing_constant = 1.0
 
-    for fiber_object, zindex in zip(fiber_objects, zindices):
-        diffracted_image = diffraction(fiber_object, psf, zindex)
+    # Group fibers on the same z-index to speed-up the process
+    for zindex in np.unique(zindices):
+        current_section = np.zeros(final.shape)
+
+        for fiber_object in fiber_objects[zindex == zindices]:
+            current_section += fiber_object
+
+        diffracted_image = diffraction(current_section, psf, zindex)
         final += diffracted_image
 
-        if most_centered_zindex > abs(zindex):
-            most_centered_zindex = abs(zindex)
+        if most_centered_zindex == zindex:
             normalizing_constant = diffracted_image.max()
 
     final /= normalizing_constant
