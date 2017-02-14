@@ -321,32 +321,39 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=str, default=None,
-                        help='Output path for saving simulation.')
+                        help='Output path for saving simulation '
+                             '(default: None).')
 
     fibers_group = parser.add_argument_group('Fibers')
     fibers_group.add_argument('--number', type=int, default=30,
-                              help='Number of fiber segments to simulate.')
+                              help='Number of fiber segments to simulate '
+                                   '(default: 30).')
     fibers_group.add_argument('--orientation', type=float, nargs=2,
                               default=[-0.3, -0.5],
-                              help='Orientation range of fibers.')
+                              help='Orientation range of fibers '
+                                   '(default: [-0.3, -0.5]).')
     fibers_group.add_argument('--thickness', type=float, nargs=2,
                               default=[2, 3],
-                              help='Thickness range of fibers.')
+                              help='Thickness range of fibers '
+                                   '(default: [2, 3]).')
     fibers_group.add_argument('--model', type=str, default=None,
                               help='Path to model file.')
     fibers_group.add_argument('--location', type=float, nargs=2,
                               default=[-500, 500],
-                              help='Coordinates range of fiber center.')
+                              help='Coordinates range of fiber center '
+                                   '(default: [-500, 500]).')
 
     image_group = parser.add_argument_group('Image degradations')
     image_group.add_argument('psf_file', type=str, default=None,
                              help='Path to 3D PSF file.')
     image_group.add_argument('--shape', type=int, nargs=2, default=[512, 512],
-                             help='Resolution of image output.')
+                             help='Resolution of image output '
+                                  '(default: [512, 512]).')
     image_group.add_argument('--z_index', type=int, nargs=2, default=[-15, 15],
-                             help='Z-index of fiber objects.')
+                             help='Z-index of fiber objects '
+                                  '(default: [-15, 15]).')
     image_group.add_argument('--snr', type=float, default=5,
-                             help='SNR in decibels.')
+                             help='SNR in decibels (default: 5).')
 
     args = parser.parse_args()
 
@@ -367,7 +374,6 @@ if __name__ == '__main__':
     degraded_image = rimage(fibers_images, zindex_range=args.z_index,
                             psf=simulated_psf, snr=args.snr,
                             outshape=args.shape)
-    print(degraded_image[0].shape)
 
     if args.output is None:
         ski.io.imshow(degraded_image, cmap='gray')
