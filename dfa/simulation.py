@@ -61,7 +61,7 @@ def fiber(theta, rho, imshape, pattern, length, thickness=1.0, shift=0):
     distance_on_line = (x * np.cos(theta + np.pi/2.0) +
                         y * np.sin(theta + np.pi/2.0)) + shift
 
-    select_line = distance_to_line < thickness
+    select_line = distance_to_line < thickness/2.0
 
     # Compute the branches points from length
     length = np.array(length)
