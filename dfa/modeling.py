@@ -87,8 +87,18 @@ class Model:
 
 standard = Model([
     {'name': 'ongoing fork',
-     'freq': 0.7,
+     'freq': 0.6,
      'channels': [0, 1],
      'mean': [100, 90],
      'std': [10, 5]},
+    {'name': '1st label origin',
+     'freq': 0.3,
+     'channels': [0, 1, 0],
+     'mean': [75, 150, 90],
+     'std': [10, 30, 20]},
+    {'name': '2nd label termination',
+     'freq': 0.1,
+     'channels': [1, 0, 1],
+     'mean': [100, 50, 100],
+     'std': [20, 5, 25]},
 ])
