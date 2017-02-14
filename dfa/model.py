@@ -45,8 +45,10 @@ class Model:
         """
         Normalize the patterns frequencies.
         """
+        norm_factor = 1.0 / sum(self._frequencies)
+
         for pattern in self.patterns:
-            pattern['freq'] /= self._frequencies
+            pattern['freq'] *= norm_factor
 
         self._update_frequencies()
 
@@ -70,16 +72,16 @@ class Model:
         """
         patterns = np.random.choice(self.patterns, number, p=self._frequencies)
 
-        channels, lengths = [], []
+        channels_pattern, lengths = [], []
 
         for pattern in patterns:
-            channels.append(pattern['channels'])
+            channels_pattern.append(pattern['channels'])
 
             lengths.append([std * np.random.randn() + mean
                             for mean, std in
                             zip(pattern['mean'], pattern['std'])])
 
-        return channels, lengths
+        return channels_pattern, lengths
 
 
 standard = Model([

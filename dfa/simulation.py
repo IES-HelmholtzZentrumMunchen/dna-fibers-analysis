@@ -12,6 +12,8 @@ import skimage as ski
 from skimage import transform
 from skimage import io
 
+from dfa import model
+
 
 def fiber(theta, rho, imshape, pattern, length, thickness=1.0, shift=0):
     """
@@ -117,14 +119,13 @@ def fibers(thetas, rhos, imshape, thicknesses, patterns, lengths, shifts):
         pattern, length, shift in zip(thetas, rhos, thicknesses,
                                       patterns, lengths, shifts):
         fiber_images.append(fiber(
-            theta, rho, imshape, thickness, pattern, length, shift))
+            theta, rho, imshape, pattern, length, thickness, shift))
 
     return fiber_images
 
 
-# TODO add fiber model as input
 def rfibers(imshape, number, theta_range, rho_range, thickness_range,
-            length_range, shift_range):
+            model, shift_range):
     """
     Randomly simulate straight fibers images (with no acquisition
     deterioration).
@@ -147,8 +148,8 @@ def rfibers(imshape, number, theta_range, rho_range, thickness_range,
     :param thickness_range: Thickness range of fibers to simulate.
     :type thickness_range: list or tuple with 2 elements
 
-    :param length_range: Length range of fibers to simulate.
-    :type length_range: list or tuple with 2 elements
+    :param model: Model to use for simulations.
+    :type model: dfa.model.Model
 
     :param shift_range: Shift range of fibers to simulate toward a direction
     or another.
@@ -159,18 +160,19 @@ def rfibers(imshape, number, theta_range, rho_range, thickness_range,
     :rtype: list of numpy.ndarray with shapes imshape
     """
 
-    return fibers(
-        (np.abs(np.diff(theta_range)) * np.random.rand(number) + np.min(
-            theta_range)).tolist(),
-        (np.abs(np.diff(rho_range)) * np.random.rand(number) + np.min(
-            rho_range)).tolist(),
-        imshape,
-        (np.abs(np.diff(thickness_range)) * np.random.rand(number) + np.min(
-            thickness_range)).tolist(),
-        (np.abs(np.diff(length_range)) * np.random.rand(number) + np.min(
-            length_range)).tolist(),
-        (np.abs(np.diff(shift_range)) * np.random.rand(number) + np.min(
-            shift_range)).tolist())
+    patterns, lengths = model.simulate_patterns(number)
+
+    return fibers((np.abs(np.diff(theta_range)) * np.random.rand(number) +
+                   np.min(theta_range)).tolist(),
+                  (np.abs(np.diff(rho_range)) * np.random.rand(number) +
+                   np.min(rho_range)).tolist(),
+                  imshape,
+                  (np.abs(np.diff(thickness_range)) * np.random.rand(number) +
+                   np.min(thickness_range)).tolist(),
+                  patterns,
+                  lengths,
+                  (np.abs(np.diff(shift_range)) * np.random.rand(number) +
+                   np.min(shift_range)).tolist())
 
 
 def diffraction(input_image, psf, pos=0):
@@ -314,7 +316,6 @@ def rimage(fiber_objects, zindex_range, psf, outshape=None, snr=50):
 if __name__ == '__main__':
     import argparse
 
-    # TODO available models and their frequencies + lengths description inputs
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=str, default=None,
                         help='Output path for saving simulation.')
@@ -328,9 +329,8 @@ if __name__ == '__main__':
     fibers_group.add_argument('--thickness', type=float, nargs=2,
                               default=[2, 3],
                               help='Thickness range of fibers.')
-    fibers_group.add_argument('--length', type=float, nargs=2,
-                              default=[50, 200],
-                              help='Total length range of fibers.')
+    fibers_group.add_argument('--model', type=str, default=None,
+                              help='Path to model file.')
     fibers_group.add_argument('--location', type=float, nargs=2,
                               default=[-500, 500],
                               help='Coordinates range of fiber center.')
@@ -347,17 +347,20 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    if args.model is None:
+        args.model = model.standard
+    else:
+        args.model = model.Model.load(args.model)
+
     from skimage import io
 
     simulated_psf = ski.io.imread(args.psf_file)
-
     fibers_images = rfibers(imshape=(1024, 1024), number=args.number,
                             theta_range=args.orientation,
                             rho_range=args.location,
                             thickness_range=args.thickness,
-                            length_range=args.length,
+                            model=args.model,
                             shift_range=args.location)
-
     degraded_image = rimage(fibers_images, zindex_range=args.z_index,
                             psf=simulated_psf, snr=args.snr,
                             outshape=args.shape)
