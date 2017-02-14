@@ -274,7 +274,10 @@ def image(fiber_objects, zindices, psf, outshape=None, snr=50):
     # When poisson noise, we have parameter lambda = 10^(SNR_dB / 5)
     final = np.round(final * np.power(10, snr/5))
 
-    return photon_noise(ski.transform.resize(final, outshape).astype(int))
+    full_shape = list(outshape)
+    full_shape.insert(0, final.shape[0])
+
+    return photon_noise(ski.transform.resize(final, full_shape).astype(int))
 
 
 def rimage(fiber_objects, zindex_range, psf, outshape=None, snr=50):
@@ -364,6 +367,7 @@ if __name__ == '__main__':
     degraded_image = rimage(fibers_images, zindex_range=args.z_index,
                             psf=simulated_psf, snr=args.snr,
                             outshape=args.shape)
+    print(degraded_image[0].shape)
 
     if args.output is None:
         ski.io.imshow(degraded_image, cmap='gray')
