@@ -13,7 +13,7 @@ from skimage import transform
 from skimage import io
 
 
-def fiber(theta, rho, imshape, pattern, lengths, thickness=1.0, shift=0):
+def fiber(theta, rho, imshape, pattern, length, thickness=1.0, shift=0):
     """
     Simulate a straight fiber image (with no acquisition deterioration).
 
@@ -34,8 +34,8 @@ def fiber(theta, rho, imshape, pattern, lengths, thickness=1.0, shift=0):
     :param pattern: Channel pattern of the simulated fiber.
     :type pattern: list of int with same size as length
 
-    :param lengths: Lengths of the branches of the simulated fiber.
-    :type lengths: list of strictly positive float or int
+    :param length: Lengths of the branches of the simulated fiber.
+    :type length: list of strictly positive float or int
 
     :param thickness: Thickness of the generated fiber (default is 1).
     :type thickness: strictly positive float or int
@@ -61,9 +61,9 @@ def fiber(theta, rho, imshape, pattern, lengths, thickness=1.0, shift=0):
 
     select_line = distance_to_line < thickness
 
-    # Compute the branches points from lengths
-    lengths = np.array(lengths)
-    points = np.append([0], lengths.cumsum()) - lengths.sum()/2.0
+    # Compute the branches points from length
+    length = np.array(length)
+    points = np.append([0], length.cumsum()) - length.sum() / 2.0
 
     # Compute simulated image (in multiple channels)
     full_shape = list(imshape)
@@ -80,7 +80,7 @@ def fiber(theta, rho, imshape, pattern, lengths, thickness=1.0, shift=0):
     return fiber_image
 
 
-def fibers(thetas, rhos, imshape, thicknesses, lengths, shifts):
+def fibers(thetas, rhos, imshape, thicknesses, patterns, lengths, shifts):
     """
     Simulate straight fibers images (with no acquisition deterioration).
 
@@ -98,8 +98,11 @@ def fibers(thetas, rhos, imshape, thicknesses, lengths, shifts):
     :param thicknesses: Thickness of the generated fibers.
     :type thicknesses: list of strictly positive float or int
 
+    :param patterns: Channel patterns of the simulated fibers.
+    :type patterns: list of lists of int with same size as matching length
+
     :param lengths: Lengths of the generated fibers.
-    :type lengths: list of strictly positive float or int
+    :type lengths: list of lists of strictly positive float or int
 
     :param shifts: Shifts of the generated fibers toward a direction or another.
     :type shifts: list of float, list of int
@@ -110,14 +113,16 @@ def fibers(thetas, rhos, imshape, thicknesses, lengths, shifts):
     """
     fiber_images = []
 
-    for theta, rho, thickness, length, shift in zip(thetas, rhos, thicknesses,
-                                                    lengths, shifts):
-        fiber_images.append(
-            fiber(theta, rho, imshape, thickness, length, shift))
+    for theta, rho, thickness, \
+        pattern, length, shift in zip(thetas, rhos, thicknesses,
+                                      patterns, lengths, shifts):
+        fiber_images.append(fiber(
+            theta, rho, imshape, thickness, pattern, length, shift))
 
     return fiber_images
 
 
+# TODO add fiber model as input
 def rfibers(imshape, number, theta_range, rho_range, thickness_range,
             length_range, shift_range):
     """
@@ -181,7 +186,7 @@ def diffraction(input_image, psf, pos=0):
     computation.
 
     :param input_image: Input single section image.
-    :type input_image: numpy.ndarray with 2 dimensions
+    :type input_image: numpy.ndarray with 2 space dimensions and 1 for channels
 
     :param psf: PSF used to simulate the microscope's diffraction of light.
     :type psf: numpy.ndarray with 3 dimensions
@@ -193,9 +198,15 @@ def diffraction(input_image, psf, pos=0):
     :return: The input single section with the requested out of focus.
     :rtype: numpy.ndarray with same shape as input_image
     """
-    return sc.signal.fftconvolve(input_image,
-                                 psf[psf.shape[0] // 2 - pos, :, :],
-                                 mode='same')
+    output_image = np.zeros(input_image.shape)
+
+    for channel in range(input_image.shape[0]):
+        output_image[channel, :, :] = sc.signal.fftconvolve(
+            input_image[channel, :, :],
+            psf[psf.shape[0] // 2 - pos, :, :],
+            mode='same')
+
+    return output_image
 
 
 def photon_noise(input_image):
