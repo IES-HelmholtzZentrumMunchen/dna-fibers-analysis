@@ -9,7 +9,7 @@ import scipy as sc
 from scipy import signal
 
 import skimage as ski
-from skimage import transform
+from skimage import measure
 from skimage import io
 
 from dfa import modeling
@@ -224,7 +224,7 @@ def photon_noise(input_image):
     return np.random.poisson(input_image)
 
 
-def image(fiber_objects, zindices, psf, outshape=None, snr=50):
+def image(fiber_objects, zindices, psf, binning=1, snr=50):
     """
     Simulate image acquisition conditions of fiber objects.
 
@@ -243,9 +243,9 @@ def image(fiber_objects, zindices, psf, outshape=None, snr=50):
     :param psf: PSF used to simulate the microscope's diffraction of light.
     :type psf: numpy.ndarray with 3 dimensions
 
-    :param outshape: Output shape of final image, i.e. quantization (default is
+    :param binning: Binning of output final image, i.e. quantization (default is
     the same as input).
-    :type outshape: list of int or tuple of int
+    :type binning: strictly positive int
 
     :param snr: Signal-to-noise ratio of the simulated image (in dB).
     :type snr: float
@@ -253,9 +253,6 @@ def image(fiber_objects, zindices, psf, outshape=None, snr=50):
     :return: Final simulated image of fibers with acquisition artefacts.
     :rtype: numpy.ndarray with 2 dimensions and shape outshape
     """
-    if outshape is None:
-        outshape = fiber_objects[0].shape
-
     final = np.zeros(fiber_objects[0].shape)
     zindices = np.array(zindices)
     fiber_objects = np.array(fiber_objects)
@@ -285,13 +282,11 @@ def image(fiber_objects, zindices, psf, outshape=None, snr=50):
     # When poisson noise, we have parameter lambda = 10^(SNR_dB / 5)
     final = np.round(final * np.power(10, snr/5))
 
-    full_shape = list(outshape)
-    full_shape.insert(0, final.shape[0])
-
-    return photon_noise(ski.transform.resize(final, full_shape).astype(int))
+    return photon_noise(ski.measure.block_reduce(
+        final, (1, binning, binning), func=np.sum).astype(int))
 
 
-def rimage(fiber_objects, zindex_range, psf, outshape=None, snr=50):
+def rimage(fiber_objects, zindex_range, psf, binning=1, snr=10):
     """
     Simulate image acquisition conditions of fiber objects with random
     out-of-focus effects.
@@ -308,9 +303,9 @@ def rimage(fiber_objects, zindex_range, psf, outshape=None, snr=50):
     :param psf: PSF used to simulate the microscope's diffraction of light.
     :type psf: numpy.ndarray with 3 dimensions
 
-    :param outshape: Output shape of final image, i.e. quantization (default is
+    :param binning: Binning of output final image, i.e. quantization (default is
     the same as input).
-    :type outshape: list of int or tuple of int
+    :type binning: strictly positive int
 
     :param snr: Signal-to-noise ratio of the simulated image (in dB).
     :type snr: float
@@ -318,13 +313,10 @@ def rimage(fiber_objects, zindex_range, psf, outshape=None, snr=50):
     :return: Final simulated image of fibers with acquisition artefacts.
     :rtype: numpy.ndarray with 2 dimensions and shape outshape
     """
-    if outshape is None:
-        outshape = fiber_objects[0].shape
-
     zindices = np.random.randint(min(zindex_range), max(zindex_range),
                                  size=len(fiber_objects))
 
-    return image(fiber_objects, zindices.tolist(), psf, outshape, snr)
+    return image(fiber_objects, zindices.tolist(), psf, binning, snr)
 
 
 if __name__ == '__main__':
@@ -348,18 +340,18 @@ if __name__ == '__main__':
                               help='Thickness range of fibers '
                                    '(default: [2, 3]).')
     fibers_group.add_argument('--model', type=str, default=None,
-                              help='Path to model file.')
+                              help='Path to model file (default: '
+                                   'internal standard).')
     fibers_group.add_argument('--location', type=float, nargs=2,
-                              default=[-500, 500],
+                              default=[-0.5, 0.5],
                               help='Coordinates range of fiber center '
-                                   '(default: [-500, 500]).')
+                                   '(default: [-0.5, 0.5]).')
 
     image_group = parser.add_argument_group('Image degradations')
     image_group.add_argument('psf_file', type=str, default=None,
                              help='Path to 3D PSF file.')
-    image_group.add_argument('--shape', type=int, nargs=2, default=[512, 512],
-                             help='Resolution of image output '
-                                  '(default: [512, 512]).')
+    image_group.add_argument('--binning', type=float, default=2,
+                             help='Binning of image output (default: 2).')
     image_group.add_argument('--z_index', type=int, nargs=2, default=[-15, 15],
                              help='Z-index of fiber objects '
                                   '(default: [-15, 15]).')
@@ -373,10 +365,14 @@ if __name__ == '__main__':
     else:
         args.model = modeling.Model.load(args.model)
 
+    highres_shape = (1024, 1024)
+    args.location[0] *= highres_shape[0]
+    args.location[1] *= highres_shape[1]
+
     from skimage import io
 
     simulated_psf = ski.io.imread(args.psf_file)
-    fibers_images = rfibers(imshape=(1024, 1024), number=args.number,
+    fibers_images = rfibers(imshape=highres_shape, number=args.number,
                             theta_range=args.orientation,
                             rho_range=args.location,
                             thickness_range=args.thickness,
@@ -384,7 +380,7 @@ if __name__ == '__main__':
                             shift_range=args.location)
     degraded_image = rimage(fibers_images, zindex_range=args.z_index,
                             psf=simulated_psf, snr=args.snr,
-                            outshape=args.shape)
+                            binning=args.binning)
 
     if args.output is None:
         ski.io.imshow(degraded_image, cmap='gray')
