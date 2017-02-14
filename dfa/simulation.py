@@ -12,7 +12,7 @@ import skimage as ski
 from skimage import transform
 from skimage import io
 
-from dfa import model
+from dfa import modeling
 
 
 def fiber(theta, rho, imshape, pattern, length, thickness=1.0, shift=0):
@@ -149,7 +149,7 @@ def rfibers(imshape, number, theta_range, rho_range, thickness_range,
     :type thickness_range: list or tuple with 2 elements
 
     :param model: Model to use for simulations.
-    :type model: dfa.model.Model
+    :type model: dfa.modeling.Model
 
     :param shift_range: Shift range of fibers to simulate toward a direction
     or another.
@@ -369,9 +369,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.model is None:
-        args.model = model.standard
+        args.model = modeling.standard
     else:
-        args.model = model.Model.load(args.model)
+        args.model = modeling.Model.load(args.model)
 
     from skimage import io
 

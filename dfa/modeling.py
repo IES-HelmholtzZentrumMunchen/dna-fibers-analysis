@@ -53,6 +53,7 @@ class Model:
         self._update_frequencies()
 
     def save(self, filename):
+        print(filename, self.patterns)
         raise RuntimeError('Not yet implemented!')
 
     @staticmethod
