@@ -336,9 +336,9 @@ if __name__ == '__main__':
                               help='Orientation range of fibers '
                                    '(default: [-0.3, -0.5]).')
     fibers_group.add_argument('--thickness', type=float, nargs=2,
-                              default=[2, 3],
+                              default=[5, 6],
                               help='Thickness range of fibers '
-                                   '(default: [2, 3]).')
+                                   '(default: [5, 6]).')
     fibers_group.add_argument('--model', type=str, default=None,
                               help='Path to model file (default: '
                                    'internal standard).')
@@ -350,7 +350,7 @@ if __name__ == '__main__':
     image_group = parser.add_argument_group('Image degradations')
     image_group.add_argument('psf_file', type=str, default=None,
                              help='Path to 3D PSF file.')
-    image_group.add_argument('--binning', type=float, default=2,
+    image_group.add_argument('--binning', type=int, default=2,
                              help='Binning of image output (default: 2).')
     image_group.add_argument('--z_index', type=int, nargs=2, default=[-15, 15],
                              help='Z-index of fiber objects '
