@@ -211,20 +211,25 @@ def diffraction(input_image, psf, pos=0):
     return output_image
 
 
-def photon_noise(input_image):
+def shot_noise(input_image, snr):
     """
     Simulate photon noise on input noise-free image.
 
     :param input_image: Input noise-free image.
     :type input_image: numpy.ndarray with 2 dimensions
 
+    :param snr: Signal-to-noise ratio of the simulated image (in dB).
+    :type snr: float
+
     :return: Image corrupted with photon-noise (Poisson distribution).
     :rtype: numpy.ndarray with same shape as input_image
     """
-    return np.random.poisson(input_image)
+    # When poisson noise, we have parameter lambda = 10^(SNR_dB / 5)
+    return np.random.poisson(np.round(input_image *
+                                      np.power(10, snr/5)).astype(int))
 
 
-def image(fiber_objects, zindices, psf, binning=1, snr=50):
+def image(fiber_objects, zindices, psf, binning=1, snr=20):
     """
     Simulate image acquisition conditions of fiber objects.
 
@@ -279,11 +284,11 @@ def image(fiber_objects, zindices, psf, binning=1, snr=50):
     final /= normalizing_constant
     final[final < 0] = 0
 
-    # When poisson noise, we have parameter lambda = 10^(SNR_dB / 5)
-    final = np.round(final * np.power(10, snr/5))
-
-    return photon_noise(ski.measure.block_reduce(
-        final, (1, binning, binning), func=np.sum).astype(int))
+    # We should do the binning first and then the shot noise. But since
+    # a sum of Poisson random variables is also a Poisson random variable,
+    # the results is formally equivalent as doing the binning last.
+    return ski.measure.block_reduce(shot_noise(final, snr),
+                                    (1, binning, binning), func=np.sum)
 
 
 def rimage(fiber_objects, zindex_range, psf, binning=1, snr=10):
