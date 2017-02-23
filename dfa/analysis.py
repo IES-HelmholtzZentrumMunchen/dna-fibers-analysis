@@ -154,6 +154,76 @@ def _choose_piecewise_model(x, y, models=(1, 2, 3)):
     return predict_y, change_points, sse
 
 
+def _regression_tree(x, y, max_depth=3):
+    """
+    Compute the binary regression tree.
+
+    The computation is performed using a recursive scheme. The split iteration
+    is performed using a fast algorithm with linear complexity in the number of
+    points.
+
+    :param x: Input independent variables.
+    :param y: numpy.ndarray (1D)
+
+    :param y: Input dependent variables.
+    :type y: numpy.ndarray (1D)
+
+    :param max_depth: Maximum height of the tree.
+    :type max_depth: positive int
+
+    :return: The estimated regression tree.
+    """
+    assert len(x.shape) == 1
+    assert len(y.shape) == 1
+    assert max_depth >= 0.0
+
+    def _fast_optimal_binary_split(y):
+        """
+        Split into binary partition using fast algorithm (linear complexity in
+        the number of points).
+        """
+        def _calculate_error():
+            return - (s1**2/n1 + s2**2/n2)
+
+        s1 = y[0]
+        n1 = 1
+        s2 = y[1:].sum()
+        n2 = y.size - 1
+
+        optimal_k = 0
+        optimal_error = _calculate_error()
+
+        for k in range(1, y.size-1):
+            s1 += y[k]
+            n1 += 1
+            s2 -= y[k]
+            n2 -= 1
+
+            error = _calculate_error()
+
+            if error < optimal_error:
+                optimal_k = k
+                optimal_error = error
+
+        return optimal_k, optimal_error
+
+    # FIXME what if the number of points is 1 or 0?
+    # FIXME better data structure for prediction + modeling conversion?
+    def _regression_tree_recursion(y, max_depth):
+        if max_depth == 1:
+            k, _ = _fast_optimal_binary_split(y)
+            return x[k]
+        else:
+            k, _ = _fast_optimal_binary_split(y)
+
+            subtree_left = _regression_tree_recursion(y[:k], max_depth - 1)
+            subtree_right = _regression_tree_recursion(y[k:], max_depth - 1)
+
+            return [x[k], [subtree_left, subtree_right]]
+
+    return _regression_tree_recursion(y, max_depth)
+
+
 def segments(profile):
     """
     Detect the segments in profile.
