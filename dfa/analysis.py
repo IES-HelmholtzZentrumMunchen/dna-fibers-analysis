@@ -2,6 +2,114 @@ import numpy as np
 from sklearn.tree import DecisionTreeRegressor
 
 
+class RegressionTree:
+    def __init__(self, max_depth=3, min_samples=20):
+        """
+        Default constructor.
+
+        :param max_depth: Maximum depth of the binary tree (default is 3).
+        :type max_depth: positive int
+
+        :param min_samples: Minimum number of samples per leaves (default
+        is 20).
+        :type min_samples: strictly positive int
+        """
+        self.max_depth = max_depth
+        self.min_samples = min_samples
+
+    def fit(self, x, y):
+        """
+        Compute the binary regression tree.
+
+        The computation is performed using a recursive scheme. The split
+        iteration
+        is performed using a fast algorithm with linear complexity in the
+        number of
+        points.
+
+        :param x: Input independent variables.
+        :type x: numpy.ndarray (1D)
+
+        :param y: Input dependent variables.
+        :type y: numpy.ndarray (1D)
+
+        :return: The regression tree object.
+        """
+        min_samples_for_split = 2 * self.min_samples
+
+        def _fast_optimal_binary_split(y):
+            """
+            Split into binary partition using fast algorithm (linear
+            complexity in
+            the number of points).
+
+            The error is the opposite of the weighted sum of square values.
+            """
+
+            def _calculate_error():
+                return - (s1 ** 2 / n1 + s2 ** 2 / n2)
+
+            s1 = y[:self.min_samples].sum()
+            n1 = y[:self.min_samples].size
+            s2 = y[self.min_samples:].sum()
+            n2 = y.size - n1
+
+            optimal_k = 0
+            optimal_error = _calculate_error()
+
+            for k in range(1, y.size - self.min_samples):
+                s1 += y[k]
+                n1 += 1
+                s2 -= y[k]
+                n2 -= 1
+
+                error = _calculate_error()
+
+                if error < optimal_error:
+                    optimal_k = k
+                    optimal_error = error
+
+            return optimal_k, optimal_error
+
+        def _regression_tree_recursion(y, max_depth):
+            if max_depth == 1:
+                k, error = _fast_optimal_binary_split(y)
+                return k, error
+            else:
+                k, error = _fast_optimal_binary_split(y)
+
+                y_left = y[:k]
+                y_right = y[k:]
+                subtree_left = None
+                subtree_right = None
+
+                if y_left.size >= 2 * min_samples_for_split:
+                    subtree_left = _regression_tree_recursion(y_left,
+                                                              max_depth - 1)
+
+                if y_right.size >= 2 * min_samples_for_split:
+                    subtree_right = _regression_tree_recursion(y_right,
+                                                               max_depth - 1)
+
+                return [(k, error), [subtree_left, subtree_right]]
+
+        tree = [(y.mean(), x.min(), x.max())]
+
+        if self.max_depth > 0:
+            tree.append(_regression_tree_recursion(y, self.max_depth))
+
+        return tree
+
+    def predict(self, x):
+        """
+        Predict dependent values with the previously computed binary tree.
+
+        :param x: Input independent variables.
+        :type x: numpy.ndarray (1D)
+        """
+        raise NotImplementedError('Not yet implemented!')
+
+
 def _piecewise_constant_regression(x, y, num_pieces):
     """
     Piecewise constant regression is implemented as a regression tree.
@@ -152,96 +260,6 @@ def _choose_piecewise_model(x, y, models=(1, 2, 3)):
     # end post-conditions
 
     return predict_y, change_points, sse
-
-
-def _regression_tree(y, max_depth=3, min_samples=20):
-    """
-    Compute the binary regression tree.
-
-    The computation is performed using a recursive scheme. The split iteration
-    is performed using a fast algorithm with linear complexity in the number of
-    points.
-
-    :param y: Input dependent variables.
-    :type y: numpy.ndarray (1D)
-
-    :param max_depth: Maximum height of the tree (default: 3).
-    :type max_depth: positive int
-
-    :param min_samples: Minimum number of samples per leave (default: 20).
-    :type min_samples: strictly positive int
-
-    :return: The estimated regression tree.
-    """
-    assert type(y) == np.ndarray
-    assert len(y.shape) == 1
-    assert type(max_depth) == int
-    assert max_depth >= 0
-    assert type(min_samples) == int
-    assert min_samples > 0
-
-    min_samples_for_split = 2 * min_samples
-
-    def _fast_optimal_binary_split(y):
-        """
-        Split into binary partition using fast algorithm (linear complexity in
-        the number of points).
-
-        The error is the opposite of the weighted sum of square values.
-        """
-        def _calculate_error():
-            return - (s1**2/n1 + s2**2/n2)
-
-        s1 = y[:min_samples].sum()
-        n1 = y[:min_samples].size
-        s2 = y[min_samples:].sum()
-        n2 = y.size - n1
-
-        optimal_k = 0
-        optimal_error = _calculate_error()
-
-        for k in range(1, y.size-min_samples):
-            s1 += y[k]
-            n1 += 1
-            s2 -= y[k]
-            n2 -= 1
-
-            error = _calculate_error()
-
-            if error < optimal_error:
-                optimal_k = k
-                optimal_error = error
-
-        return optimal_k, optimal_error
-
-    # FIXME what if the number of points is 1 or 0?
-    # FIXME better data structure for prediction + modeling conversion?
-    def _regression_tree_recursion(y, max_depth):
-        if max_depth == 1:
-            k, error = _fast_optimal_binary_split(y)
-            return k, error
-        else:
-            k, error = _fast_optimal_binary_split(y)
-
-            y_left = y[:k]
-            y_right = y[k:]
-            subtree_left = None
-            subtree_right = None
-
-            if y_left.size >= 2 * min_samples_for_split:
-                subtree_left = _regression_tree_recursion(y_left, max_depth-1)
-
-            if y_right.size >= 2 * min_samples_for_split:
-                subtree_right = _regression_tree_recursion(y_right, max_depth-1)
-
-            return [(k, error), [subtree_left, subtree_right]]
-
-    tree = [-y.sum()**2/y.size]
-
-    if max_depth > 0:
-        tree.append(_regression_tree_recursion(y, max_depth))
-
-    return tree
 
 
 def segments(profile):
