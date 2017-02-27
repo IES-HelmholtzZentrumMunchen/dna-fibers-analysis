@@ -171,7 +171,7 @@ def _regression_tree(y, max_depth=3):
     :return: The estimated regression tree.
     """
     assert len(y.shape) == 1
-    assert max_depth >= 0.0
+    assert max_depth >= 0
 
     def _fast_optimal_binary_split(y):
         """
@@ -217,7 +217,12 @@ def _regression_tree(y, max_depth=3):
 
             return [k, [subtree_left, subtree_right]]
 
-    return _regression_tree_recursion(y, max_depth)
+    tree = [np.power(y-y.mean(), 2).sum()]
+
+    if max_depth > 0:
+        tree.append(_regression_tree_recursion(y, max_depth))
+
+    return tree
 
 
 def segments(profile):
