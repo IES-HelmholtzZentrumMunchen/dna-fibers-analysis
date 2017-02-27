@@ -38,6 +38,49 @@ class BinaryNode:
 
         return _recursive_leaves_search(self)
 
+    def display(self, offset_factor=2):
+        """
+        Display the tree in a terminal.
+
+        :param offset_factor: Width tabulation factor.
+        :type offset_factor: strictly positive int
+        """
+        def _recursive_display(tree, offset, offset_factor):
+            if tree is not None:
+                print('{:->{offset}}{}'.format('', tree.values,
+                                               offset=offset_factor * offset))
+                _recursive_display(tree.left, offset + 1, offset_factor)
+                _recursive_display(tree.right, offset + 1, offset_factor)
+
+        _recursive_display(self, 0, offset_factor)
+
+    def print_dot(self, filename):
+        """
+        Write binary tree to a DOT file.
+
+        :param filename: Output filename to write to.
+        :type filename: path (str)
+        """
+        def _recursive_dot(tree):
+            if tree.left is None or tree.right is None:
+                return []
+            else:
+                output = ['{} -> {};'.format(tree.values[0],
+                                             tree.left.values[0]),
+                          '{} -> {};'.format(tree.values[0],
+                                             tree.right.values[0])]
+
+                return (output + _recursive_dot(tree.left) +
+                        _recursive_dot(tree.right))
+
+        lines = _recursive_dot(self)
+        lines.insert(0, 'digraph G {')
+        lines.append('}')
+
+        with open(filename, 'w') as graph_file:
+            for line in lines:
+                graph_file.write(line)
+
 
 class RegressionTree:
     def __init__(self, max_depth=3, min_samples=1):
