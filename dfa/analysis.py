@@ -154,7 +154,7 @@ def _choose_piecewise_model(x, y, models=(1, 2, 3)):
     return predict_y, change_points, sse
 
 
-def _regression_tree(y, max_depth=3, min_samples=0.05):
+def _regression_tree(y, max_depth=3, min_samples=20):
     """
     Compute the binary regression tree.
 
@@ -168,8 +168,8 @@ def _regression_tree(y, max_depth=3, min_samples=0.05):
     :param max_depth: Maximum height of the tree (default: 3).
     :type max_depth: positive int
 
-    :param min_samples: Minimum number of samples per piece (default: 0.05).
-    :type min_samples: float in [0, 1].
+    :param min_samples: Minimum number of samples per leave (default: 20).
+    :type min_samples: strictly positive int
 
     :return: The estimated regression tree.
     """
@@ -177,8 +177,10 @@ def _regression_tree(y, max_depth=3, min_samples=0.05):
     assert len(y.shape) == 1
     assert type(max_depth) == int
     assert max_depth >= 0
-    assert type(min_samples) == float
-    assert 0.0 <= min_samples <= 1.0
+    assert type(min_samples) == int
+    assert min_samples > 0
+
+    min_samples_for_split = 2 * min_samples
 
     def _fast_optimal_binary_split(y):
         """
@@ -190,15 +192,15 @@ def _regression_tree(y, max_depth=3, min_samples=0.05):
         def _calculate_error():
             return - (s1**2/n1 + s2**2/n2)
 
-        s1 = y[0]
-        n1 = 1
-        s2 = y[1:].sum()
-        n2 = y.size - 1
+        s1 = y[:min_samples].sum()
+        n1 = y[:min_samples].size
+        s2 = y[min_samples:].sum()
+        n2 = y.size - n1
 
         optimal_k = 0
         optimal_error = _calculate_error()
 
-        for k in range(1, y.size-1):
+        for k in range(1, y.size-min_samples):
             s1 += y[k]
             n1 += 1
             s2 -= y[k]
@@ -221,8 +223,16 @@ def _regression_tree(y, max_depth=3, min_samples=0.05):
         else:
             k, error = _fast_optimal_binary_split(y)
 
-            subtree_left = _regression_tree_recursion(y[:k], max_depth - 1)
-            subtree_right = _regression_tree_recursion(y[k:], max_depth - 1)
+            y_left = y[:k]
+            y_right = y[k:]
+            subtree_left = None
+            subtree_right = None
+
+            if y_left.size >= 2 * min_samples_for_split:
+                subtree_left = _regression_tree_recursion(y_left, max_depth-1)
+
+            if y_right.size >= 2 * min_samples_for_split:
+                subtree_right = _regression_tree_recursion(y_right, max_depth-1)
 
             return [(k, error), [subtree_left, subtree_right]]
 
