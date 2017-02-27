@@ -154,16 +154,13 @@ def _choose_piecewise_model(x, y, models=(1, 2, 3)):
     return predict_y, change_points, sse
 
 
-def _regression_tree(x, y, max_depth=3):
+def _regression_tree(y, max_depth=3):
     """
     Compute the binary regression tree.
 
     The computation is performed using a recursive scheme. The split iteration
     is performed using a fast algorithm with linear complexity in the number of
     points.
-
-    :param x: Input independent variables.
-    :param y: numpy.ndarray (1D)
 
     :param y: Input dependent variables.
     :type y: numpy.ndarray (1D)
@@ -173,7 +170,6 @@ def _regression_tree(x, y, max_depth=3):
 
     :return: The estimated regression tree.
     """
-    assert len(x.shape) == 1
     assert len(y.shape) == 1
     assert max_depth >= 0.0
 
@@ -212,14 +208,14 @@ def _regression_tree(x, y, max_depth=3):
     def _regression_tree_recursion(y, max_depth):
         if max_depth == 1:
             k, _ = _fast_optimal_binary_split(y)
-            return x[k]
+            return k
         else:
             k, _ = _fast_optimal_binary_split(y)
 
             subtree_left = _regression_tree_recursion(y[:k], max_depth - 1)
             subtree_right = _regression_tree_recursion(y[k:], max_depth - 1)
 
-            return [x[k], [subtree_left, subtree_right]]
+            return [k, [subtree_left, subtree_right]]
 
     return _regression_tree_recursion(y, max_depth)
 
