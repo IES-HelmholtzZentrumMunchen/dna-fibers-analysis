@@ -40,7 +40,7 @@ class BinaryNode:
 
 
 class RegressionTree:
-    def __init__(self, max_depth=3, min_samples=20):
+    def __init__(self, max_depth=3, min_samples=1):
         """
         Constructor of regression tree.
 
@@ -48,7 +48,7 @@ class RegressionTree:
         :type max_depth: positive int
 
         :param min_samples: Minimum number of samples per leaves (default
-        is 20).
+        is 1).
         :type min_samples: strictly positive int
         """
         self.max_depth = max_depth
@@ -89,14 +89,14 @@ class RegressionTree:
                 return - (s1 ** 2 / n1 + s2 ** 2 / n2)
 
             s1 = y[:self.min_samples].sum()
-            n1 = y[:self.min_samples].size
+            n1 = self.min_samples
             s2 = y[self.min_samples:].sum()
             n2 = y.size - n1
 
-            optimal_k = 0
+            optimal_k = self.min_samples - 1
             optimal_error = _calculate_error()
 
-            for k in range(1, y.size - self.min_samples):
+            for k in range(self.min_samples - 1, y.size - self.min_samples - 1):
                 s1 += y[k]
                 n1 += 1
                 s2 -= y[k]
