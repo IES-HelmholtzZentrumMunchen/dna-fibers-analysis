@@ -2,6 +2,16 @@ import numpy as np
 from sklearn.tree import DecisionTreeRegressor
 
 
+class BinaryNode:
+    def __init__(self, values=None, left=None, right=None):
+        self.values = values
+        self.left = left
+        self.right = right
+
+    def leaves(self):
+        pass
+
+
 class RegressionTree:
     def __init__(self, max_depth=3, min_samples=20):
         """
@@ -71,32 +81,43 @@ class RegressionTree:
 
             return optimal_k, optimal_error
 
-        def _regression_tree_recursion(y, max_depth):
+        def _regression_tree_recursion(x, y, max_depth):
             if max_depth == 1:
-                k, error = _fast_optimal_binary_split(y)
-                return k, error
+                k, _ = _fast_optimal_binary_split(y)
+
+                return BinaryNode(values=(y.mean(), x.min(), x.max()),
+                                  left=BinaryNode(
+                                      values=(y[:k].mean(),
+                                              x[:k].min(),
+                                              x[:k].max())),
+                                  right=BinaryNode(
+                                      values=(y[k:].mean(),
+                                              x[k:].min(),
+                                              x[k:].max())))
             else:
-                k, error = _fast_optimal_binary_split(y)
+                k, _ = _fast_optimal_binary_split(y)
 
                 y_left = y[:k]
                 y_right = y[k:]
                 subtree_left = None
                 subtree_right = None
 
-                if y_left.size >= 2 * min_samples_for_split:
-                    subtree_left = _regression_tree_recursion(y_left,
+                if y_left.size >= min_samples_for_split:
+                    subtree_left = _regression_tree_recursion(x[:k], y_left,
                                                               max_depth - 1)
 
-                if y_right.size >= 2 * min_samples_for_split:
-                    subtree_right = _regression_tree_recursion(y_right,
+                if y_right.size >= min_samples_for_split:
+                    subtree_right = _regression_tree_recursion(x[k:], y_right,
                                                                max_depth - 1)
 
-                return [(k, error), [subtree_left, subtree_right]]
+                return BinaryNode(values=(y.mean(), x.min(), y.min()),
+                                  left=subtree_left,
+                                  right=subtree_right)
 
-        tree = [(y.mean(), x.min(), x.max())]
-
-        if self.max_depth > 0:
-            tree.append(_regression_tree_recursion(y, self.max_depth))
+        if self.max_depth == 0:
+            tree = BinaryNode(values=(y.mean(), x.min(), x.max()))
+        else:
+            tree = _regression_tree_recursion(x, y, self.max_depth)
 
         return tree
 
@@ -106,6 +127,9 @@ class RegressionTree:
 
         :param x: Input independent variables.
         :type x: numpy.ndarray (1D)
+
+        :return: Estimated dependent variables.
+        :rtype: numpy.ndarray (1D)
         """
         raise NotImplementedError('Not yet implemented!')
 
