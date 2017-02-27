@@ -154,7 +154,7 @@ def _choose_piecewise_model(x, y, models=(1, 2, 3)):
     return predict_y, change_points, sse
 
 
-def _regression_tree(y, max_depth=3):
+def _regression_tree(y, max_depth=3, min_samples=0.05):
     """
     Compute the binary regression tree.
 
@@ -165,18 +165,27 @@ def _regression_tree(y, max_depth=3):
     :param y: Input dependent variables.
     :type y: numpy.ndarray (1D)
 
-    :param max_depth: Maximum height of the tree.
+    :param max_depth: Maximum height of the tree (default: 3).
     :type max_depth: positive int
+
+    :param min_samples: Minimum number of samples per piece (default: 0.05).
+    :type min_samples: float in [0, 1].
 
     :return: The estimated regression tree.
     """
+    assert type(y) == np.ndarray
     assert len(y.shape) == 1
+    assert type(max_depth) == int
     assert max_depth >= 0
+    assert type(min_samples) == float
+    assert 0.0 <= min_samples <= 1.0
 
     def _fast_optimal_binary_split(y):
         """
         Split into binary partition using fast algorithm (linear complexity in
         the number of points).
+
+        The error is the opposite of the weighted sum of square values.
         """
         def _calculate_error():
             return - (s1**2/n1 + s2**2/n2)
@@ -207,17 +216,17 @@ def _regression_tree(y, max_depth=3):
     # FIXME better data structure for prediction + modeling conversion?
     def _regression_tree_recursion(y, max_depth):
         if max_depth == 1:
-            k, _ = _fast_optimal_binary_split(y)
-            return k
+            k, error = _fast_optimal_binary_split(y)
+            return k, error
         else:
-            k, _ = _fast_optimal_binary_split(y)
+            k, error = _fast_optimal_binary_split(y)
 
             subtree_left = _regression_tree_recursion(y[:k], max_depth - 1)
             subtree_right = _regression_tree_recursion(y[k:], max_depth - 1)
 
-            return [k, [subtree_left, subtree_right]]
+            return [(k, error), [subtree_left, subtree_right]]
 
-    tree = [np.power(y-y.mean(), 2).sum()]
+    tree = [-y.sum()**2/y.size]
 
     if max_depth > 0:
         tree.append(_regression_tree_recursion(y, max_depth))
