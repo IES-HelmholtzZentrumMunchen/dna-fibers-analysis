@@ -4,18 +4,45 @@ from sklearn.tree import DecisionTreeRegressor
 
 class BinaryNode:
     def __init__(self, values=None, left=None, right=None):
+        """
+        Constructor of Binary nodes.
+
+        :param values: Values associated with the current node.
+        :type values: any
+
+        :param left: Left child (subtree, node or None if the current node is
+        a leaf).
+        :type left: BinaryNode
+
+        :param right: Right child (subtree, node or None if the current node is
+        a leaf).
+        :type right: BinaryNode
+        """
         self.values = values
         self.left = left
         self.right = right
 
     def leaves(self):
-        pass
+        """
+        Get the leaves of the tree as a list.
+
+        :return: Leaves of the current tree.
+        :rtype: list of BinaryNodes
+        """
+        def _recursive_leaves_search(tree):
+            if tree.left is None or tree.right is None:
+                return [tree]
+            else:
+                return _recursive_leaves_search(tree.left) + \
+                       _recursive_leaves_search(tree.right)
+
+        return _recursive_leaves_search(self)
 
 
 class RegressionTree:
     def __init__(self, max_depth=3, min_samples=20):
         """
-        Default constructor.
+        Constructor of regression tree.
 
         :param max_depth: Maximum depth of the binary tree (default is 3).
         :type max_depth: positive int
@@ -26,6 +53,8 @@ class RegressionTree:
         """
         self.max_depth = max_depth
         self.min_samples = min_samples
+
+        self._tree = None
 
     def fit(self, x, y):
         """
@@ -97,29 +126,28 @@ class RegressionTree:
             else:
                 k, _ = _fast_optimal_binary_split(y)
 
-                y_left = y[:k]
-                y_right = y[k:]
+                y_left, x_left = y[:k], x[:k]
+                y_right, x_right = y[k:], x[k:]
                 subtree_left = None
                 subtree_right = None
 
-                if y_left.size >= min_samples_for_split:
-                    subtree_left = _regression_tree_recursion(x[:k], y_left,
+                if y_left.size >= min_samples_for_split and \
+                   y_right.size >= min_samples_for_split:
+                    subtree_left = _regression_tree_recursion(x_left, y_left,
                                                               max_depth - 1)
-
-                if y_right.size >= min_samples_for_split:
-                    subtree_right = _regression_tree_recursion(x[k:], y_right,
+                    subtree_right = _regression_tree_recursion(x_right, y_right,
                                                                max_depth - 1)
 
-                return BinaryNode(values=(y.mean(), x.min(), y.min()),
+                return BinaryNode(values=(y.mean(), x.min(), x.max()),
                                   left=subtree_left,
                                   right=subtree_right)
 
         if self.max_depth == 0:
-            tree = BinaryNode(values=(y.mean(), x.min(), x.max()))
+            self._tree = BinaryNode(values=(y.mean(), x.min(), x.max()))
         else:
-            tree = _regression_tree_recursion(x, y, self.max_depth)
+            self._tree = _regression_tree_recursion(x, y, self.max_depth)
 
-        return tree
+        return self
 
     def predict(self, x):
         """
@@ -131,7 +159,14 @@ class RegressionTree:
         :return: Estimated dependent variables.
         :rtype: numpy.ndarray (1D)
         """
-        raise NotImplementedError('Not yet implemented!')
+        leaves = self._tree.leaves()
+        y = np.zeros(x.shape)
+
+        for leaf in leaves:
+            y[np.bitwise_and(x >= leaf.values[1],
+                             x <= leaf.values[2])] = leaf.values[0]
+
+        return y
 
 
 def _piecewise_constant_regression(x, y, num_pieces):
