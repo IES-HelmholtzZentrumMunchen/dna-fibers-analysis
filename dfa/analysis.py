@@ -61,17 +61,21 @@ class BinaryNode:
         :param filename: Output filename to write to.
         :type filename: path (str)
         """
-        def _recursive_dot(tree):
+        def _recursive_dot(tree, id_name=0):
             if tree.left is None or tree.right is None:
                 return []
             else:
-                output = ['{} -> {};'.format(tree.values[0],
-                                             tree.left.values[0]),
-                          '{} -> {};'.format(tree.values[0],
-                                             tree.right.values[0])]
+                output = [
+                    '"{}\\n{}" -> "{}\\n{}";'.format(
+                        id_name, tree.values,
+                        10*id_name+1, tree.left.values),
+                    '"{}\\n{}" -> "{}\\n{}";'.format(
+                        id_name, tree.values,
+                        10*id_name+2, tree.right.values)
+                ]
 
-                return (output + _recursive_dot(tree.left) +
-                        _recursive_dot(tree.right))
+                return (output + _recursive_dot(tree.left, 10*id_name+1) +
+                        _recursive_dot(tree.right, 10*id_name+2))
 
         lines = _recursive_dot(self)
         lines.insert(0, 'digraph G {')
@@ -79,7 +83,7 @@ class BinaryNode:
 
         with open(filename, 'w') as graph_file:
             for line in lines:
-                graph_file.write(line)
+                graph_file.write(line + '\n')
 
 
 class RegressionTree:
