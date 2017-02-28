@@ -18,9 +18,13 @@ class BinaryNode:
         a leaf).
         :type right: BinaryNode
         """
-        self.values = values
         self.left = left
         self.right = right
+
+        try:
+            self.values = tuple(values)
+        except TypeError:
+            self.values = tuple([values])
 
     def leaves(self):
         """
@@ -38,40 +42,59 @@ class BinaryNode:
 
         return _recursive_leaves_search(self)
 
-    def display(self, offset_factor=2):
+    def display(self, offset_factor=2, values_to_display=slice(None)):
         """
         Display the tree in a terminal.
 
         :param offset_factor: Width tabulation factor.
         :type offset_factor: strictly positive int
+
+        :param values_to_display: Slicing object used to select values to
+        display.
+        :type values_to_display: slice
         """
         def _recursive_display(tree, offset, offset_factor):
             if tree is not None:
-                print('{:->{offset}}{}'.format('', tree.values,
+                print('{:->{offset}}{}'.format('',
+                                               tree.values[values_to_display],
                                                offset=offset_factor * offset))
                 _recursive_display(tree.left, offset + 1, offset_factor)
                 _recursive_display(tree.right, offset + 1, offset_factor)
 
         _recursive_display(self, 0, offset_factor)
 
-    def print_dot(self, filename):
+    def print(self, filename, values_to_print=slice(None), out='dot'):
         """
         Write binary tree to a DOT file.
 
         :param filename: Output filename to write to.
         :type filename: path (str)
+
+        :param values_to_print: Slicing object used to select values to print.
+        :type values_to_print: slice
+
+        :param out: Tell the final destination of the print to choose the
+        separator between the node id and the values.
+        :type out: str
         """
+        if out == 'latex':
+            sep = '\\\\\\\\'
+        elif out == 'dot':
+            sep = '\\n'
+        else:
+            sep = ' '
+
         def _recursive_dot(tree, id_name=0):
             if tree.left is None or tree.right is None:
                 return []
             else:
                 output = [
-                    '"{}\\n{}" -> "{}\\n{}";'.format(
-                        id_name, tree.values,
-                        10*id_name+1, tree.left.values),
-                    '"{}\\n{}" -> "{}\\n{}";'.format(
-                        id_name, tree.values,
-                        10*id_name+2, tree.right.values)
+                    '"{}{}{}" -> "{}{}{}";'.format(
+                        id_name, sep, tree.values[values_to_print],
+                        10*id_name+1, sep, tree.left.values[values_to_print]),
+                    '"{}{}{}" -> "{}{}{}";'.format(
+                        id_name, sep, tree.values[values_to_print],
+                        10*id_name+2, sep, tree.right.values[values_to_print])
                 ]
 
                 return (output + _recursive_dot(tree.left, 10*id_name+1) +
