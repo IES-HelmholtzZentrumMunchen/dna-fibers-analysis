@@ -54,9 +54,9 @@ class BinaryNode:
 
     def depth_first(self):
         """
-        Go trough the tree with depth-first strategy.
+        Traverse the tree with depth-first strategy.
 
-        :return: A generator to the nodes.
+        :return: A generator to the nodes in depth-first order.
         :rtype: generator
         """
         def _recursive_depth_first(node):
@@ -66,6 +66,22 @@ class BinaryNode:
                 yield from _recursive_depth_first(node.right)
 
         return _recursive_depth_first(self)
+
+    def breadth_first(self):
+        """
+        Traverse the tree with breadth-first strategy.
+
+        :return: A generator to the nodes in breadth-first order.
+        :rtype: generator
+        """
+        nodes_to_visit = [self]
+
+        while len(nodes_to_visit) > 0:
+            node = nodes_to_visit.pop(0)
+
+            if node is not None:
+                yield node
+                nodes_to_visit += [node.left, node.right]
 
     def display(self, offset_factor=2, values_to_display=slice(None)):
         """
