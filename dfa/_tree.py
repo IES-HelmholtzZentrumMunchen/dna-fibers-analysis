@@ -83,7 +83,7 @@ class BinaryNode:
                 yield node
                 nodes_to_visit += [node.left, node.right]
 
-    def display(self, offset_factor=2, values_to_display=slice(None)):
+    def display(self, offset_factor=2, values_to_display=None):
         """
         Display the tree in a terminal.
 
@@ -94,6 +94,9 @@ class BinaryNode:
         display.
         :type values_to_display: slice
         """
+        if values_to_display is None:
+            values_to_display = slice(len(self.values))
+
         def _recursive_display(tree, offset, offset_factor):
             if tree is not None:
                 print('{:->{offset}}{}'.format('',
@@ -104,7 +107,7 @@ class BinaryNode:
 
         _recursive_display(self, 0, offset_factor)
 
-    def print(self, filename, values_to_print=slice(None), out='dot'):
+    def print(self, filename, values_to_print=None, out='dot'):
         """
         Write binary tree to a DOT file.
 
@@ -118,6 +121,9 @@ class BinaryNode:
         separator between the node id and the values.
         :type out: str
         """
+        if values_to_print is None:
+            values_to_print = slice(len(self.values))
+
         if out == 'latex':
             sep = '\\\\\\\\'
         elif out == 'dot':
@@ -270,19 +276,19 @@ class RegressionTree:
 
         return self
 
-    def find_partitions(self):
-        """
-        Find the possible partition of the space and order them by a criterion.
-
-        Find partitions of the independent variables from the fitted tree with
-        a best-first approach. The function maximized is the variance percentage
-        improvement per split.
-        """
-        nodes_to_visit = [self._tree]
-
-        # TODO implement a best-first search to find partitions
-        # for node in nodes_to_visit:
-        #     1 - (node.left.values[3] + node.right.values[3]) / node.values[3]
+    # def find_partitions(self):
+    #     """
+    #     Find the possible partition of the space and order them by a criterion.
+    #
+    #     Find partitions of the independent variables from the fitted tree with
+    #     a best-first approach. The function maximized is the variance percentage
+    #     improvement per split.
+    #     """
+    #     nodes_to_visit = [self._tree]
+    #
+    #     # TODO implement a best-first search to find partitions
+    #     for node in nodes_to_visit:
+    #         1 - (node.left.values[3] + node.right.values[3]) / node.values[3]
 
     def predict(self, x):
         """
