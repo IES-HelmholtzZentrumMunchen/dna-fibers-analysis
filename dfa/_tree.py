@@ -52,6 +52,21 @@ class BinaryNode:
 
         return _recursive_leaves_search(self)
 
+    def depth_first(self):
+        """
+        Go trough the tree with depth-first strategy.
+
+        :return: A generator to the nodes.
+        :rtype: generator
+        """
+        def _recursive_depth_first(node):
+            if node is not None:
+                yield node
+                yield from _recursive_depth_first(node.left)
+                yield from _recursive_depth_first(node.right)
+
+        return _recursive_depth_first(self)
+
     def display(self, offset_factor=2, values_to_display=slice(None)):
         """
         Display the tree in a terminal.
