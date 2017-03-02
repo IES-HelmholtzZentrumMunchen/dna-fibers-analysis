@@ -278,7 +278,8 @@ class RegressionTree:
 
                 y_left, y_right = y[:k], y[k:]
 
-                return BinaryNode(values=(x[k], y_left.mean(), y_right.mean(),
+                return BinaryNode(values=(x.min(), x[k], x.max(),
+                                          y_left.mean(), y_right.mean(),
                                           error_func(y_left) +
                                           error_func(y_right)))
             else:
@@ -297,7 +298,8 @@ class RegressionTree:
                     subtree_right = _regression_tree_recursion(x_right, y_right,
                                                                max_depth - 1)
 
-                return BinaryNode(values=(x[k], y_left.mean(), y_right.mean(),
+                return BinaryNode(values=(x.min(), x[k], x.max(),
+                                          y_left.mean(), y_right.mean(),
                                           error_func(y_left) +
                                           error_func(y_right)),
                                   left=subtree_left,
@@ -332,11 +334,12 @@ class RegressionTree:
         :return: Estimated dependent variables.
         :rtype: numpy.ndarray (1D)
         """
-        leaves = self._tree.leaves()
         y = np.zeros(x.shape)
 
-        for leaf in leaves:
-            y[np.bitwise_and(x >= leaf.values[1],
-                             x <= leaf.values[2])] = leaf.values[0]
+        for leaf in self._tree.leaves():
+            y[np.bitwise_and(
+                x >= leaf.values[0], x <= leaf.values[1])] = leaf.values[3]
+            y[np.bitwise_and(
+                x >= leaf.values[1], x <= leaf.values[2])] = leaf.values[4]
 
         return y
