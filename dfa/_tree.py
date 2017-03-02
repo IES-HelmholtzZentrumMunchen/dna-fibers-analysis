@@ -280,7 +280,7 @@ class RegressionTree:
 
                 return BinaryNode(values=(x.min(), x[k], x.max(),
                                           y_left.mean(), y_right.mean(),
-                                          error_func(y_left) +
+                                          error_func(y_left),
                                           error_func(y_right)))
             else:
                 k = _fast_optimal_binary_split(y)
@@ -300,29 +300,63 @@ class RegressionTree:
 
                 return BinaryNode(values=(x.min(), x[k], x.max(),
                                           y_left.mean(), y_right.mean(),
-                                          error_func(y_left) +
+                                          error_func(y_left),
                                           error_func(y_right)),
                                   left=subtree_left,
                                   right=subtree_right)
 
         if y.size >= min_samples_for_split:
-            self._tree = _regression_tree_recursion(x, y, self.max_depth)
+            self._tree = _regression_tree_recursion(x, y,
+                                                    self.max_depth)
+
+        # Since we use the node is split strategy, we also
+        # add artificially a root node at the top, representing 0 split.
+        self._tree = BinaryNode(values=(x.min(), x.max(), x.max(),
+                                        y.mean(), y.mean(),
+                                        error_func(y), error_func(y)),
+                                left=self._tree)
 
         return self
 
-    # def find_partitions(self):
-    #     """
-    #     Find the possible partition of the space and order them by a criterion.
-    #
-    #     Find partitions of the independent variables from the fitted tree with
-    #     a best-first approach. The function maximized is the variance percentage
-    #     improvement per split.
-    #     """
-    #     nodes_to_visit = [self._tree]
-    #
-    #     # TODO implement a best-first search to find partitions
-    #     for node in nodes_to_visit:
-    #         1 - (node.left.values[3] + node.right.values[3]) / node.values[3]
+    def find_partitions(self, max_partitions=None):
+        """
+        Find the possible partition of the space.
+
+        Find partitions of the independent variables from the fitted tree with
+        a best-first approach. The function maximized is the normalized
+        residuals per split.
+
+        :param max_partitions: The maximum number of partitions to find
+        (default is None).
+        :type max_partitions: strictly positive int or None
+        """
+        def _error_function(node):
+            """
+            This is an heuristic function to help finding the best next node.
+            It sums the error of the current split and normalize it by the
+            error coming from the corresponding branch. The lower is this ratio,
+            the better is the "importance" of the current split node.
+            """
+            split_error = sum(node.values[5:7])
+
+            if node is node.parent.left:
+                return split_error / node.parent.values[5]
+            else:
+                return split_error / node.parent.values[6]
+
+        if max_partitions is None:
+            max_partitions = self.max_depth-1
+
+        bests = self._tree.left.best_first(func=_error_function)
+        nodes = []
+
+        try:
+            for _ in range(max_partitions):
+                nodes.append(next(bests))
+        except StopIteration:
+            pass
+
+        return nodes
 
     def predict(self, x):
         """
@@ -336,7 +370,7 @@ class RegressionTree:
         """
         y = np.zeros(x.shape)
 
-        for leaf in self._tree.leaves():
+        for leaf in self._tree.left.leaves():
             y[np.bitwise_and(
                 x >= leaf.values[0], x <= leaf.values[1])] = leaf.values[3]
             y[np.bitwise_and(
