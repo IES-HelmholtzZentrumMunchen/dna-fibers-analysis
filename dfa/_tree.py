@@ -28,8 +28,15 @@ class BinaryNode:
         a leaf).
         :type right: BinaryNode
         """
+        self.parent = None
         self.left = left
         self.right = right
+
+        if self.left is not None:
+            self.left.parent = self
+
+        if self.right is not None:
+            self.right.parent = self
 
         try:
             self.values = tuple(values)
