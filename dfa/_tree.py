@@ -83,6 +83,35 @@ class BinaryNode:
                 yield node
                 nodes_to_visit += [node.left, node.right]
 
+    def best_first(self, func):
+        """
+        Traverse the tree with best-first strategy.
+
+        The nodes are ordered using the best-first strategy but keeping the
+        hierarchy of the tree. For instance, a node cannot be visited if its
+        parent is hast not been already visited, even if it has a greater
+        output function value than his parent.
+
+        :param func: Function of the values for choosing best node.
+        :type func: function
+
+        :return: A generator to the nodes in best-first order.
+        :rtype: generator
+        """
+        nodes_to_visit = [(self, func(self))]
+
+        while len(nodes_to_visit) > 0:
+            nodes_to_visit.sort(key=lambda e: e[1])
+            node, _ = nodes_to_visit.pop(0)
+
+            yield node
+
+            if node.left is not None:
+                nodes_to_visit.append((node.left, func(node.left)))
+
+            if node.right is not None:
+                nodes_to_visit.append((node.right, func(node.right)))
+
     def display(self, offset_factor=2, values_to_display=None):
         """
         Display the tree in a terminal.
