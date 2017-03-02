@@ -318,17 +318,17 @@ class RegressionTree:
 
         return self
 
-    def find_partitions(self, max_partitions=None):
+    def _find_partitioning_nodes(self, max_partitions=None):
         """
-        Find the possible partition of the space.
+        Find the possible partitioning nodes with specified maximal segments.
 
         Find partitions of the independent variables from the fitted tree with
-        a best-first approach. The function maximized is the normalized
-        residuals per split.
+        a best-first approach. The function try to minimize the normalized
+        residuals per split and per branch.
 
         :param max_partitions: The maximum number of partitions to find
         (default is None).
-        :type max_partitions: strictly positive int or None
+        :type max_partitions: int greater than 0 or None
         """
         def _error_function(node):
             """
@@ -345,20 +345,20 @@ class RegressionTree:
                 return split_error / node.parent.values[6]
 
         if max_partitions is None:
-            max_partitions = self.max_depth-1
+            max_partitions = 2**self.max_depth
 
         bests = self._tree.left.best_first(func=_error_function)
-        nodes = []
+        nodes = [self._tree]
 
         try:
-            for _ in range(max_partitions):
+            for _ in range(max_partitions - 1):
                 nodes.append(next(bests))
         except StopIteration:
             pass
 
         return nodes
 
-    def predict(self, x):
+    def predict(self, x, max_partitions=None):
         """
         Predict dependent values with the previously computed binary tree.
 
@@ -367,13 +367,19 @@ class RegressionTree:
 
         :return: Estimated dependent variables.
         :rtype: numpy.ndarray (1D)
+
+        :param max_partitions: The maximum number of partitions to find
+        (default is None).
+        :type max_partitions: int greater than 0 or None
         """
         y = np.zeros(x.shape)
 
-        for leaf in self._tree.left.leaves():
+        for node in self._find_partitioning_nodes(max_partitions=max_partitions):
             y[np.bitwise_and(
-                x >= leaf.values[0], x <= leaf.values[1])] = leaf.values[3]
+                node.values[0] <= x,
+                x <= node.values[1])] = node.values[3]
             y[np.bitwise_and(
-                x >= leaf.values[1], x <= leaf.values[2])] = leaf.values[4]
+                node.values[1] <= x,
+                x <= node.values[2])] = node.values[4]
 
         return y
