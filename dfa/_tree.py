@@ -195,13 +195,18 @@ class BinaryNode:
 class RegressionTree:
     """
     Defines a regression tree for 1D dependent variables.
+
+    Building a general tree being NP-hard problem, we use instead a heuristic
+    by constructing a binary tree (CART algorithm).
+
+    Each node of the binary tree represents a particular split.
     """
-    def __init__(self, max_depth=3, min_samples=1):
+    def __init__(self, max_depth=3, min_samples=2):
         """
         Constructor of regression tree.
 
         :param max_depth: Maximum depth of the binary tree (default is 3).
-        :type max_depth: positive int
+        :type max_depth: strictly positive int
 
         :param min_samples: Minimum number of samples per leaves (default
         is 1).
@@ -212,15 +217,13 @@ class RegressionTree:
 
         self._tree = None
 
-    def fit(self, x, y):
+    def fit(self, x, y, error_func=lambda y: np.power(y-y.mean(), 2).sum()):
         """
         Compute the binary regression tree.
 
         The computation is performed using a recursive scheme. The split
-        iteration
-        is performed using a fast algorithm with linear complexity in the
-        number of
-        points.
+        iteration is performed using a fast algorithm with linear complexity
+        in the number of points.
 
         :param x: Input independent variables.
         :type x: numpy.ndarray (1D)
@@ -228,9 +231,12 @@ class RegressionTree:
         :param y: Input dependent variables.
         :type y: numpy.ndarray (1D)
 
+        :param error_func: Error function to use (default is SSE).
+        :type error_func: lambda function
+
         :return: The regression tree object.
         """
-        min_samples_for_split = 2 * self.min_samples
+        min_samples_for_split = self.min_samples * (self.min_samples - 1)
 
         def _fast_optimal_binary_split(y):
             """
@@ -264,50 +270,40 @@ class RegressionTree:
                     optimal_k = k
                     optimal_error = error
 
-            return optimal_k, optimal_error
+            return optimal_k
 
         def _regression_tree_recursion(x, y, max_depth):
             if max_depth == 1:
-                k, _ = _fast_optimal_binary_split(y)
+                k = _fast_optimal_binary_split(y)
 
-                return BinaryNode(values=(y.mean(), x.min(), x.max(),
-                                          np.power(y-y.mean(), 2).sum()),
-                                  left=BinaryNode(
-                                      values=(y[:k].mean(),
-                                              x[:k].min(),
-                                              x[:k].max(),
-                                              np.power(y[:k]-y[:k].mean(),
-                                                       2).sum())),
-                                  right=BinaryNode(
-                                      values=(y[k:].mean(),
-                                              x[k:].min(),
-                                              x[k:].max(),
-                                              np.power(y[k:]-y[k:].mean(),
-                                                       2).sum())))
+                y_left, y_right = y[:k], y[k:]
+
+                return BinaryNode(values=(x[k], y_left.mean(), y_right.mean(),
+                                          error_func(y_left) +
+                                          error_func(y_right)))
             else:
-                k, _ = _fast_optimal_binary_split(y)
+                k = _fast_optimal_binary_split(y)
 
                 y_left, x_left = y[:k], x[:k]
                 y_right, x_right = y[k:], x[k:]
                 subtree_left = None
                 subtree_right = None
 
-                if y_left.size >= min_samples_for_split and \
-                   y_right.size >= min_samples_for_split:
+                if y_left.size >= min_samples_for_split:
                     subtree_left = _regression_tree_recursion(x_left, y_left,
                                                               max_depth - 1)
+
+                if y_right.size >= min_samples_for_split:
                     subtree_right = _regression_tree_recursion(x_right, y_right,
                                                                max_depth - 1)
 
-                return BinaryNode(values=(y.mean(), x.min(), x.max(),
-                                          np.power(y-y.mean(), 2).sum()),
+                return BinaryNode(values=(x[k], y_left.mean(), y_right.mean(),
+                                          error_func(y_left) +
+                                          error_func(y_right)),
                                   left=subtree_left,
                                   right=subtree_right)
 
-        if self.max_depth == 0:
-            self._tree = BinaryNode(values=(y.mean(), x.min(), x.max(),
-                                            np.power(y-y.mean(), 2).sum()))
-        else:
+        if y.size >= min_samples_for_split:
             self._tree = _regression_tree_recursion(x, y, self.max_depth)
 
         return self
