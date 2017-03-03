@@ -8,6 +8,9 @@ import numpy as np
 from sklearn.tree import DecisionTreeRegressor
 from debtcollector import removals
 
+from dfa import _tree
+from dfa import modeling
+
 
 @removals.remove(removal_version='?')
 def _piecewise_constant_regression(x, y, num_pieces):
@@ -162,6 +165,48 @@ def _choose_piecewise_model(x, y, models=(1, 2, 3)):
     # end post-conditions
 
     return predict_y, change_points, sse
+
+
+def _select_patterns(x, y, model=modeling.standard,
+                     error_func=lambda v1, v2: np.power(v1-v2, 2).sum()):
+    """
+    Select the matching models.
+
+    The models are chosen according to the modeling given. The output models are
+    ordered in increasing error (given by the error function).
+
+    :param x: Independent variables.
+    :type x: numpy.array
+
+    :param y: Dependent variables.
+    :type y: numpy.array
+
+    :param model: Model defining the patterns to detect and filter (default is
+    the standard model defined in dfa.modeling.standard).
+    :type model: dfa.modeling.Model
+
+    :param error_func: function used to quantify the quality of the patterns
+    (default is the residuals-sum of squared errors).
+    :type: function
+
+    :return:
+    """
+    selected_patterns = []
+
+    reg = _tree.RegressionTree()
+    reg = reg.fit(x, y)
+
+    for number_of_segments in model.numbers_of_segments():
+        prediction_y = reg.predict(x, max_partitions=number_of_segments)
+        prediction_diff = np.diff(prediction_y)
+        splits = np.where(prediction_diff != 0)[0].tolist()
+
+        if all(prediction_diff[splits[i]] * prediction_diff[splits[i+1]] < 0
+               for i in range(len(splits)-1)):
+            selected_patterns.append((splits, error_func(y, prediction_y)))
+
+    selected_patterns.sort(key=lambda e: e[1])
+    return selected_patterns
 
 
 def segments(profile):

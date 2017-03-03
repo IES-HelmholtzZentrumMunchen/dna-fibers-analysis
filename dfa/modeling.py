@@ -52,6 +52,21 @@ class Model:
 
         self._update_frequencies()
 
+    def numbers_of_segments(self):
+        """
+        Get the number of segments defined by the modeling.
+
+        :return: A list of all possible segment numbers.
+         :rtype: list of strictly positive int
+        """
+        numbers_of_segments = []
+
+        for pattern in self.patterns:
+            if len(pattern['channels']) not in numbers_of_segments:
+                numbers_of_segments.append(len(pattern['channels']))
+
+        return numbers_of_segments
+
     def save(self, filename):
         print(filename, self.patterns)
         raise RuntimeError('Not yet implemented!')
