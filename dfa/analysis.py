@@ -195,7 +195,9 @@ def _select_possible_patterns(x, y, model=modeling.standard,
     (default is the residuals-sum of squared errors).
     :type: function
 
-    :return:
+    :return: For each possible pattern, the error, the splits and the channels
+    patterns.
+    :rtype: list of tuple
     """
     selected_patterns = []
 
@@ -232,6 +234,49 @@ def _select_possible_patterns(x, y, model=modeling.standard,
     return selected_patterns
 
 
+def analyze(profile, model=modeling.standard):
+    """
+    Detect the segments in profile.
+
+    By default, it takes the model with the minimal error.
+
+    :param profile: Input profile (containing the X values and the Y values of
+    the two channels as column vectors of a matrix).
+    :type profile: numpy.ndarray
+
+    :param model: Model defining the patterns to detect and filter (default is
+    the standard model defined in dfa.modeling.standard).
+    :type model: dfa.modeling.Model
+
+    :return: A reference to a pattern defined in model.
+    :rtype: dict or None (if no pattern is found)
+
+    :raises ValueError: In case input are not valid.
+    """
+    if type(profile) != np.ndarray:
+        raise ValueError('Input profile must be of type numpy.ndarray!\n'
+                         'It is of type {}...'.format(type(profile)))
+
+    if profile.shape[0] <= 1 or profile.shape[1] != 3:
+        raise ValueError('Input profile must have a shape equal to Nx3 '
+                         '(N>=1 rows and 3 columns)!\n'
+                         'It has shape equal to {}...'.format(profile.shape))
+
+    x, y1, y2 = profile[:, 0], profile[:, 1], profile[:, 2]
+    y = np.log(y1) - np.log(y2)
+    possible_patterns = _select_possible_patterns(x, y, model=model)
+
+    _, splits, channels_pattern = possible_patterns[0]
+    splits.insert(0, 0)
+    splits.append(x.size-1)
+    lengths = np.diff(x[splits])
+
+    # TODO log each segment
+
+    return model.search(channels_pattern), lengths
+
+
+@removals.remove(removal_version='?')
 def segments(profile):
     """
     Detect the segments in profile.
@@ -281,6 +326,7 @@ def segments(profile):
     return channels, change_points
 
 
+@removals.remove(removal_version='?')
 def quantify(channels, change_points, patterns):
     """
     Quantify the segments detected with the segments function.
