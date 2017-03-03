@@ -52,6 +52,17 @@ class Model:
 
         self._update_frequencies()
 
+    def initialize_for_quantification(self):
+        """
+        Initialize the object for the quantification.
+
+        Set frequency to 0 as well as the lengths.
+        """
+        for pattern in self.patterns:
+            pattern['freq'] = 0
+            pattern['mean'] = [0 for _ in range(len(pattern['mean']))]
+            pattern['std'] = [0 for _ in range(len(pattern['std']))]
+
     def numbers_of_segments(self):
         """
         Get the number of segments defined by the modeling.

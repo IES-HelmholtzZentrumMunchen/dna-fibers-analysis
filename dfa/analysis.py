@@ -236,7 +236,7 @@ def _select_possible_patterns(x, y, model=modeling.standard,
 
 def analyze(profile, model=modeling.standard):
     """
-    Detect the segments in profile.
+    Detect the segments in profile and analyze it.
 
     By default, it takes the model with the minimal error.
 
@@ -248,10 +248,10 @@ def analyze(profile, model=modeling.standard):
     the standard model defined in dfa.modeling.standard).
     :type model: dfa.modeling.Model
 
-    :return: A reference to a pattern defined in model.
-    :rtype: dict or None (if no pattern is found)
+    :return: A reference to a pattern defined in model and the lengths.
+    :rtype: list of dict and list or None (if no pattern is found)
 
-    :raises ValueError: In case input are not valid.
+    :raises ValueError: In case inputs are not valid.
     """
     if type(profile) != np.ndarray:
         raise ValueError('Input profile must be of type numpy.ndarray!\n'
@@ -274,8 +274,6 @@ def analyze(profile, model=modeling.standard):
     splits.insert(0, 0)
     splits.append(x.size-1)
     lengths = np.diff(x[splits])
-
-    # TODO log each segment
 
     return model.search(channels_pattern), lengths
 
@@ -394,7 +392,7 @@ def quantify(channels, change_points, patterns):
 
 if __name__ == '__main__':
     import os
-    from matplotlib import pyplot as plt
+    import copy
 
     # Read profiles
     path = '../data/profiles'
@@ -405,42 +403,32 @@ if __name__ == '__main__':
                            skiprows=1, usecols=(0, 1, 2))
                 for file_name in file_names]
 
-    # Find regression tree and display it
-    columns = 3
-    fig = plt.figure()
-
-    for index, profile in enumerate(profiles):
-        profile_x = profile[:, 0].reshape(profile[:, 0].size, 1)
-        profile_y = np.log(profile[:, 1]/profile[:, 2]).reshape(profile_x.shape)
-
-        prediction_y, points, error = _choose_piecewise_model(profile_x,
-                                                              profile_y)
-
-        ax = fig.add_subplot(np.ceil(len(profiles)/columns), columns, index+1)
-        ax.scatter(profile[:, 0], profile_y, c='black')
-        ax.plot(profile_x, prediction_y, '-r')
-
-        for point in points:
-            ax.plot(profile_x[[point, point]], [min(profile_y),
-                                                max(profile_y)], '--g')
-
-        ax.set_title(file_names[index].split('.')[0].replace('_', '-'))
-
-    plt.tight_layout()
-    plt.show()
-
-    # Detect segments and quantify
-    patterns = {
-        (0, 1, 0): 'Origin',
-        (0, 1): 'Ongoing fork',
-        (1, 0): 'Ongoing fork',
-        (1, 0, 1): 'Termination'
-    }
+    # Find patterns and save quantification to csv files
+    model = copy.deepcopy(modeling.standard)
+    model.initialize_for_quantification()
 
     for profile, file_name in zip(profiles, file_names):
-        print(file_name)
-        channels, change_points = segments(profile)
-        print(channels, change_points)
-        pattern_name, lengths = quantify(channels, change_points, patterns)
-        print(pattern_name, lengths)
-        print()
+        pattern, lengths = analyze(profile, model=model)
+        pattern['freq'] += 1
+        pattern['mean'] = [sum_lengths + length
+                           for sum_lengths, length
+                           in zip(pattern['mean'], lengths)]
+        pattern['std'] = [sum_squared_lengths + length**2
+                          for sum_squared_lengths, length
+                          in zip(pattern['std'], lengths)]
+
+        for length, channel in zip(lengths, pattern['channels']):
+            print('{}, {}, {}, {}'.format(
+                file_name, pattern['name'], channel, length))
+
+    # Update the model
+    for pattern in model.patterns:
+        if pattern['freq'] > 0:
+            pattern['mean'] = [sum_lengths / pattern['freq']
+                               for sum_lengths in pattern['mean']]
+            pattern['std'] = [np.sqrt(sum_squared_lengths / pattern['freq']
+                              - mean_lengths**2)
+                              for sum_squared_lengths, mean_lengths
+                              in zip(pattern['std'], pattern['mean'])]
+    model._normalize_frequencies()
+    print(model.patterns)
