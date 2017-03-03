@@ -76,6 +76,25 @@ class Model:
         """
         return [pattern['channels'] for pattern in self.patterns]
 
+    def search(self, channels_pattern):
+        """
+        Get the pattern corresponding to the input channels pattern.
+
+        The symmetric channels patterns are also taken into account.
+
+        :param channels_pattern: Input sequence of channels.
+        :type channels_pattern: list of int
+
+        :return: The pattern.
+        :rtype: dict or None (if no pattern is found)
+        """
+        for pattern in self.patterns:
+            if pattern['channels'] == channels_pattern or \
+               pattern['channels'] == channels_pattern[::-1]:
+                return pattern
+
+        return None
+
     def save(self, filename):
         print(filename, self.patterns)
         raise RuntimeError('Not yet implemented!')
