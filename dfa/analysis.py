@@ -167,19 +167,21 @@ def _choose_piecewise_model(x, y, models=(1, 2, 3)):
     return predict_y, change_points, sse
 
 
-def _select_patterns(x, y, model=modeling.standard,
-                     error_func=lambda v1, v2: np.power(v1-v2, 2).sum()):
+def _select_possible_patterns(x, y, model=modeling.standard,
+                              error_func=lambda v1, v2: np.power(v1-v2,
+                                                                 2).sum()):
     """
     Select the matching models.
 
-    The models are chosen according to the modeling given. The output models are
-    ordered in increasing error (given by the error function).
+    The models are chosen according to the modeling given. The output patterns
+    are ordered in increasing error (given by the error function). Any pattern
+    that does not have a binary alternative scheme will be dropped.
 
     :param x: Independent variables.
-    :type x: numpy.array
+    :type x: numpy.ndarray
 
     :param y: Dependent variables.
-    :type y: numpy.array
+    :type y: numpy.ndarray
 
     :param model: Model defining the patterns to detect and filter (default is
     the standard model defined in dfa.modeling.standard).
@@ -196,16 +198,29 @@ def _select_patterns(x, y, model=modeling.standard,
     reg = _tree.RegressionTree()
     reg = reg.fit(x, y)
 
+    # Models can be symmetric
+    channels_patterns = model.channels_patterns()
+    channels_patterns += [channels_pattern[::-1]
+                          for channels_pattern in channels_patterns]
+
     for number_of_segments in model.numbers_of_segments():
         prediction_y = reg.predict(x, max_partitions=number_of_segments)
         prediction_diff = np.diff(prediction_y)
         splits = np.where(prediction_diff != 0)[0].tolist()
 
+        # Check first the alternative scheme
         if all(prediction_diff[splits[i]] * prediction_diff[splits[i+1]] < 0
                for i in range(len(splits)-1)):
-            selected_patterns.append((splits, error_func(y, prediction_y)))
+            channels_pattern = (prediction_diff[splits] < 0)\
+                .astype('int').tolist()
+            channels_pattern.append(1 - channels_pattern[-1])
 
-    selected_patterns.sort(key=lambda e: e[1])
+            # Check if pattern is in model (and symmetric)
+            if channels_pattern in channels_patterns:
+                selected_patterns.append((error_func(y, prediction_y),
+                                          splits, channels_pattern))
+
+    selected_patterns.sort(key=lambda e: e[0])
     return selected_patterns
 
 

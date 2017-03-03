@@ -67,6 +67,15 @@ class Model:
 
         return numbers_of_segments
 
+    def channels_patterns(self):
+        """
+        Get the channels patterns as a list.
+
+        :return: A list of all channels patterns in the current model.
+        :rtype: list of list of int
+        """
+        return [pattern['channels'] for pattern in self.patterns]
+
     def save(self, filename):
         print(filename, self.patterns)
         raise RuntimeError('Not yet implemented!')
