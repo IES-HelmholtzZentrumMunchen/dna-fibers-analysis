@@ -6,8 +6,10 @@ module).
 """
 import numpy as np
 from sklearn.tree import DecisionTreeRegressor
+from debtcollector import removals
 
 
+@removals.remove(removal_version='?')
 def _piecewise_constant_regression(x, y, num_pieces):
     """
     Piecewise constant regression is implemented as a regression tree.
@@ -62,6 +64,7 @@ def _piecewise_constant_regression(x, y, num_pieces):
     return predict_y, change_points, sse
 
 
+@removals.remove(removal_version='?')
 def _constant_regression(y):
     """
     Constant regression is a linear constrained regression.
@@ -94,6 +97,7 @@ def _constant_regression(y):
     return predict_y, [], sse
 
 
+@removals.remove(removal_version='?')
 def _choose_piecewise_model(x, y, models=(1, 2, 3)):
     """
     Automatic model selection for piecewise constant model fitting.

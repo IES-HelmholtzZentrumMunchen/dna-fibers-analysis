@@ -318,7 +318,7 @@ class RegressionTree:
 
         return self
 
-    def _find_partitioning_nodes(self, max_partitions=None):
+    def _partitioning_nodes(self, max_partitions=None):
         """
         Find the possible partitioning nodes with specified maximal segments.
 
@@ -374,7 +374,7 @@ class RegressionTree:
         """
         y = np.zeros(x.shape)
 
-        for node in self._find_partitioning_nodes(max_partitions=max_partitions):
+        for node in self._partitioning_nodes(max_partitions=max_partitions):
             y[np.bitwise_and(
                 node.values[0] <= x,
                 x <= node.values[1])] = node.values[3]
