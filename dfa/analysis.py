@@ -262,6 +262,10 @@ def analyze(profile, model=modeling.standard):
                          '(N>=1 rows and 3 columns)!\n'
                          'It has shape equal to {}...'.format(profile.shape))
 
+    if type(model) != modeling.Model:
+        raise ValueError('Input model must by of type dfa.modeling.Model!\n'
+                         'It is of type {}...'.format(type(model)))
+
     x, y1, y2 = profile[:, 0], profile[:, 1], profile[:, 2]
     y = np.log(y1) - np.log(y2)
     possible_patterns = _select_possible_patterns(x, y, model=model)
