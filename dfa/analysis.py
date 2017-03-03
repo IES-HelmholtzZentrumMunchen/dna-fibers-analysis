@@ -3,6 +3,10 @@ Analysis module of the DNA fiber analysis package.
 
 Use this module to analyse fiber profiles (extracted with the detection
 module).
+
+Note that for patterns with only one segment (no splits), the results might
+be biased since then we have to rely on the intensity ratio, instead of the
+intensity ratio derivative, to choose the channels pattern.
 """
 import numpy as np
 from sklearn.tree import DecisionTreeRegressor
@@ -211,9 +215,13 @@ def _select_possible_patterns(x, y, model=modeling.standard,
         # Check first the alternative scheme
         if all(prediction_diff[splits[i]] * prediction_diff[splits[i+1]] < 0
                for i in range(len(splits)-1)):
-            channels_pattern = (prediction_diff[splits] < 0)\
-                .astype('int').tolist()
-            channels_pattern.append(1 - channels_pattern[-1])
+            channels_pattern = list(np.less(prediction_diff[splits], 0)
+                                    .astype('int').tolist())
+
+            if len(channels_pattern) > 0:
+                channels_pattern.append(1 - channels_pattern[-1])
+            else:  # When no split, the resulting pattern rely on the intensity
+                channels_pattern.append(int(prediction_y[0] > 0))
 
             # Check if pattern is in model (and symmetric)
             if channels_pattern in channels_patterns:

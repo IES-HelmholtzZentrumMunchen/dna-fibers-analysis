@@ -110,6 +110,12 @@ class Model:
 
 
 standard = Model([
+    # Take results carefully for 1-segments patterns, it might not be reliable!
+    {'name': 'stalled',
+     'freq': 0.6,
+     'channels': [0],
+     'mean': [100],
+     'std': [10]},
     {'name': 'ongoing fork',
      'freq': 0.6,
      'channels': [0, 1],
