@@ -17,11 +17,15 @@ class Model:
 
     A model is a list of pattern structures. Pattern structure is a dictionary
     with the following keys:
+    1) keys for simulation
     - 'name': the name of the pattern (ex: 'ongoing fork')
     - 'freq': its frequency of appearance (ex: 0.7)
     - 'channels': its actual pattern of channels (ex: [0, 1])
     - 'mean': the mean length of branches (ex: [100, 90])
     - 'std': the standard deviation of branches (ex: [10, 5])
+    2) keys for quantification
+    - 'count': the number of sample belonging to the pattern (ex: 11)
+    - 'lengths': the sample lengths for each of the segment
     """
     def __init__(self, patterns, channels_names=None):
         """
@@ -37,7 +41,6 @@ class Model:
         self.patterns = patterns
         self.channels_names = channels_names
 
-        self._update_frequencies()
         self._normalize_frequencies()
 
     def _update_frequencies(self):
@@ -50,23 +53,14 @@ class Model:
         """
         Normalize the patterns frequencies.
         """
+        self._update_frequencies()
+
         norm_factor = 1.0 / sum(self._frequencies)
 
         for pattern in self.patterns:
             pattern['freq'] *= norm_factor
 
         self._update_frequencies()
-
-    def initialize_for_quantification(self):
-        """
-        Initialize the object for the quantification.
-
-        Set frequency to 0 as well as the lengths.
-        """
-        for pattern in self.patterns:
-            pattern['freq'] = 0
-            pattern['mean'] = [0 for _ in range(len(pattern['mean']))]
-            pattern['std'] = [0 for _ in range(len(pattern['std']))]
 
     def numbers_of_segments(self):
         """
@@ -105,8 +99,7 @@ class Model:
         :rtype: dict or None (if no pattern is found)
         """
         for pattern in self.patterns:
-            if pattern['channels'] == channels_pattern or \
-               pattern['channels'] == channels_pattern[::-1]:
+            if pattern['channels'] == channels_pattern:
                 return pattern
 
         return None
@@ -126,29 +119,33 @@ class Model:
         :param lengths: Lengths of the sample.
         :type lengths: list of float
         """
-        pattern['freq'] += 1
-        pattern['mean'] = [sum_lengths + length
-                           for sum_lengths, length
-                           in zip(pattern['mean'], lengths)]
-        pattern['std'] = [sum_squared_lengths + length ** 2
-                          for sum_squared_lengths, length
-                          in zip(pattern['std'], lengths)]
+        pattern['count'] += 1
+
+        for length, samples in zip(lengths, pattern['lengths']):
+            samples.append(length)
 
     def update_model(self):
         """
         Update the model after appending samples to patterns.
 
-        This is a convenience method for updating the model. It must be called
-        after all samples have been appended with method Model.append_sample.
+        This is a convenience method for updating the model. It can be called
+        after all samples have been appended with method Model.append_sample to
+        be used for simulation for instance.
         """
         for pattern in self.patterns:
-            if pattern['freq'] > 0:
-                pattern['mean'] = [sum_lengths / pattern['freq']
-                                   for sum_lengths in pattern['mean']]
-                pattern['std'] = [np.sqrt(sum_squared_lengths / pattern['freq']
-                                          - mean_lengths ** 2)
-                                  for sum_squared_lengths, mean_lengths
-                                  in zip(pattern['std'], pattern['mean'])]
+            if pattern['count'] > 0:
+                pattern['mean'] = [sum(samples) / pattern['count']
+                                   for samples in pattern['lengths']]
+
+                pattern['std'] = [np.sqrt(sum([sample**2 for sample in samples])
+                                  / pattern['count'] - mean**2)
+                                  for samples, mean in zip(pattern['lengths'],
+                                                           pattern['mean'])]
+            else:
+                pattern['mean'] = [0 for _ in pattern['mean']]
+                pattern['std'] = [0 for _ in pattern['std']]
+
+        self._normalize_frequencies()
 
     def save(self, filename):
         print(filename, self.patterns)
@@ -189,19 +186,27 @@ standard = Model([
      'freq': 0.6,
      'channels': [0],
      'mean': [100],
-     'std': [10]},
+     'std': [10],
+     'count': 0,
+     'lengths': [[]]},
     {'name': 'ongoing fork',
      'freq': 0.6,
      'channels': [0, 1],
      'mean': [100, 90],
-     'std': [10, 5]},
+     'std': [10, 5],
+     'count': 0,
+     'lengths': [[], []]},
     {'name': '1st label origin',
      'freq': 0.3,
      'channels': [0, 1, 0],
      'mean': [75, 150, 90],
-     'std': [10, 30, 20]},
+     'std': [10, 30, 20],
+     'count': 0,
+     'lengths': [[], [], []]},
     {'name': '2nd label termination',
      'freq': 0.1,
      'channels': [1, 0, 1],
      'mean': [100, 50, 100],
-     'std': [20, 5, 25]}], channels_names=['CIdU', 'IdU'])
+     'std': [20, 5, 25],
+     'count': 0,
+     'lengths': [[], [], []]}], channels_names=['CIdU', 'IdU'])

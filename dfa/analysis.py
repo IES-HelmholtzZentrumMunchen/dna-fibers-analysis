@@ -276,7 +276,14 @@ def analyze(profile, model=modeling.standard):
     splits.append(x.size-1)
     lengths = np.diff(x[splits])
 
-    return model.search(channels_pattern), lengths
+    pattern = model.search(channels_pattern)
+
+    # Handle the symmetric case for match the pattern in the same order
+    if pattern is None:
+        pattern = model.search(channels_pattern[::-1])
+        lengths = lengths[::-1]
+
+    return pattern, lengths
 
 
 def analyzes(profiles, model=modeling.standard, update_model=True, keys=None):
@@ -359,9 +366,7 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None):
 
     for key, profile in zip(keys, profiles):
         pattern, lengths = analyze(profile, model=model)
-
-        if update_model:
-            model.append_sample(pattern, lengths)
+        model.append_sample(pattern, lengths)
 
         for length, channel in zip(lengths, pattern['channels']):
             s = pd.Series({labels[0]: pattern['name'],
@@ -507,10 +512,9 @@ if __name__ == '__main__':
 
     # Find patterns and save quantification to csv files
     model = copy.deepcopy(modeling.standard)
-    model.initialize_for_quantification()
     detailed_analysis = analyzes(profiles,
                                  model=model,
                                  keys=list(zip(experiments, images, fibers)))
     print(detailed_analysis)
-    model._normalize_frequencies()
-    print(model.patterns)
+    for pattern in model.patterns:
+        print(pattern['mean'], pattern['std'])
