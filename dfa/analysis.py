@@ -498,7 +498,7 @@ if __name__ == '__main__':
     import copy
     import argparse
 
-    # Define parser
+    # Parse input arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=str, default=None,
                         help='Output path for saving data analysis '
@@ -506,23 +506,50 @@ if __name__ == '__main__':
     parser.add_argument('--output_model', type=str, default=None,
                         help='Output path for saving the model (default '
                              'is None).')
+    parser.add_argument('input', type=str,
+                        help='Input path to profile(s) (folder or file).')
+    parser.add_argument('--model', type=str, default=None,
+                        help='Path to the model to use (default will use the'
+                             'standard model defined in the dfa.modeling'
+                             'module).')
     args = parser.parse_args()
 
-    # Read profiles
-    path = '../data/profiles'
-    file_names = os.listdir(path)
-    file_names = [file_name for file_name in file_names
-                  if file_name.endswith('.csv')]
-    profiles = [np.loadtxt('{}/{}'.format(path, file_name), delimiter=',',
-                           skiprows=1, usecols=(0, 1, 2))
-                for file_name in file_names]
+    # Read profiles from input path
+    if os.path.isfile(args.input):
+        if not args.input.endswith('.csv'):
+            raise ValueError('The input file must be a csv file!')
 
-    experiments = [file_name.split('_')[0] for file_name in file_names]
-    images = [file_name.split('_')[1] for file_name in file_names]
-    fibers = [file_name.split('.')[0].split('_')[2] for file_name in file_names]
+        paths = [args.input]
+    elif os.path.isdir(args.input):
+        paths = os.listdir(args.input)
+        paths = [os.path.join(args.input, filename) for filename in paths
+                 if filename.endswith('.csv')]
+
+        if len(paths) == 0:
+            raise ValueError('The input folder does not contain any csv file!')
+    else:
+        raise ValueError('The input is neither a valid file nor '
+                         'a valid directory!')
+
+    profiles = [np.loadtxt(path, delimiter=',', skiprows=1, usecols=(0, 1, 2))
+                for path in paths]
+
+    # Get data origin information
+    filenames = [path.split('/')[-1] for path in paths]
+    experiments = [filename.split('_')[0] for filename in filenames]
+    images = [filename.split('_')[1] for filename in filenames]
+    fibers = [filename.split('.')[0].split('_')[2] for filename in filenames]
 
     # Quantify
-    model = copy.deepcopy(modeling.standard)
+    if args.model is None:
+        model = copy.deepcopy(modeling.standard)
+    else:
+        if not os.path.isfile(args.model):
+            raise ValueError('The input model argument must be a valid path'
+                             ' to a text file!')
+
+        model = modeling.Model.load(args.model)
+
     model.initialize_model()
     detailed_analysis = analyzes(profiles,
                                  model=model,
