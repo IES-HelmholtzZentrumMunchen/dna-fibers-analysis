@@ -279,7 +279,7 @@ def analyze(profile, model=modeling.standard):
     return model.search(channels_pattern), lengths
 
 
-def analyzes(profiles, model=modeling.standard, update_model=True):
+def analyzes(profiles, model=modeling.standard, update_model=True, keys=None):
     """
     Detect the segments in each profile and analyze it.
 
@@ -296,6 +296,11 @@ def analyzes(profiles, model=modeling.standard, update_model=True):
     model is updated, it is then possible to extract frequencies of patterns and
     mean and std lengths.
     :type update_model: bool
+
+    :param keys: A list of tuples to use as key index of rows for profiles'
+    results (default is None). The tuples must be (experiment name, image name,
+    fiber name).
+    :type keys: list of tuples
 
     :return: A data structure containing the detailed measurements.
 
@@ -323,10 +328,36 @@ def analyzes(profiles, model=modeling.standard, update_model=True):
         raise ValueError('Update model flag must be of type bool!\n'
                          'It is of type {}...'.format(type(update_model)))
 
-    labels = ['pattern', 'channel', 'length']
-    detailed_analysis = pd.DataFrame([], columns=labels)
+    if keys is not None:
+        if type(keys) != list:
+            raise ValueError('Index must be of type list!\n'
+                             'It is of type {}...'.format(type(keys)))
 
-    for profile in profiles:
+        if len(keys) != len(profiles):
+            raise ValueError('Index and profiles must have the same size!\n'
+                             'Index has {} and profiles has {}...'.format(
+                len(keys), len(profiles)))
+
+        if any(type(key) != tuple for key in keys):
+            raise ValueError('Key index must be of type tuple!\n'
+                             'At least one key is not of type tuple...')
+
+        if any(len(key) != 3 for key in keys):
+            raise ValueError('Key index must have size equal to 3!\n'
+                             'At least one key does not have shape '
+                             'equal to 3...')
+
+        index = pd.MultiIndex(levels=[[], [], []], labels=[[], [], []],
+                              names=['experiment', 'image', 'fiber'])
+    else:
+        keys = range(len(profiles))
+        index = pd.MultiIndex(levels=[[]], labels=[[]],
+                              names=['profile'])
+
+    labels = ['pattern', 'channel', 'length']
+    detailed_analysis = pd.DataFrame([], columns=labels, index=index)
+
+    for key, profile in zip(keys, profiles):
         pattern, lengths = analyze(profile, model=model)
 
         if update_model:
@@ -339,10 +370,12 @@ def analyzes(profiles, model=modeling.standard, update_model=True):
                               in zip(pattern['std'], lengths)]
 
         for length, channel in zip(lengths, pattern['channels']):
-            detailed_analysis = detailed_analysis.append({
-                labels[0]: pattern['name'],
-                labels[1]: model.channels_names[channel],
-                labels[2]: length}, ignore_index=True)
+            s = pd.Series({labels[0]: pattern['name'],
+                           labels[1]: model.channels_names[channel],
+                           labels[2]: length},
+                          name=key)
+
+            detailed_analysis = detailed_analysis.append(s)
 
     if update_model:
         for pattern in model.patterns:
@@ -482,10 +515,16 @@ if __name__ == '__main__':
                            skiprows=1, usecols=(0, 1, 2))
                 for file_name in file_names]
 
+    experiments = [file_name.split('_')[0] for file_name in file_names]
+    images = [file_name.split('_')[1] for file_name in file_names]
+    fibers = [file_name.split('.')[0].split('_')[2] for file_name in file_names]
+
     # Find patterns and save quantification to csv files
     model = copy.deepcopy(modeling.standard)
     model.initialize_for_quantification()
-    detailed_analysis = analyzes(profiles, model=model)
+    detailed_analysis = analyzes(profiles,
+                                 model=model,
+                                 keys=list(zip(experiments, images, fibers)))
     print(detailed_analysis)
     model._normalize_frequencies()
     print(model.patterns)
