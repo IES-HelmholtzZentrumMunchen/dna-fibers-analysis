@@ -23,14 +23,19 @@ class Model:
     - 'mean': the mean length of branches (ex: [100, 90])
     - 'std': the standard deviation of branches (ex: [10, 5])
     """
-    def __init__(self, patterns):
+    def __init__(self, patterns, channels_names=None):
         """
         Initialize the model with the specified patterns.
 
         :param patterns: List of patterns.
         :type patterns: list of dict
+
+        :param channels_names: List of names of channels in the same order as in
+        patterns (0, 1, etc.).
+        :type channels_names: list
         """
         self.patterns = patterns
+        self.channels_names = channels_names
 
         self._update_frequencies()
         self._normalize_frequencies()
@@ -160,5 +165,4 @@ standard = Model([
      'freq': 0.1,
      'channels': [1, 0, 1],
      'mean': [100, 50, 100],
-     'std': [20, 5, 25]},
-])
+     'std': [20, 5, 25]}], channels_names=['CIdU', 'IdU'])
