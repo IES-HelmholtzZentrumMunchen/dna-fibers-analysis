@@ -335,8 +335,8 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None):
 
         if len(keys) != len(profiles):
             raise ValueError('Index and profiles must have the same size!\n'
-                             'Index has {} and profiles has {}...'.format(
-                len(keys), len(profiles)))
+                             'Index has {} and profiles '
+                             'has {}...'.format(len(keys), len(profiles)))
 
         if any(type(key) != tuple for key in keys):
             raise ValueError('Key index must be of type tuple!\n'
@@ -361,31 +361,17 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None):
         pattern, lengths = analyze(profile, model=model)
 
         if update_model:
-            pattern['freq'] += 1
-            pattern['mean'] = [sum_lengths + length
-                               for sum_lengths, length
-                               in zip(pattern['mean'], lengths)]
-            pattern['std'] = [sum_squared_lengths + length**2
-                              for sum_squared_lengths, length
-                              in zip(pattern['std'], lengths)]
+            model.append_sample(pattern, lengths)
 
         for length, channel in zip(lengths, pattern['channels']):
             s = pd.Series({labels[0]: pattern['name'],
                            labels[1]: model.channels_names[channel],
                            labels[2]: length},
                           name=key)
-
             detailed_analysis = detailed_analysis.append(s)
 
     if update_model:
-        for pattern in model.patterns:
-            if pattern['freq'] > 0:
-                pattern['mean'] = [sum_lengths / pattern['freq']
-                                   for sum_lengths in pattern['mean']]
-                pattern['std'] = [np.sqrt(sum_squared_lengths / pattern['freq']
-                                          - mean_lengths ** 2)
-                                  for sum_squared_lengths, mean_lengths
-                                  in zip(pattern['std'], pattern['mean'])]
+        model.update_model()
 
     return detailed_analysis
 

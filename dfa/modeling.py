@@ -111,6 +111,45 @@ class Model:
 
         return None
 
+    @staticmethod
+    def append_sample(pattern, lengths):
+        """
+        Append a sample to the specified pattern.
+
+        This is a convenience method for updating the model (count and lengths)
+        with a new sample.
+
+        :param pattern: Specified pattern to update (it must be an element
+        of self.patterns as no check will be performed).
+        :type pattern: dict as defined to be a pattern
+
+        :param lengths: Lengths of the sample.
+        :type lengths: list of float
+        """
+        pattern['freq'] += 1
+        pattern['mean'] = [sum_lengths + length
+                           for sum_lengths, length
+                           in zip(pattern['mean'], lengths)]
+        pattern['std'] = [sum_squared_lengths + length ** 2
+                          for sum_squared_lengths, length
+                          in zip(pattern['std'], lengths)]
+
+    def update_model(self):
+        """
+        Update the model after appending samples to patterns.
+
+        This is a convenience method for updating the model. It must be called
+        after all samples have been appended with method Model.append_sample.
+        """
+        for pattern in self.patterns:
+            if pattern['freq'] > 0:
+                pattern['mean'] = [sum_lengths / pattern['freq']
+                                   for sum_lengths in pattern['mean']]
+                pattern['std'] = [np.sqrt(sum_squared_lengths / pattern['freq']
+                                          - mean_lengths ** 2)
+                                  for sum_squared_lengths, mean_lengths
+                                  in zip(pattern['std'], pattern['mean'])]
+
     def save(self, filename):
         print(filename, self.patterns)
         raise RuntimeError('Not yet implemented!')
