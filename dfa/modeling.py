@@ -163,12 +163,30 @@ class Model:
         self._normalize_frequencies()
 
     def save(self, filename):
-        print(filename, self.patterns)
-        raise RuntimeError('Not yet implemented!')
+        """
+        Save the model description of patterns to a text file.
+
+        :param filename: Path where to save the model.
+        :type filename: str
+        """
+        with open(filename, 'w') as file:
+            file.write(str(self.patterns))
+            file.write('\n')
+            file.write(str(self.channels_names))
 
     @staticmethod
     def load(filename):
-        raise RuntimeError('Not yet implemented!')
+        """
+        Load a model from its description in a text file.
+
+        :param filename: Path where the model description to load is.
+        :type filename: str
+        """
+        with open(filename, 'r') as file:
+            patterns = eval(file.readline())
+            channels_names = eval(file.readline())
+
+        return Model(patterns=patterns, channels_names=channels_names)
 
     def simulate_patterns(self, number):
         """
