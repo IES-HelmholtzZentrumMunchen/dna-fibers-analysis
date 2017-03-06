@@ -503,6 +503,9 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=str, default=None,
                         help='Output path for saving data analysis '
                              '(default is None).')
+    parser.add_argument('--output_model', type=str, default=None,
+                        help='Output path for saving the model (default '
+                             'is None).')
     args = parser.parse_args()
 
     # Read profiles
@@ -530,3 +533,8 @@ if __name__ == '__main__':
         print(detailed_analysis)
     else:
         detailed_analysis.to_csv(args.output)
+
+    if args.output_model is None:
+        model.print()
+    else:
+        model.save(args.output_model)

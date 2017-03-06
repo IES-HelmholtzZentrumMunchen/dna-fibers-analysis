@@ -49,20 +49,17 @@ class Model:
         """
         Update the class shortcut for patterns frequencies.
         """
-        self._frequencies = [pattern['freq'] for pattern in self.patterns]
+        for pattern in self.patterns:
+            pattern['freq'] = pattern['count']
 
     def _normalize_frequencies(self):
         """
         Normalize the patterns frequencies.
         """
-        self._update_frequencies()
-
-        norm_factor = 1.0 / sum(self._frequencies)
+        norm_factor = 1.0 / sum([pattern['freq'] for pattern in self.patterns])
 
         for pattern in self.patterns:
             pattern['freq'] *= norm_factor
-
-        self._update_frequencies()
 
     def numbers_of_segments(self):
         """
@@ -160,6 +157,7 @@ class Model:
                 pattern['mean'] = [0 for _ in pattern['mean']]
                 pattern['std'] = [0 for _ in pattern['std']]
 
+        self._update_frequencies()
         self._normalize_frequencies()
 
     def save(self, filename):
@@ -188,6 +186,18 @@ class Model:
 
         return Model(patterns=patterns, channels_names=channels_names)
 
+    def print(self):
+        """
+        Print the model on the standard output.
+        """
+        for pattern in self.patterns:
+            print('\n{}: {}% ({} samples)'.format(
+                pattern['name'], 100*pattern['freq'], pattern['count']))
+            print('pattern: {}, lengths mean: {}, lengths std: {}'.format(
+                [self.channels_names[channel]
+                 for channel in pattern['channels']],
+                pattern['mean'], pattern['std']))
+
     def simulate_patterns(self, number):
         """
         Simulate number patterns.
@@ -199,7 +209,9 @@ class Model:
         branches lengths).
         :rtype:list of list of int and list of list of float
         """
-        patterns = np.random.choice(self.patterns, number, p=self._frequencies)
+        patterns = np.random.choice(self.patterns, number,
+                                    p=[pattern['freq']
+                                       for pattern in self.patterns])
 
         channels_pattern, lengths = [], []
 
