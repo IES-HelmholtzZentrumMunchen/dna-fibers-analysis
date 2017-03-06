@@ -9,6 +9,7 @@ be biased since then we have to rely on the intensity ratio, instead of the
 intensity ratio derivative, to choose the channels pattern.
 """
 import numpy as np
+import pandas as pd
 from sklearn.tree import DecisionTreeRegressor
 from debtcollector import removals
 
@@ -278,6 +279,84 @@ def analyze(profile, model=modeling.standard):
     return model.search(channels_pattern), lengths
 
 
+def analyzes(profiles, model=modeling.standard, update_model=True):
+    """
+    Detect the segments in each profile and analyze it.
+
+    Internally, it loops over the profiles and use the analyze function.
+
+    :param profiles: Input profiles to analyze.
+    :type profiles: list
+
+    :param model: Model defining the patterns to detect and filter (default is
+    the standard model defined in dfa.modeling.standard).
+    :type model: dfa.modeling.Model
+
+    :param update_model: Flag to update the model or not (default is True). If
+    model is updated, it is then possible to extract frequencies of patterns and
+    mean and std lengths.
+    :type update_model: bool
+
+    :return: A data structure containing the detailed measurements.
+
+    :raises ValueError: In case inputs are not valid.
+    """
+    if type(profiles) != list:
+        raise ValueError('Input profiles must be a list of profiles!\n'
+                         'It is of type {}...'.format(type(profiles)))
+
+    if any(type(profile) != np.ndarray for profile in profiles):
+        raise ValueError('Input profiles must be of type numpy.ndarray!\n'
+                         'At least one is not of type numpy.ndarray...')
+
+    if any(profile.shape[0] <= 1 or profile.shape[1] !=3
+           for profile in profiles):
+        raise ValueError('Input profiles must have a shape equal to Nx3 '
+                         '(N>=1 rows and 3 columns)!\n'
+                         'At least one does not have this shape...')
+
+    if type(model) != modeling.Model:
+        raise ValueError('Input model must by of type dfa.modeling.Model!\n'
+                         'It is of type {}...'.format(type(model)))
+
+    if type(update_model) != bool:
+        raise ValueError('Update model flag must be of type bool!\n'
+                         'It is of type {}...'.format(type(update_model)))
+
+    labels = ['pattern', 'channel', 'length']
+    detailed_analysis = pd.DataFrame([], columns=labels)
+
+    for profile in profiles:
+        pattern, lengths = analyze(profile, model=model)
+
+        if update_model:
+            pattern['freq'] += 1
+            pattern['mean'] = [sum_lengths + length
+                               for sum_lengths, length
+                               in zip(pattern['mean'], lengths)]
+            pattern['std'] = [sum_squared_lengths + length**2
+                              for sum_squared_lengths, length
+                              in zip(pattern['std'], lengths)]
+
+        for length, channel in zip(lengths, pattern['channels']):
+            detailed_analysis = detailed_analysis.append({
+                labels[0]: pattern['name'],
+                labels[1]: model.channels_names[channel],
+                labels[2]: length}, ignore_index=True)
+
+    if update_model:
+        for pattern in model.patterns:
+            if pattern['freq'] > 0:
+                pattern['mean'] = [sum_lengths / pattern['freq']
+                                   for sum_lengths in pattern['mean']]
+                pattern['std'] = [np.sqrt(sum_squared_lengths / pattern['freq']
+                                          - mean_lengths ** 2)
+                                  for sum_squared_lengths, mean_lengths
+                                  in zip(pattern['std'], pattern['mean'])]
+
+    return detailed_analysis
+
+
 @removals.remove(removal_version='?')
 def segments(profile):
     """
@@ -406,29 +485,7 @@ if __name__ == '__main__':
     # Find patterns and save quantification to csv files
     model = copy.deepcopy(modeling.standard)
     model.initialize_for_quantification()
-
-    for profile, file_name in zip(profiles, file_names):
-        pattern, lengths = analyze(profile, model=model)
-        pattern['freq'] += 1
-        pattern['mean'] = [sum_lengths + length
-                           for sum_lengths, length
-                           in zip(pattern['mean'], lengths)]
-        pattern['std'] = [sum_squared_lengths + length**2
-                          for sum_squared_lengths, length
-                          in zip(pattern['std'], lengths)]
-
-        for length, channel in zip(lengths, pattern['channels']):
-            print('{}, {}, {}, {}'.format(
-                file_name, pattern['name'], channel, length))
-
-    # Update the model
-    for pattern in model.patterns:
-        if pattern['freq'] > 0:
-            pattern['mean'] = [sum_lengths / pattern['freq']
-                               for sum_lengths in pattern['mean']]
-            pattern['std'] = [np.sqrt(sum_squared_lengths / pattern['freq']
-                              - mean_lengths**2)
-                              for sum_squared_lengths, mean_lengths
-                              in zip(pattern['std'], pattern['mean'])]
+    detailed_analysis = analyzes(profiles, model=model)
+    print(detailed_analysis)
     model._normalize_frequencies()
     print(model.patterns)
