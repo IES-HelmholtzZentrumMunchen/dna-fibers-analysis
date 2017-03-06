@@ -217,7 +217,7 @@ class RegressionTree:
 
         self._tree = None
 
-    def fit(self, x, y, error_func=lambda y: np.power(y-y.mean(), 2).sum()):
+    def fit(self, x, y, error_func=lambda y: np.power(y-y.mean(), 2).mean()):
         """
         Compute the binary regression tree.
 
