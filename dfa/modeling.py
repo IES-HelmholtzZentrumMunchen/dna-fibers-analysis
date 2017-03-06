@@ -25,7 +25,9 @@ class Model:
     - 'std': the standard deviation of branches (ex: [10, 5])
     2) keys for quantification
     - 'count': the number of sample belonging to the pattern (ex: 11)
-    - 'lengths': the sample lengths for each of the segment
+
+    The keys for simulation can be filled directly or can be updated after a
+    quantification.
     """
     def __init__(self, patterns, channels_names=None):
         """
@@ -104,6 +106,15 @@ class Model:
 
         return None
 
+    def initialize_model(self):
+        """
+        Initialize the model for preparing quantification.
+        """
+        for pattern in self.patterns:
+            pattern['count'] = 0
+            pattern['mean'] = [0 for _ in pattern['mean']]
+            pattern['std'] = [0 for _ in pattern['mean']]
+
     @staticmethod
     def append_sample(pattern, lengths):
         """
@@ -121,8 +132,12 @@ class Model:
         """
         pattern['count'] += 1
 
-        for length, samples in zip(lengths, pattern['lengths']):
-            samples.append(length)
+        pattern['mean'] = [sum_lengths+length
+                           for sum_lengths, length
+                           in zip(pattern['mean'], lengths)]
+        pattern['std'] = [sum_squared_lengths + length**2
+                          for sum_squared_lengths, length
+                          in zip(pattern['std'], lengths)]
 
     def update_model(self):
         """
@@ -134,13 +149,13 @@ class Model:
         """
         for pattern in self.patterns:
             if pattern['count'] > 0:
-                pattern['mean'] = [sum(samples) / pattern['count']
-                                   for samples in pattern['lengths']]
+                pattern['mean'] = [sum_lengths / pattern['count']
+                                   for sum_lengths in pattern['mean']]
 
-                pattern['std'] = [np.sqrt(sum([sample**2 for sample in samples])
-                                  / pattern['count'] - mean**2)
-                                  for samples, mean in zip(pattern['lengths'],
-                                                           pattern['mean'])]
+                pattern['std'] = [np.sqrt(sum_squared_lengths
+                                          / pattern['count'] - mean**2)
+                                  for sum_squared_lengths, mean
+                                  in zip(pattern['std'], pattern['mean'])]
             else:
                 pattern['mean'] = [0 for _ in pattern['mean']]
                 pattern['std'] = [0 for _ in pattern['std']]
@@ -187,26 +202,22 @@ standard = Model([
      'channels': [0],
      'mean': [100],
      'std': [10],
-     'count': 0,
-     'lengths': [[]]},
+     'count': 0},
     {'name': 'ongoing fork',
      'freq': 0.6,
      'channels': [0, 1],
      'mean': [100, 90],
      'std': [10, 5],
-     'count': 0,
-     'lengths': [[], []]},
+     'count': 0},
     {'name': '1st label origin',
      'freq': 0.3,
      'channels': [0, 1, 0],
      'mean': [75, 150, 90],
      'std': [10, 30, 20],
-     'count': 0,
-     'lengths': [[], [], []]},
+     'count': 0},
     {'name': '2nd label termination',
      'freq': 0.1,
      'channels': [1, 0, 1],
      'mean': [100, 50, 100],
      'std': [20, 5, 25],
-     'count': 0,
-     'lengths': [[], [], []]}], channels_names=['CIdU', 'IdU'])
+     'count': 0}], channels_names=['CIdU', 'IdU'])

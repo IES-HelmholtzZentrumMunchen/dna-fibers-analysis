@@ -496,6 +496,14 @@ def quantify(channels, change_points, patterns):
 if __name__ == '__main__':
     import os
     import copy
+    import argparse
+
+    # Define parser
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--output', type=str, default=None,
+                        help='Output path for saving data analysis '
+                             '(default is None).')
+    args = parser.parse_args()
 
     # Read profiles
     path = '../data/profiles'
@@ -510,11 +518,15 @@ if __name__ == '__main__':
     images = [file_name.split('_')[1] for file_name in file_names]
     fibers = [file_name.split('.')[0].split('_')[2] for file_name in file_names]
 
-    # Find patterns and save quantification to csv files
+    # Quantify
     model = copy.deepcopy(modeling.standard)
+    model.initialize_model()
     detailed_analysis = analyzes(profiles,
                                  model=model,
                                  keys=list(zip(experiments, images, fibers)))
-    print(detailed_analysis)
-    for pattern in model.patterns:
-        print(pattern['mean'], pattern['std'])
+
+    # Display or save results
+    if args.output is None:
+        print(detailed_analysis)
+    else:
+        detailed_analysis.to_csv(args.output)
