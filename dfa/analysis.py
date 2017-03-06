@@ -314,7 +314,7 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None):
         raise ValueError('Input profiles must be of type numpy.ndarray!\n'
                          'At least one is not of type numpy.ndarray...')
 
-    if any(profile.shape[0] <= 1 or profile.shape[1] !=3
+    if any(profile.shape[0] <= 1 or profile.shape[1] != 3
            for profile in profiles):
         raise ValueError('Input profiles must have a shape equal to Nx3 '
                          '(N>=1 rows and 3 columns)!\n'
