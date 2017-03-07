@@ -318,7 +318,8 @@ class RegressionTree:
 
         return self
 
-    def _partitioning_nodes(self, max_partitions=None):
+    def _partitioning_nodes(self, max_partitions=None,
+                            constraint_func=lambda _: True):
         """
         Find the possible partitioning nodes with specified maximal segments.
 
@@ -329,6 +330,13 @@ class RegressionTree:
         :param max_partitions: The maximum number of partitions to find
         (default is None).
         :type max_partitions: int greater than 0 or None
+
+        :param constraint_func: Function that check a constraint. Default is no
+        constraint (the function returns always True).
+        :type constraint_func: function
+
+        :return: The splitting nodes in the order of their traversal.
+        :rtype: list of BinaryNode
         """
         def _error_function(node):
             """
@@ -337,12 +345,15 @@ class RegressionTree:
             error coming from the corresponding branch. The lower is this ratio,
             the better is the "importance" of the current split node.
             """
+            constraint = constraint_func(node)
             split_error = sum(node.values[5:7])
 
             if node is node.parent.left:
-                return split_error / node.parent.values[5]
+                left_error = split_error / node.parent.values[5]
+                return left_error if constraint else left_error + 1000000
             else:
-                return split_error / node.parent.values[6]
+                right_error = split_error / node.parent.values[6]
+                return right_error if constraint else right_error + 1000000
 
         if max_partitions is None:
             max_partitions = 2**self.max_depth
@@ -358,7 +369,7 @@ class RegressionTree:
 
         return nodes
 
-    def predict(self, x, max_partitions=None):
+    def predict(self, x, max_partitions=None, constraint_func=lambda _: True):
         """
         Predict dependent values with the previously computed binary tree.
 
@@ -371,10 +382,18 @@ class RegressionTree:
         :param max_partitions: The maximum number of partitions to find
         (default is None).
         :type max_partitions: int greater than 0 or None
+
+        :param constraint_func: Function that check a constraint. Default is no
+        constraint (the function returns always True).
+        :type constraint_func: function
+
+        :return: The predicted dependent values.
+        :rtype: numpy.ndarray
         """
         y = np.zeros(x.shape)
 
-        for node in self._partitioning_nodes(max_partitions=max_partitions):
+        for node in self._partitioning_nodes(max_partitions=max_partitions,
+                                             constraint_func=constraint_func):
             y[np.bitwise_and(
                 node.values[0] <= x,
                 x <= node.values[1])] = node.values[3]

@@ -200,6 +200,14 @@ def _select_possible_patterns(x, y, model=modeling.standard,
     patterns.
     :rtype: list of tuple
     """
+    def _alternate_constraint_func(node):
+        if node is node.parent.left:
+            return (node.values[4] - node.values[3]) * \
+                   (node.parent.values[4] - node.values[4]) < 0
+        else:
+            return (node.values[3] - node.parent.values[3]) * \
+                   (node.values[4] - node.values[3]) < 0
+
     selected_patterns = []
 
     reg = _tree.RegressionTree()
@@ -211,7 +219,8 @@ def _select_possible_patterns(x, y, model=modeling.standard,
                           for channels_pattern in channels_patterns]
 
     for number_of_segments in model.numbers_of_segments():
-        prediction_y = reg.predict(x, max_partitions=number_of_segments)
+        prediction_y = reg.predict(x, max_partitions=number_of_segments,
+                                   constraint_func=_alternate_constraint_func)
         prediction_diff = np.diff(prediction_y)
         splits = np.where(prediction_diff != 0)[0].tolist()
 
