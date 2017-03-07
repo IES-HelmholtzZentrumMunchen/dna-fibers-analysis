@@ -174,7 +174,8 @@ def _choose_piecewise_model(x, y, models=(1, 2, 3)):
 
 def _select_possible_patterns(x, y, model=modeling.standard,
                               error_func=lambda v1, v2: np.power(v1-v2,
-                                                                 2).sum()):
+                                                                 2).sum(),
+                              min_error_improvement=0.05):
     """
     Select the matching models.
 
@@ -195,6 +196,10 @@ def _select_possible_patterns(x, y, model=modeling.standard,
     :param error_func: function used to quantify the quality of the patterns
     (default is the residuals-sum of squared errors).
     :type: function
+
+    :param min_error_improvement: Minimum error improvement necessary for a
+    given model to be kept. Default is 0.05 (%5 of the maximum error).
+    :type min_error_improvement: float
 
     :return: For each possible pattern, the error, the splits and the channels
     patterns.
@@ -241,10 +246,21 @@ def _select_possible_patterns(x, y, model=modeling.standard,
                                           splits, channels_pattern))
 
     selected_patterns.sort(key=lambda e: e[0])
-    return selected_patterns
+
+    errors = np.array(list(zip(*selected_patterns))[0])
+    indices_to_remove = np.where(np.diff(errors / errors.max()) <
+                                 min_error_improvement)[0].tolist()
+
+    filtered_patterns = selected_patterns.copy()
+
+    for index in indices_to_remove:
+        filtered_patterns.remove(selected_patterns[index])
+
+    return filtered_patterns
 
 
-def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU')):
+def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
+            min_error_improvement=0.05):
     """
     Detect the segments in profile and analyze it.
 
@@ -261,6 +277,11 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU')):
     :param channels_names: Names of the channels in the same order as they
     appear in the profile.
     :type channels_names: tuple of str of size 2
+
+    :param min_error_improvement: Minimum error improvement necessary for a
+    given model to be kept, as a percentage (in range [0,1]). Default is 0.05
+    (%5 of the maximum error).
+    :type min_error_improvement: float
 
     :return: A reference to a pattern defined in model and the lengths.
     :rtype: list of dict and list or None (if no pattern is found)
@@ -288,13 +309,24 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU')):
         raise ValueError('Input channels names must have size equal to 2\n'
                          'The number of channels is limited to 2.')
 
+    if type(min_error_improvement) != float:
+        raise ValueError('Minimum error improvement parameter must be '
+                         'of type float!\nIt is of type {}...'
+                         .format(type(min_error_improvement)))
+
+    if min_error_improvement < 0 or min_error_improvement > 1:
+        raise ValueError('Minimum error improvement parameter must be in '
+                         'range [0,1]!\nIt is {}...'
+                         .format(min_error_improvement))
+
     channels_indices = [2-model.channels_names.index(cn)
                         for cn in channels_names]
 
     x = profile[:, 0]
     y1, y2 = profile[:, channels_indices[0]], profile[:, channels_indices[1]]
     y = np.log(y1) - np.log(y2)
-    possible_patterns = _select_possible_patterns(x, y, model=model)
+    possible_patterns = _select_possible_patterns(
+        x, y, model=model, min_error_improvement=min_error_improvement)
 
     _, splits, channels_pattern = possible_patterns[0]
     splits.insert(0, 0)
@@ -312,7 +344,7 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU')):
 
 
 def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
-             channels_names=('CIdU', 'IdU')):
+             channels_names=('CIdU', 'IdU'), min_error_improvement=0.05):
     """
     Detect the segments in each profile and analyze it.
 
@@ -338,6 +370,10 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
     :param channels_names: Names of the channels in the same order as they
     appear in the profile.
     :type channels_names: tuple of str of size 2
+
+    :param min_error_improvement: Minimum error improvement necessary for a
+    given model to be kept. Default is 0.05 (%5 of the maximum error).
+    :type min_error_improvement: float
 
     :return: A data structure containing the detailed measurements.
 
@@ -386,7 +422,8 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
 
     for key, profile in zip(keys, profiles):
         pattern, lengths = analyze(profile, model=model,
-                                   channels_names=channels_names)
+                                   channels_names=channels_names,
+                                   min_error_improvement=min_error_improvement)
         model.append_sample(pattern, lengths)
 
         for length, channel in zip(lengths, pattern['channels']):
