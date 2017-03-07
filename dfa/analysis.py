@@ -301,6 +301,10 @@ if __name__ == '__main__':
                         help='Path to the model to use (default will use the'
                              'standard model defined in the dfa.modeling'
                              'module).')
+    parser.add_argument('--min_error_improvement', type=float, default=0.05,
+                        help='Minimum error improvement used to filter out'
+                             'unnecessary complex models (default is 0.05,'
+                             ' acceptable range is [0,1]).')
     args = parser.parse_args()
 
     # Read profiles from input path
@@ -340,9 +344,9 @@ if __name__ == '__main__':
         model = modeling.Model.load(args.model)
 
     model.initialize_model()
-    detailed_analysis = analyzes(profiles,
-                                 model=model,
-                                 keys=list(zip(experiments, images, fibers)))
+    detailed_analysis = analyzes(
+        profiles, model=model, keys=list(zip(experiments, images, fibers)),
+        min_error_improvement=args.min_error_improvement)
 
     # Display or save results
     if args.output is None:
