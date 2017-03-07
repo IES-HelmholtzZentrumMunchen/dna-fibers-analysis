@@ -244,7 +244,7 @@ def _select_possible_patterns(x, y, model=modeling.standard,
     return selected_patterns
 
 
-def analyze(profile, model=modeling.standard):
+def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU')):
     """
     Detect the segments in profile and analyze it.
 
@@ -257,6 +257,10 @@ def analyze(profile, model=modeling.standard):
     :param model: Model defining the patterns to detect and filter (default is
     the standard model defined in dfa.modeling.standard).
     :type model: dfa.modeling.Model
+
+    :param channels_names: Names of the channels in the same order as they
+    appear in the profile.
+    :type channels_names: tuple of str of size 2
 
     :return: A reference to a pattern defined in model and the lengths.
     :rtype: list of dict and list or None (if no pattern is found)
@@ -276,7 +280,19 @@ def analyze(profile, model=modeling.standard):
         raise ValueError('Input model must by of type dfa.modeling.Model!\n'
                          'It is of type {}...'.format(type(model)))
 
-    x, y1, y2 = profile[:, 0], profile[:, 1], profile[:, 2]
+    if type(channels_names) != tuple and type(channels_names) != list:
+        raise ValueError('Input channels names must be of type tuple or list!\n'
+                         'It is of type {}...'.format(type(channels_names)))
+
+    if len(channels_names) != 2:
+        raise ValueError('Input channels names must have size equal to 2\n'
+                         'The number of channels is limited to 2.')
+
+    channels_indices = [2-model.channels_names.index(cn)
+                        for cn in channels_names]
+
+    x = profile[:, 0]
+    y1, y2 = profile[:, channels_indices[0]], profile[:, channels_indices[1]]
     y = np.log(y1) - np.log(y2)
     possible_patterns = _select_possible_patterns(x, y, model=model)
 
@@ -295,7 +311,8 @@ def analyze(profile, model=modeling.standard):
     return pattern, lengths
 
 
-def analyzes(profiles, model=modeling.standard, update_model=True, keys=None):
+def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
+             channels_names=('CIdU', 'IdU')):
     """
     Detect the segments in each profile and analyze it.
 
@@ -318,6 +335,10 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None):
     fiber name).
     :type keys: list of tuples
 
+    :param channels_names: Names of the channels in the same order as they
+    appear in the profile.
+    :type channels_names: tuple of str of size 2
+
     :return: A data structure containing the detailed measurements.
 
     :raises ValueError: In case inputs are not valid.
@@ -325,16 +346,6 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None):
     if type(profiles) != list:
         raise ValueError('Input profiles must be a list of profiles!\n'
                          'It is of type {}...'.format(type(profiles)))
-
-    if any(type(profile) != np.ndarray for profile in profiles):
-        raise ValueError('Input profiles must be of type numpy.ndarray!\n'
-                         'At least one is not of type numpy.ndarray...')
-
-    if any(profile.shape[0] <= 1 or profile.shape[1] != 3
-           for profile in profiles):
-        raise ValueError('Input profiles must have a shape equal to Nx3 '
-                         '(N>=1 rows and 3 columns)!\n'
-                         'At least one does not have this shape...')
 
     if type(model) != modeling.Model:
         raise ValueError('Input model must by of type dfa.modeling.Model!\n'
@@ -374,7 +385,8 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None):
     detailed_analysis = pd.DataFrame([], columns=labels, index=index)
 
     for key, profile in zip(keys, profiles):
-        pattern, lengths = analyze(profile, model=model)
+        pattern, lengths = analyze(profile, model=model,
+                                   channels_names=channels_names)
         model.append_sample(pattern, lengths)
 
         for length, channel in zip(lengths, pattern['channels']):
