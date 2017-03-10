@@ -98,7 +98,8 @@ class Model:
         :rtype: dict or None (if no pattern is found)
         """
         for pattern in self.patterns:
-            if pattern['channels'] == channels_pattern:
+            if pattern['channels'] == channels_pattern or \
+                            pattern['channels'] == channels_pattern[::-1]:
                 return pattern
 
         return None
