@@ -282,6 +282,70 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
     return detailed_analysis
 
 
+def fork_speed(data, channel='CIdU', pattern_name='ongoing fork',
+               kb_per_microns=2.5):
+    """
+    Calculate the fork speed from a detailed analysis.
+
+    :param data: Detailed analysis of DNA fibers.
+    :type data: pandas.DataFrame
+
+    :param channel: Name of the channel to consider (default is 'CIdU').
+    :type channel: str
+
+    :param pattern_name: Name of the pattern to consider (default is 'ongoing
+    fork').
+    :type pattern_name: str
+
+    :param kb_per_microns: Number of kb per microns along the DNA fibers.
+    :type kb_per_microns: strictly positive float
+
+    :return: The calculated fork speeds in kb.
+    :rtype: list of float
+
+    :raises ValueError: In case inputs are not valid.
+    """
+    if type(data) != pd.DataFrame:
+        raise ValueError('The data type must be pandas.DataFrame!\n'
+                         'It is of type {}...'.format(type(data)))
+
+    if 'pattern' not in data.columns:
+        raise ValueError('The data frame must contain a column '
+                         'named "pattern"!')
+
+    if 'channel' not in data.columns:
+        raise ValueError('The data frame must contain a column '
+                         'named "channel"!')
+
+    if 'length' not in data.columns:
+        raise ValueError('The data frame must contain a column '
+                         'named "length"!')
+
+    if type(channel) != str:
+        raise ValueError('The type of channel must be str!\n'
+                         'It is of type {}...'.format(type(channel)))
+
+    if type(pattern_name) != str:
+        raise ValueError('The type of pattern_name must be str!\n'
+                         'It is of type {}...'.format(type(pattern_name)))
+
+    if type(kb_per_microns) != float:
+        raise ValueError('The type of kb_per_microns must be float!\n'
+                         'It is of type {}...'.format(type(kb_per_microns)))
+
+    if kb_per_microns <= 0:
+        raise ValueError('The kb_per_microns variable must be strictly'
+                         ' greater than {}!'.format(kb_per_microns))
+
+    fork_speeds = []
+
+    for index in data[data['pattern'] == pattern_name].index.unique():
+        fork_speeds += data[data['channel'] == channel]\
+                       .ix[index, 'length'].tolist()
+
+    return fork_speeds
+
+
 if __name__ == '__main__':
     import os
     import copy
