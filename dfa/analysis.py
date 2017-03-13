@@ -285,7 +285,7 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
 def fork_speed(data, channel='CIdU', pattern_name='ongoing fork',
                kb_per_microns=2.5):
     """
-    Calculate the fork speed from a detailed analysis.
+    Calculate fork speeds from a detailed analysis.
 
     :param data: Detailed analysis of DNA fibers.
     :type data: pandas.DataFrame
@@ -344,6 +344,58 @@ def fork_speed(data, channel='CIdU', pattern_name='ongoing fork',
                        .ix[index, 'length'].tolist()
 
     return fork_speeds
+
+
+def fork_rate(data, channel='CIdU', pattern_name='1st label origin'):
+    """
+    Calculate fork rates from a detailed analysis.
+
+    :param data: Detailed analysis of DNA fibers.
+    :type data: pandas.DataFrame
+
+    :param channel: Name of the channel to consider (default is 'CIdU').
+    :type channel: str
+
+    :param pattern_name: Name of the pattern to consider (default is 'ongoing
+    fork').
+    :type pattern_name: str
+
+    :return: The calculated fork rates.
+    :rtype: list of float
+
+    :raises ValueError: In case inputs are not valid.
+    """
+    if type(data) != pd.DataFrame:
+        raise ValueError('The data type must be pandas.DataFrame!\n'
+                         'It is of type {}...'.format(type(data)))
+
+    if 'pattern' not in data.columns:
+        raise ValueError('The data frame must contain a column '
+                         'named "pattern"!')
+
+    if 'channel' not in data.columns:
+        raise ValueError('The data frame must contain a column '
+                         'named "channel"!')
+
+    if 'length' not in data.columns:
+        raise ValueError('The data frame must contain a column '
+                         'named "length"!')
+
+    if type(channel) != str:
+        raise ValueError('The type of channel must be str!\n'
+                         'It is of type {}...'.format(type(channel)))
+
+    if type(pattern_name) != str:
+        raise ValueError('The type of pattern_name must be str!\n'
+                         'It is of type {}...'.format(type(pattern_name)))
+
+    fork_rates = []
+
+    for index in data[data['pattern'] == pattern_name].index.unique():
+        values = data[data['channel'] == channel].ix[index, 'length'].tolist()
+        fork_rates.append(max(values) / min(values))
+
+    return fork_rates
 
 
 if __name__ == '__main__':
