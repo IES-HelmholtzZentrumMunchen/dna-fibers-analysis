@@ -12,7 +12,7 @@ from skimage import feature
 def enhance_fibers(image, width_range, alpha=1, beta=1):
     enhanced = np.zeros((len(width_range), image.shape[0], image.shape[1]))
 
-    for index, width in enumerate(width_range):
+    for index, width in enumerate(np.array(width_range) / 2):
         hxx, hxy, hyy = feature.hessian_matrix(image, sigma=width)
         l1, l2 = feature.hessian_matrix_eigvals(hxx, hxy, hyy)
 
