@@ -253,17 +253,18 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
             raise ValueError('Key index must be of type tuple!\n'
                              'At least one key is not of type tuple...')
 
-        if any(len(key) != 3 for key in keys):
-            raise ValueError('Key index must have size equal to 3!\n'
-                             'At least one key does not have shape '
-                             'equal to 3...')
+        # if any(len(key) != 3 for key in keys):
+        #     raise ValueError('Key index must have size equal to 3!\n'
+        #                      'At least one key does not have shape '
+        #                      'equal to 3...')
 
         if any(len(key) != len(keys_names) for key in keys):
             raise ValueError('Keys and keys names must have the same size!\n'
                              'At least one key does not have {} elements...'
                              .format(len(keys_names)))
 
-        index = pd.MultiIndex(levels=[[], [], []], labels=[[], [], []],
+        index = pd.MultiIndex(levels=[[] for _ in range(len(keys_names))],
+                              labels=[[] for _ in range(len(keys_names))],
                               names=keys_names)
     else:
         keys = range(len(profiles))
@@ -413,6 +414,17 @@ if __name__ == '__main__':
     import copy
     import argparse
 
+    def check_min_error_improvement(s):
+        """ Range checking for minimum error improvement value. """
+        value = float(s)
+
+        if value < 0 or value > 1:
+            raise argparse.ArgumentTypeError('The value of the minimum error'
+                                             ' improvement argument must be '
+                                             'within range [0, 1]!')
+
+        return value
+
     # Parse input arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=str, default=None,
@@ -435,7 +447,15 @@ if __name__ == '__main__':
                         help='Search in specified path recursively (default is'
                              'False; works only for directory input).')
     parser.add_argument('--scheme', type=str, nargs='+',
-                        default=['experiment', 'image', 'fiber'])
+                        default=['experiment', 'image', 'fiber'],
+                        help='Names of the keys used as indexing of the results'
+                             ' (default is experiment, image, fiber; there '
+                             'should be at least one name).')
+    parser.add_argument('--keys_in_file', type=str, default=None,
+                        help='If set, the keys are searched in the filenames '
+                             '(separator must be provided); otherwise the keys '
+                             'are searched in the last path elements (folders '
+                             'and filenames separated by /).')
     args = parser.parse_args()
 
     # Read profiles from input path
@@ -464,11 +484,14 @@ if __name__ == '__main__':
     profiles = [np.loadtxt(path, delimiter=',', skiprows=1, usecols=(0, 1, 2))
                 for path in paths]
 
-    # Get data origin information
-    filenames = [path.split('/')[-1] for path in paths]
-    experiments = [filename.split('_')[0] for filename in filenames]
-    images = [filename.split('_')[1] for filename in filenames]
-    fibers = [filename.split('.')[0].split('_')[2] for filename in filenames]
+    # Get data origin information (keys)
+    if args.keys_in_file is None:
+        keys = [tuple(path[:-4].split('/')[-len(args.scheme):])
+                for path in paths]
+    else:
+        keys = [tuple(path.split('/')[-1][:-4]
+                      .split(args.keys_in_file)[-len(args.scheme):])
+                for path in paths]
 
     # Quantify
     if args.model is None:
@@ -482,8 +505,7 @@ if __name__ == '__main__':
 
     model.initialize_model()
     detailed_analysis = analyzes(
-        profiles, model=model, keys=list(zip(experiments, images, fibers)),
-        keys_names=args.scheme,
+        profiles, model=model, keys=keys, keys_names=args.scheme,
         min_error_improvement=args.min_error_improvement)
 
     # Display or save results
