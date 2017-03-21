@@ -343,13 +343,9 @@ def fork_speed(data, channel='CIdU', pattern_name='ongoing fork',
         raise ValueError('The kb_per_microns variable must be strictly'
                          ' greater than {}!'.format(kb_per_microns))
 
-    fork_speeds = []
-
-    for index in data[data['pattern'] == pattern_name].index.unique():
-        fork_speeds += data[data['channel'] == channel]\
-                       .ix[index, 'length'].tolist()
-
-    return fork_speeds
+    return data[data['channel'] == channel].ix[
+        data[data['pattern'] == pattern_name].index.unique(),
+        'length'].tolist()
 
 
 def fork_rate(data, channel='CIdU', pattern_name='1st label origin'):
@@ -398,8 +394,8 @@ def fork_rate(data, channel='CIdU', pattern_name='1st label origin'):
     fork_rates = []
 
     for index in data[data['pattern'] == pattern_name].index.unique():
-        values = data[data['channel'] == channel].ix[index, 'length'].tolist()
-        fork_rates.append(max(values) / min(values))
+        values = data[data['channel'] == channel].ix[index, 'length']
+        fork_rates.append(values.max() / values.min())
 
     return fork_rates
 
