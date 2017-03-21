@@ -421,6 +421,9 @@ if __name__ == '__main__':
                         help='Minimum error improvement used to filter out'
                              'unnecessary complex models (default is 0.05,'
                              ' acceptable range is [0,1]).')
+    parser.add_argument('--recursive', action='store_true',
+                        help='Search in specified path recursively (default is'
+                             'False; works only for directory input).')
     args = parser.parse_args()
 
     # Read profiles from input path
@@ -430,9 +433,15 @@ if __name__ == '__main__':
 
         paths = [args.input]
     elif os.path.isdir(args.input):
-        paths = os.listdir(args.input)
-        paths = [os.path.join(args.input, filename) for filename in paths
-                 if filename.endswith('.csv')]
+        if args.recursive:
+            paths = [os.path.join(root, filename)
+                     for root, _, filenames in os.walk(args.input)
+                     for filename in filenames
+                     if filename.endswith('.csv')]
+        else:
+            paths = [os.path.join(args.input, filename)
+                     for filename in os.listdir(args.input)
+                     if filename.endswith('.csv')]
 
         if len(paths) == 0:
             raise ValueError('The input folder does not contain any csv file!')
