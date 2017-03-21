@@ -422,45 +422,56 @@ if __name__ == '__main__':
 
     # Parse input arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('--output', type=str, default=None,
-                        help='Output path for saving data analysis '
-                             '(default is None).')
-    parser.add_argument('--output_model', type=str, default=None,
-                        help='Output path for saving the model (default '
-                             'is None).')
-    parser.add_argument('input', type=str,
-                        help='Input path to profile(s) (folder or file). '
-                             'Profiles are assumed to have at least 3 columns, '
-                             'the first one being the values of the x-axis.')
-    parser.add_argument('--channels_names', type=str, nargs='+',
-                        default=['CIdU', 'IdU'],
-                        help='Names of the channels as they appear in order in'
-                             ' the profiles (default is CIdU and IdU).')
-    parser.add_argument('--input_columns', type=int, nargs='+',
-                        default=[1, 2],
-                        help='Columns index of the profiles to use')
-    parser.add_argument('--model', type=str, default=None,
-                        help='Path to the model to use (default will use the'
-                             'standard model defined in the dfa.modeling'
-                             'module).')
-    parser.add_argument('--min_error_improvement', default=0.05,
-                        type=check_min_error_improvement,
-                        help='Minimum error improvement used to filter out'
-                             'unnecessary complex models (default is 0.05,'
-                             ' acceptable range is [0,1]).')
-    parser.add_argument('--recursive', action='store_true',
-                        help='Search in specified path recursively (default is'
-                             'False; works only for directory input).')
-    parser.add_argument('--scheme', type=str, nargs='+',
-                        default=['experiment', 'image', 'fiber'],
-                        help='Names of the keys used as indexing of the results'
-                             ' (default is experiment, image, fiber; there '
-                             'should be at least one name).')
-    parser.add_argument('--keys_in_file', type=str, default=None,
-                        help='If set, the keys are searched in the filenames '
-                             '(separator must be provided); otherwise the keys '
-                             'are searched in the last path elements (folders '
-                             'and filenames separated by /).')
+
+    group_profile = parser.add_argument_group('Profiles')
+    group_profile.add_argument('input', type=str,
+                               help='Input path to profile(s) (folder or file).'
+                                    ' Profiles are assumed to have at least 3 '
+                                    'columns, the first one being the values '
+                                    'of the x-axis.')
+    group_profile.add_argument('--channels_names', type=str, nargs='+',
+                               default=['CIdU', 'IdU'],
+                               help='Names of the channels as they appear in '
+                                    'order in the profiles (default is CIdU '
+                                    'and IdU).')
+    group_profile.add_argument('--input_columns', type=int, nargs='+',
+                               default=[1, 2],
+                               help='Columns index of the profiles to use')
+    group_profile.add_argument('--recursive', action='store_true',
+                               help='Search in specified path recursively '
+                                    '(default is False; works only for '
+                                    'directory input).')
+
+    group_model = parser.add_argument_group('Model')
+    group_model.add_argument('--model', type=str, default=None,
+                             help='Path to the model to use (default will use '
+                                  'the standard model defined in the '
+                                  'dfa.modeling module).')
+    group_model.add_argument('--min_error_improvement', default=0.05,
+                             type=check_min_error_improvement,
+                             help='Minimum error improvement used to filter '
+                                  'out unnecessary complex models (default is '
+                                  '0.05, acceptable range is [0,1]).')
+    group_model.add_argument('--output_model', type=str, default=None,
+                             help='Output path for saving the model (default '
+                                  'is None).')
+
+    group_data = parser.add_argument_group('Quantification')
+    group_data.add_argument('--scheme', type=str, nargs='+',
+                            default=['experiment', 'image', 'fiber'],
+                            help='Names of the keys used as indexing of the '
+                                 'results (default is experiment, image, '
+                                 'fiber; there should be at least one name).')
+    group_data.add_argument('--keys_in_file', type=str, default=None,
+                            help='If set, the keys are searched in the '
+                                 'filenames (separator must be provided); '
+                                 'otherwise the keys are searched in the last '
+                                 'path elements (folders and filenames '
+                                 'separated by /).')
+    group_data.add_argument('--output', type=str, default=None,
+                            help='Output path for saving data analysis '
+                                 '(default is None).')
+
     args = parser.parse_args()
 
     # Check inputs (because argparse cannot manage 2+ nargs
