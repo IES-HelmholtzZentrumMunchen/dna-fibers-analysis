@@ -89,8 +89,6 @@ class Model:
         """
         Get the pattern corresponding to the input channels pattern.
 
-        The symmetric channels patterns are also taken into account.
-
         :param channels_pattern: Input sequence of channels.
         :type channels_pattern: list of int
 
@@ -98,8 +96,7 @@ class Model:
         :rtype: dict or None (if no pattern is found)
         """
         for pattern in self.patterns:
-            if pattern['channels'] == channels_pattern or \
-                            pattern['channels'] == channels_pattern[::-1]:
+            if pattern['channels'] == channels_pattern:
                 return pattern
 
         return None

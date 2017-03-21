@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 import _tree
-import modeling
+from dfa import modeling
 
 
 def _select_possible_patterns(x, y, model=modeling.standard,
