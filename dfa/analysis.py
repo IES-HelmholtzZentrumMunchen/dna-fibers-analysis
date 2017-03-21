@@ -187,7 +187,8 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
 
 
 def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
-             channels_names=('CIdU', 'IdU'), min_error_improvement=0.05):
+             keys_names=None, channels_names=('CIdU', 'IdU'),
+             min_error_improvement=0.05):
     """
     Detect the segments in each profile and analyze it.
 
@@ -206,9 +207,13 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
     :type update_model: bool
 
     :param keys: A list of tuples to use as key index of rows for profiles'
-    results (default is None). The tuples must be (experiment name, image name,
-    fiber name).
+    results (default is None). Each key must have the same size as the keys
+    names.
     :type keys: list of tuples
+
+    :param keys_names: A list of strings to use as columns headers for indexing
+    columns (default is None). The list must have the same size as each key.
+    :type keys_names: list of str
 
     :param channels_names: Names of the channels in the same order as they
     appear in the profile.
@@ -253,8 +258,13 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
                              'At least one key does not have shape '
                              'equal to 3...')
 
+        if any(len(key) != len(keys_names) for key in keys):
+            raise ValueError('Keys and keys names must have the same size!\n'
+                             'At least one key does not have {} elements...'
+                             .format(len(keys_names)))
+
         index = pd.MultiIndex(levels=[[], [], []], labels=[[], [], []],
-                              names=['experiment', 'image', 'fiber'])
+                              names=keys_names)
     else:
         keys = range(len(profiles))
         index = pd.MultiIndex(levels=[[]], labels=[[]],
@@ -424,6 +434,8 @@ if __name__ == '__main__':
     parser.add_argument('--recursive', action='store_true',
                         help='Search in specified path recursively (default is'
                              'False; works only for directory input).')
+    parser.add_argument('--scheme', type=str, nargs='+',
+                        default=['experiment', 'image', 'fiber'])
     args = parser.parse_args()
 
     # Read profiles from input path
@@ -471,6 +483,7 @@ if __name__ == '__main__':
     model.initialize_model()
     detailed_analysis = analyzes(
         profiles, model=model, keys=list(zip(experiments, images, fibers)),
+        keys_names=args.scheme,
         min_error_improvement=args.min_error_improvement)
 
     # Display or save results
