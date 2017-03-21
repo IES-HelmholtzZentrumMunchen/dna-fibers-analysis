@@ -162,11 +162,11 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
                          'range [0,1]!\nIt is {}...'
                          .format(min_error_improvement))
 
-    channels_indices = [2-model.channels_names.index(cn)
+    channels_indices = [1 + model.channels_names.index(cn)
                         for cn in channels_names]
 
     x = profile[:, 0]
-    y1, y2 = profile[:, channels_indices[0]], profile[:, channels_indices[1]]
+    y1, y2 = profile[:, channels_indices[1]], profile[:, channels_indices[0]]
     y = np.log(y1) - np.log(y2)
     possible_patterns = _select_possible_patterns(
         x, y, model=model, min_error_improvement=min_error_improvement)
@@ -252,11 +252,6 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
         if any(type(key) != tuple for key in keys):
             raise ValueError('Key index must be of type tuple!\n'
                              'At least one key is not of type tuple...')
-
-        # if any(len(key) != 3 for key in keys):
-        #     raise ValueError('Key index must have size equal to 3!\n'
-        #                      'At least one key does not have shape '
-        #                      'equal to 3...')
 
         if any(len(key) != len(keys_names) for key in keys):
             raise ValueError('Keys and keys names must have the same size!\n'
@@ -434,12 +429,22 @@ if __name__ == '__main__':
                         help='Output path for saving the model (default '
                              'is None).')
     parser.add_argument('input', type=str,
-                        help='Input path to profile(s) (folder or file).')
+                        help='Input path to profile(s) (folder or file). '
+                             'Profiles are assumed to have at least 3 columns, '
+                             'the first one being the values of the x-axis.')
+    parser.add_argument('--channels_names', type=str, nargs='+',
+                        default=['CIdU', 'IdU'],
+                        help='Names of the channels as they appear in order in'
+                             ' the profiles (default is CIdU and IdU).')
+    parser.add_argument('--input_columns', type=int, nargs='+',
+                        default=[1, 2],
+                        help='Columns index of the profiles to use')
     parser.add_argument('--model', type=str, default=None,
                         help='Path to the model to use (default will use the'
                              'standard model defined in the dfa.modeling'
                              'module).')
-    parser.add_argument('--min_error_improvement', type=float, default=0.05,
+    parser.add_argument('--min_error_improvement', default=0.05,
+                        type=check_min_error_improvement,
                         help='Minimum error improvement used to filter out'
                              'unnecessary complex models (default is 0.05,'
                              ' acceptable range is [0,1]).')
@@ -457,6 +462,19 @@ if __name__ == '__main__':
                              'are searched in the last path elements (folders '
                              'and filenames separated by /).')
     args = parser.parse_args()
+
+    # Check inputs (because argparse cannot manage 2+ nargs
+    if len(args.input_columns) < 2:
+        parser.error('argument --input_columns: expected at '
+                     'least two arguments')
+
+    if len(args.channels_names) < 2:
+        parser.error('argument --channels_names: expected at '
+                     'least two arguments')
+
+    if len(args.input_columns) != len(args.channels_names):
+        parser.error('arguments --input_columns and --channels_names: '
+                     'expected the same number of arguments')
 
     # Read profiles from input path
     if os.path.isfile(args.input):
@@ -481,7 +499,8 @@ if __name__ == '__main__':
         raise ValueError('The input is neither a valid file nor '
                          'a valid directory!')
 
-    profiles = [np.loadtxt(path, delimiter=',', skiprows=1, usecols=(0, 1, 2))
+    profiles = [np.loadtxt(path, delimiter=',', skiprows=1,
+                           usecols=[0]+args.input_columns)
                 for path in paths]
 
     # Get data origin information (keys)
@@ -506,7 +525,8 @@ if __name__ == '__main__':
     model.initialize_model()
     detailed_analysis = analyzes(
         profiles, model=model, keys=keys, keys_names=args.scheme,
-        min_error_improvement=args.min_error_improvement)
+        min_error_improvement=args.min_error_improvement,
+        channels_names=args.channels_names)
 
     # Display or save results
     if args.output is None:
