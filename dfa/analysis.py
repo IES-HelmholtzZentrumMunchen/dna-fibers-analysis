@@ -17,8 +17,7 @@ from dfa import modeling
 
 def _select_possible_patterns(x, y, model=modeling.standard,
                               error_func=lambda v1, v2: np.power(v1-v2,
-                                                                 2).sum(),
-                              min_error_improvement=0.05):
+                                                                 2).sum()):
     """
     Select the matching models.
 
@@ -39,10 +38,6 @@ def _select_possible_patterns(x, y, model=modeling.standard,
     :param error_func: function used to quantify the quality of the patterns
     (default is the residuals-sum of squared errors).
     :type: function
-
-    :param min_error_improvement: Minimum error improvement necessary for a
-    given model to be kept. Default is 0.05 (%5 of the maximum error).
-    :type min_error_improvement: float
 
     :return: For each possible pattern, the error, the splits and the channels
     patterns.
@@ -106,18 +101,26 @@ def _select_possible_patterns(x, y, model=modeling.standard,
                                                          number_of_segments),
                                           splits, channels_pattern))
 
+    return selected_patterns
+
+
+def _choose_pattern(selected_patterns, min_error_improvement=0.05):
+    """
+    Choose the best pattern with given criterion.
+
+    :param selected_patterns: Possible patterns.
+    :type selected_patterns: list of tuples
+
+    :param min_error_improvement: Minimum error improvement necessary for a
+    given model to be kept. Default is 0.05 (%5 of the maximum error).
+    :type min_error_improvement: float
+
+    :return: Chosen pattern
+    :rtype: tuple
+    """
+    # FIXME select the pattern in a more clever way than just the minimal error
     selected_patterns.sort(key=lambda e: e[0])
-
-    # errors = np.array(list(zip(*selected_patterns))[0])
-    # indices_to_remove = np.where(np.diff(errors / errors.max()) <
-    #                              min_error_improvement)[0].tolist()
-
-    filtered_patterns = selected_patterns.copy()
-
-    # for index in indices_to_remove:
-    #     filtered_patterns.remove(selected_patterns[index])
-
-    return filtered_patterns
+    return selected_patterns[0]
 
 
 def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
@@ -186,10 +189,10 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
     x = profile[:, 0]
     y1, y2 = profile[:, channels_indices[1]], profile[:, channels_indices[0]]
     y = np.log(y1) - np.log(y2)
-    possible_patterns = _select_possible_patterns(
-        x, y, model=model, min_error_improvement=min_error_improvement)
+    possible_patterns = _select_possible_patterns(x, y, model=model)
 
-    _, splits, channels_pattern = possible_patterns[0]
+    _, splits, channels_pattern = _choose_pattern(
+        possible_patterns, min_error_improvement=min_error_improvement)
     splits.insert(0, 0)
     splits.append(x.size-1)
     lengths = np.diff(x[splits])
