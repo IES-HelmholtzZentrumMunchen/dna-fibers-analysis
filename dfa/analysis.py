@@ -56,6 +56,21 @@ def _select_possible_patterns(x, y, model=modeling.standard,
             return (node.values[3] - node.parent.values[3]) * \
                    (node.values[4] - node.values[3]) < 0
 
+    def _leave_one_out(x, y, max_partitions):
+        error = 0
+
+        for i in range(x.size):
+            select = np.array(range(x.size)) != i
+            reg = _tree.RegressionTree()
+            reg = reg.fit(x[select], y[select])
+            error += error_func(y[i],
+                                reg.predict(x[i],
+                                            constraint_func=
+                                            _alternate_constraint_func,
+                                            max_partitions=max_partitions))
+
+        return error
+
     selected_patterns = []
 
     reg = _tree.RegressionTree()
@@ -75,6 +90,7 @@ def _select_possible_patterns(x, y, model=modeling.standard,
         # Check first the alternative scheme
         if all(prediction_diff[splits[i]] * prediction_diff[splits[i+1]] < 0
                for i in range(len(splits)-1)):
+            # Create segments pattern from splits
             channels_pattern = list(np.less(prediction_diff[splits], 0)
                                     .astype('int').tolist())
 
@@ -85,19 +101,21 @@ def _select_possible_patterns(x, y, model=modeling.standard,
 
             # Check if pattern is in model (and symmetric)
             if channels_pattern in channels_patterns:
-                selected_patterns.append((error_func(y, prediction_y),
+                # Use cross-validation (leave-one-out) to compute error
+                selected_patterns.append((_leave_one_out(x, y,
+                                                         number_of_segments),
                                           splits, channels_pattern))
 
     selected_patterns.sort(key=lambda e: e[0])
 
-    errors = np.array(list(zip(*selected_patterns))[0])
-    indices_to_remove = np.where(np.diff(errors / errors.max()) <
-                                 min_error_improvement)[0].tolist()
+    # errors = np.array(list(zip(*selected_patterns))[0])
+    # indices_to_remove = np.where(np.diff(errors / errors.max()) <
+    #                              min_error_improvement)[0].tolist()
 
     filtered_patterns = selected_patterns.copy()
 
-    for index in indices_to_remove:
-        filtered_patterns.remove(selected_patterns[index])
+    # for index in indices_to_remove:
+    #     filtered_patterns.remove(selected_patterns[index])
 
     return filtered_patterns
 
@@ -342,6 +360,8 @@ def fork_speed(data, channel='CIdU', pattern_name='ongoing fork',
     if kb_per_microns <= 0:
         raise ValueError('The kb_per_microns variable must be strictly'
                          ' greater than {}!'.format(kb_per_microns))
+
+    # FIXME kb per microns ?
 
     subset = data[data['pattern'] == pattern_name]
 
