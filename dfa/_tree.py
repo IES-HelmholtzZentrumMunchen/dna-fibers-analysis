@@ -255,10 +255,10 @@ class RegressionTree:
             s2 = y[self.min_samples:].sum()
             n2 = y.size - n1
 
-            optimal_k = self.min_samples - 1
+            optimal_k = self.min_samples
             optimal_error = _calculate_error()
 
-            for k in range(self.min_samples - 1, y.size - self.min_samples - 1):
+            for k in range(self.min_samples, y.size - self.min_samples - 1):
                 s1 += y[k]
                 n1 += 1
                 s2 -= y[k]
@@ -290,11 +290,11 @@ class RegressionTree:
                 subtree_left = None
                 subtree_right = None
 
-                if y_left.size >= min_samples_for_split:
+                if y_left.size > min_samples_for_split:
                     subtree_left = _regression_tree_recursion(x_left, y_left,
                                                               max_depth - 1)
 
-                if y_right.size >= min_samples_for_split:
+                if y_right.size > min_samples_for_split:
                     subtree_right = _regression_tree_recursion(x_right, y_right,
                                                                max_depth - 1)
 
