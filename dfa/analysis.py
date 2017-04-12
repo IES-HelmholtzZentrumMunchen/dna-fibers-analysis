@@ -170,8 +170,8 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
     :raises ValueError: In case inputs are not valid.
     """
     if type(profile) != np.ndarray:
-        raise ValueError('Input profile must be of type numpy.ndarray!\n'
-                         'It is of type {}...'.format(type(profile)))
+        raise TypeError('Input profile must be of type numpy.ndarray!\n'
+                        'It is of type {}...'.format(type(profile)))
 
     if profile.shape[0] <= 1 or profile.shape[1] != 3:
         raise ValueError('Input profile must have a shape equal to Nx3 '
@@ -179,28 +179,28 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
                          'It has shape equal to {}...'.format(profile.shape))
 
     if type(model) != modeling.Model:
-        raise ValueError('Input model must by of type dfa.modeling.Model!\n'
-                         'It is of type {}...'.format(type(model)))
+        raise TypeError('Input model must by of type dfa.modeling.Model!\n'
+                        'It is of type {}...'.format(type(model)))
 
     if type(channels_names) != tuple and type(channels_names) != list:
-        raise ValueError('Input channels names must be of type tuple or list!\n'
-                         'It is of type {}...'.format(type(channels_names)))
+        raise TypeError('Input channels names must be of type tuple or list!\n'
+                        'It is of type {}...'.format(type(channels_names)))
 
     if len(channels_names) != 2:
         raise ValueError('Input channels names must have size equal to 2\n'
                          'The number of channels is limited to 2.')
 
     if type(min_length) != int:
-        raise ValueError('Minimal length parameter must be of type int!\n'
-                         'It is of type {}...'.format(type(min_length)))
+        raise TypeError('Minimal length parameter must be of type int!\n'
+                        'It is of type {}...'.format(type(min_length)))
 
     if min_length <= 0:
         raise ValueError('Minimal length parameter must be strictly '
                          'positive!\nIt is equal to {}...'.format(min_length))
 
     if type(min_error_improvement) != float:
-        raise ValueError('Minimum error improvement parameter must be '
-                         'of type float!\nIt is of type {}...'
+        raise TypeError('Minimum error improvement parameter must be '
+                        'of type float!\nIt is of type {}...'
                          .format(type(min_error_improvement)))
 
     if min_error_improvement < 0 or min_error_improvement > 1:
@@ -275,30 +275,30 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
     :raises ValueError: In case inputs are not valid.
     """
     if type(profiles) != list:
-        raise ValueError('Input profiles must be a list of profiles!\n'
-                         'It is of type {}...'.format(type(profiles)))
+        raise TypeError('Input profiles must be a list of profiles!\n'
+                        'It is of type {}...'.format(type(profiles)))
 
     if type(model) != modeling.Model:
-        raise ValueError('Input model must by of type dfa.modeling.Model!\n'
-                         'It is of type {}...'.format(type(model)))
+        raise TypeError('Input model must by of type dfa.modeling.Model!\n'
+                        'It is of type {}...'.format(type(model)))
 
     if type(update_model) != bool:
-        raise ValueError('Update model flag must be of type bool!\n'
-                         'It is of type {}...'.format(type(update_model)))
+        raise TypeError('Update model flag must be of type bool!\n'
+                        'It is of type {}...'.format(type(update_model)))
 
     if keys is not None:
         if type(keys) != list:
-            raise ValueError('Index must be of type list!\n'
-                             'It is of type {}...'.format(type(keys)))
+            raise TypeError('Index must be of type list!\n'
+                            'It is of type {}...'.format(type(keys)))
 
         if len(keys) != len(profiles):
-            raise ValueError('Index and profiles must have the same size!\n'
-                             'Index has {} and profiles '
-                             'has {}...'.format(len(keys), len(profiles)))
+            raise TypeError('Index and profiles must have the same size!\n'
+                            'Index has {} and profiles '
+                            'has {}...'.format(len(keys), len(profiles)))
 
         if any(type(key) != tuple for key in keys):
-            raise ValueError('Key index must be of type tuple!\n'
-                             'At least one key is not of type tuple...')
+            raise TypeError('Key index must be of type tuple!\n'
+                            'At least one key is not of type tuple...')
 
         if any(len(key) != len(keys_names) for key in keys):
             raise ValueError('Keys and keys names must have the same size!\n'
@@ -359,8 +359,8 @@ def fork_speed(data, channel='CIdU', pattern_name='ongoing fork',
     :raises ValueError: In case inputs are not valid.
     """
     if type(data) != pd.DataFrame:
-        raise ValueError('The data type must be pandas.DataFrame!\n'
-                         'It is of type {}...'.format(type(data)))
+        raise TypeError('The data type must be pandas.DataFrame!\n'
+                        'It is of type {}...'.format(type(data)))
 
     if 'pattern' not in data.columns:
         raise ValueError('The data frame must contain a column '
@@ -375,16 +375,16 @@ def fork_speed(data, channel='CIdU', pattern_name='ongoing fork',
                          'named "length"!')
 
     if type(channel) != str:
-        raise ValueError('The type of channel must be str!\n'
-                         'It is of type {}...'.format(type(channel)))
+        raise TypeError('The type of channel must be str!\n'
+                        'It is of type {}...'.format(type(channel)))
 
     if type(pattern_name) != str:
-        raise ValueError('The type of pattern_name must be str!\n'
-                         'It is of type {}...'.format(type(pattern_name)))
+        raise TypeError('The type of pattern_name must be str!\n'
+                        'It is of type {}...'.format(type(pattern_name)))
 
     if type(kb_per_microns) != float:
-        raise ValueError('The type of kb_per_microns must be float!\n'
-                         'It is of type {}...'.format(type(kb_per_microns)))
+        raise TypeError('The type of kb_per_microns must be float!\n'
+                        'It is of type {}...'.format(type(kb_per_microns)))
 
     if kb_per_microns <= 0:
         raise ValueError('The kb_per_microns variable must be strictly'
@@ -421,8 +421,8 @@ def fork_rate(data, channel='CIdU', pattern_name='1st label origin'):
     :raises ValueError: In case inputs are not valid.
     """
     if type(data) != pd.DataFrame:
-        raise ValueError('The data type must be pandas.DataFrame!\n'
-                         'It is of type {}...'.format(type(data)))
+        raise TypeError('The data type must be pandas.DataFrame!\n'
+                        'It is of type {}...'.format(type(data)))
 
     if 'pattern' not in data.columns:
         raise ValueError('The data frame must contain a column '
@@ -437,12 +437,12 @@ def fork_rate(data, channel='CIdU', pattern_name='1st label origin'):
                          'named "length"!')
 
     if type(channel) != str:
-        raise ValueError('The type of channel must be str!\n'
-                         'It is of type {}...'.format(type(channel)))
+        raise TypeError('The type of channel must be str!\n'
+                        'It is of type {}...'.format(type(channel)))
 
     if type(pattern_name) != str:
-        raise ValueError('The type of pattern_name must be str!\n'
-                         'It is of type {}...'.format(type(pattern_name)))
+        raise TypeError('The type of pattern_name must be str!\n'
+                        'It is of type {}...'.format(type(pattern_name)))
 
     fork_rates = []
 
