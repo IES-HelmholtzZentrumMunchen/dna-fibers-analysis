@@ -16,6 +16,7 @@ from dfa import modeling
 
 
 def _select_possible_patterns(x, y, model=modeling.standard,
+                              min_length=4,
                               error_func=lambda v1, v2: np.power(v1-v2,
                                                                  2).sum()):
     """
@@ -34,6 +35,11 @@ def _select_possible_patterns(x, y, model=modeling.standard,
     :param model: Model defining the patterns to detect and filter (default is
     the standard model defined in dfa.modeling.standard).
     :type model: dfa.modeling.Model
+
+    :param min_length: Minimal length of a segment. Default is 4 pixels, which
+    corresponds to the thickness of a fiber when pixel size is equal to
+    0.1419761 microns.
+    :type min_length: strictly positive integer
 
     :param error_func: function used to quantify the quality of the patterns
     (default is the residuals-sum of squared errors).
@@ -68,7 +74,7 @@ def _select_possible_patterns(x, y, model=modeling.standard,
 
     selected_patterns = []
 
-    reg = _tree.RegressionTree()
+    reg = _tree.RegressionTree(min_samples=min_length)
     reg = reg.fit(x, y)
 
     # Models can be symmetric
@@ -119,12 +125,18 @@ def _choose_pattern(selected_patterns, min_error_improvement=0.05):
     :rtype: tuple
     """
     # FIXME select the pattern in a more clever way than just the minimal error
+    # Ideas:
+    # 1) choose simplest model if no significative improvement
+    # 2) filter out models with branch smaller than a threshold
+    # 3) filter out models with amplitude between branches smaller than a
+    # threshold
+    # 4) filter out models with too asymmetric amplitude of branches
     selected_patterns.sort(key=lambda e: e[0])
     return selected_patterns[0]
 
 
 def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
-            min_error_improvement=0.05):
+            min_length=4, min_error_improvement=0.05):
     """
     Detect the segments in profile and analyze it.
 
@@ -141,6 +153,11 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
     :param channels_names: Names of the channels in the same order as they
     appear in the profile.
     :type channels_names: tuple of str of size 2
+
+    :param min_length: Minimal length of a segment. Default is 4 pixels, which
+    corresponds to the thickness of a fiber when pixel size is equal to
+    0.1419761 microns.
+    :type min_length: strictly positive integer
 
     :param min_error_improvement: Minimum error improvement necessary for a
     given model to be kept, as a percentage (in range [0,1]). Default is 0.05
@@ -173,6 +190,14 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
         raise ValueError('Input channels names must have size equal to 2\n'
                          'The number of channels is limited to 2.')
 
+    if type(min_length) != int:
+        raise ValueError('Minimal length parameter must be of type int!\n'
+                         'It is of type {}...'.format(type(min_length)))
+
+    if min_length <= 0:
+        raise ValueError('Minimal length parameter must be strictly '
+                         'positive!\nIt is equal to {}...'.format(min_length))
+
     if type(min_error_improvement) != float:
         raise ValueError('Minimum error improvement parameter must be '
                          'of type float!\nIt is of type {}...'
@@ -189,7 +214,8 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
     x = profile[:, 0]
     y1, y2 = profile[:, channels_indices[1]], profile[:, channels_indices[0]]
     y = np.log(y1) - np.log(y2)
-    possible_patterns = _select_possible_patterns(x, y, model=model)
+    possible_patterns = _select_possible_patterns(
+        x, y, model=model, min_length=min_length)
 
     _, splits, channels_pattern = _choose_pattern(
         possible_patterns, min_error_improvement=min_error_improvement)
