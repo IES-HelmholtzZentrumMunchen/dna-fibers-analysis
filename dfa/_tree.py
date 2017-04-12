@@ -209,7 +209,7 @@ class RegressionTree:
         :type max_depth: strictly positive int
 
         :param min_samples: Minimum number of samples per leaves (default
-        is 1).
+        is 2).
         :type min_samples: strictly positive int
         """
         self.max_depth = max_depth
