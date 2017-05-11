@@ -32,10 +32,13 @@ def varying_filtering_2d(image, structuring_elements, function_map,
     ki = structuring_elements.shape[2] // 2
     kj = structuring_elements.shape[3] // 2
 
+    oj, oi = np.meshgrid(range(-kj, kj + 1), range(-ki, ki + 1))
+
     for i in range(ki, image.shape[0] - ki):
         for j in range(kj, image.shape[1] - kj):
             filtered[i, j] = function_reduce(
-                function_map(image[i, j], structuring_elements[i, j, :]))
+                function_map(image[i + oi, j + oj],
+                             structuring_elements[i, j, :]))
 
     return filtered
 
