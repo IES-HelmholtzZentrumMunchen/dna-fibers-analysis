@@ -6,6 +6,7 @@ Use this module to detect fibers and extract their profiles.
 Note that only quite straight fibers are detected for now.
 """
 import numpy as np
+from skimage.measure import label
 
 from dfa import _scale_space_hessian as _sha
 from dfa import _structuring_segments as _ss
@@ -99,8 +100,53 @@ def reconstruct_fibers(vesselness, directions, length, size):
     return _gm.adjunct_varying_closing(vesselness, segments)
 
 
-def estimate_medial_axis(reconstruction):
-    pass  # TODO: implement medial axis estimation
+def estimate_medial_axis(reconstruction, threshold, degree=3):
+    """
+    Estimate the medial axis of the detected fibers from the reconstructed
+    vesselness map.
+
+    This current implementation uses a polynomial fitting to estimate,
+    separately, the medial axis of the fibers.
+
+    :param reconstruction: Reconstructed vesselness map.
+    :type reconstruction: numpy.ndarray
+
+    :param threshold: Threshold to use with the vesselness map.
+    :type threshold: integer between 0 and 1
+
+    :param degree: Degree of the fitted polynomial.
+    :type degree: positive int
+
+    :return: Coordinates of the medial axis lines of corresponding fibers.
+    :rtype: list of tuples of float
+    """
+    # Threshold vesselness map and get connected components
+    labels = label(reconstruction >= threshold)
+    coordinates = []
+
+    for l in range(1, labels.max() + 1):
+        # Get points coordinate for current component
+        j, i = np.meshgrid(range(labels.shape[1]), range(labels.shape[0]))
+        x = j[labels == l]
+        x = x.reshape(x.size, 1)
+        y = i[labels == l]
+        y = y.reshape(y.size, 1)
+
+        # Fit a polynome with least-squares
+        xm = np.ones((x.size, 1))
+        for d in range(1, degree + 1):
+            xm = np.hstack((xm, np.power(x, d)))
+        b = np.dot(np.dot(np.linalg.inv(np.dot(xm.T, xm)), xm.T), y)
+
+        # Get medial axis coordinates
+        x = np.linspace(x.min(), x.max())
+        coordinates.append(
+            (x, (np.tile(b, (1, x.size)) *
+                 np.power(np.tile(x, (b.size, 1)),
+                          np.tile(np.arange(b.size).reshape(b.size, 1),
+                                  (1, x.size)))).sum(axis=0)))
+
+    return coordinates
 
 
 if __name__ == '__main__':
@@ -120,6 +166,12 @@ if __name__ == '__main__':
                              'elements).')
     parser.add_argument('--reconstruction-extent', type=float, default=20,
                         help='Reconstruction extent in pixels (default is 20).')
+    parser.add_argument('--vesselness-threshold', type=float, default=0.25,
+                        help='Threshold used to binarize the vesselness map ('
+                             'default is 0.25).')
+    parser.add_argument('--polynomial-degree', type=int, default=3,
+                        help='The degree of the polynomial fitted to estimate '
+                             'the medial axis of the fibers (default is 3).')
     args = parser.parse_args()
 
     input_image = io.imread(args.input)
@@ -133,3 +185,7 @@ if __name__ == '__main__':
     reconstructed_vesselness = reconstruct_fibers(
         vesselness, directions, args.reconstruction_extent,
         (args.scales[0]+args.scales[1])/2)
+
+    coordinates = estimate_medial_axis(reconstructed_vesselness,
+                                       args.vesselness_threshold,
+                                       args.polynomial_degree)
