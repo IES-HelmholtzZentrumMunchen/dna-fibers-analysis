@@ -11,8 +11,7 @@ intensity ratio derivative, to choose the channels pattern.
 import numpy as np
 import pandas as pd
 
-import _tree
-from dfa import modeling
+from dfa import modeling, _tree
 
 
 def _select_possible_patterns(x, y, model=modeling.standard,
