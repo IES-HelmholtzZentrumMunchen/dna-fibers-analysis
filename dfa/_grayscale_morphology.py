@@ -193,3 +193,61 @@ def adjunct_varying_erosion(image, structuring_elements):
     """
     return adjunct_varying_filtering_2d(image, structuring_elements,
                                         np.subtract, np.minimum, np.inf)
+
+
+def adjunct_varying_opening(image, structuring_elements, adjunct_dilation=True):
+    """
+    Compute a grayscale opening with a (possibly) varying structuring  element
+    using adjunct operator.
+
+    Use of adjunct operator is particularly important when using varying
+    structuring elements, as the standard operators do not take into account
+    the varying elements.
+
+    :param image: Image to filter.
+    :type image: numpy.ndarray
+
+    :param structuring_elements: Structuring elements possibly varying.
+    :type structuring_elements: numpy.ndarray
+
+    :param adjunct_dilation: Use adjunct of erosion as dilation (True by
+    default).
+    :type adjunct_dilation: bool
+
+    :return: The opened image.
+    :rtype: numpy.ndarray
+    """
+    if adjunct_dilation:
+        return adjunct_varying_dilation(
+            varying_erosion(image, structuring_elements), structuring_elements)
+    else:
+        return varying_dilation(
+            adjunct_varying_erosion(image, structuring_elements),
+            structuring_elements)
+
+
+def adjunct_varying_closing(image, structuring_elements, adjunct_dilation=True):
+    """
+    Compute a grayscale closing with a (possibly) varying structuring  element
+    using adjunct operator..
+
+    :param image: Image to filter.
+    :type image: numpy.ndarray
+
+    :param structuring_elements: Structuring elements possibly varying.
+    :type structuring_elements: numpy.ndarray
+
+    :param adjunct_dilation: Use adjunct of erosion as dilation (True by
+    default).
+    :type adjunct_dilation: bool
+
+    :return: The closed image.
+    :rtype: numpy.ndarray
+    """
+    if adjunct_dilation:
+        return varying_erosion(
+            adjunct_varying_dilation(image, structuring_elements),
+            structuring_elements)
+    else:
+        return adjunct_varying_erosion(
+            varying_dilation(image, structuring_elements), structuring_elements)
