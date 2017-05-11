@@ -27,22 +27,17 @@ def varying_filtering_2d(image, structuring_elements, function_map,
     :return: The filtered image.
     :rtype: numpy.ndarray
     """
-    w = structuring_elements.shape[2]
-    t = w // 2
-    filtered = np.zeros((structuring_elements[0, 0, :].size,) + image.shape)
+    filtered = np.zeros(image.shape)
 
-    k = np.array(range(filtered.shape[0]))
-    i, _, j = np.meshgrid(range(t, image.shape[0] - t), k,
-                          range(t, image.shape[1] - t))
+    ki = structuring_elements.shape[2] // 2
+    kj = structuring_elements.shape[3] // 2
 
-    bi, bj = k // w, k % w
-    bi = np.tile(bi.reshape(bi.size, 1, 1), (1, i.shape[1], i.shape[2]))
-    bj = np.tile(bj.reshape(bj.size, 1, 1), (1, i.shape[1], i.shape[2]))
+    for i in range(ki, image.shape[0] - ki):
+        for j in range(kj, image.shape[1] - kj):
+            filtered[i, j] = function_reduce(
+                function_map(image[i, j], structuring_elements[i, j, :]))
 
-    filtered[:, t:image.shape[0] - t, t:image.shape[1] - t] = function_map(
-        image[i + bi - t, j + bj - t], structuring_elements[i, j, bi, bj])
-
-    return function_reduce(filtered, axis=0)
+    return filtered
 
 
 def varying_dilation(image, structuring_elements):
@@ -139,8 +134,8 @@ def adjunct_varying_filtering_2d(image, structuring_elements, function_map,
     :return: The filtered image with the adjunct operator.
     :rtype: numpy.ndarray
     """
-    dilation = np.zeros(image.shape)
-    dilation[:] = initialization
+    filtered = np.zeros(image.shape)
+    filtered[:] = initialization
 
     ki = structuring_elements.shape[2] // 2
     kj = structuring_elements.shape[3] // 2
@@ -149,13 +144,13 @@ def adjunct_varying_filtering_2d(image, structuring_elements, function_map,
 
     for i in range(ki, image.shape[0] - ki):
         for j in range(kj, image.shape[1] - kj):
-            dilation[i + oi, j + oj] = function_reduce(
-                dilation[i + oi, j + oj],
+            filtered[i + oi, j + oj] = function_reduce(
+                filtered[i + oi, j + oj],
                 function_map(image[i, j], structuring_elements[i, j, :]))
 
-    dilation[dilation == initialization] = 0
+    filtered[filtered == initialization] = 0
 
-    return dilation
+    return filtered
 
 
 def adjunct_varying_dilation(image, structuring_elements):
