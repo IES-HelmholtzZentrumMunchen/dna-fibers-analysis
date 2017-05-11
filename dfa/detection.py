@@ -6,31 +6,80 @@ Use this module to detect fibers and extract their profiles.
 Note that only quite straight fibers are detected for now.
 """
 import numpy as np
-from skimage import feature
+
+import _scale_space_hessian as _sha
 
 
-def enhance_fibers(image, width_range, alpha=0.5, beta=1):
-    enhanced = np.zeros((len(width_range), image.shape[0], image.shape[1]))
+def vesselness_filter(image, scales, alpha, beta):
+    """
+    Enhance fiber image using a multiscale vesselness filter.
 
-    for index, width in enumerate(np.array(width_range) / 2):
-        hxx, hxy, hyy = feature.hessian_matrix(image, sigma=width)
-        l1, l2 = feature.hessian_matrix_eigvals(hxx, hxy, hyy)
+    This vesselness is based on the Frangi filter (Frangi et al. Multiscale
+    vessel enhancement filtering (1998). In: Medical ImageComputing and
+    Computer-Assisted Intervention, vol. 1496, pp. 130-137).
 
-        # We want to order eigenvalues by absolute values of magnitude
-        swap = np.greater(np.abs(l1), np.abs(l2))
-        tmp = l1[swap]
-        l1[swap] = l2[swap]
-        l2[swap] = tmp
+    :param image: Input image to filter.
+    :type image: numpy.ndarray
 
-        l2[l2 == 0] = np.finfo(l2.dtype).eps
+    :param scales: Sizes range.
+    :type scales: list of float or iterable of float
 
-        # Compute the Frangi 2D filter
-        blobness = np.abs(l1) / np.abs(l2)
-        structurness = np.sqrt(np.power(l1, 2) + np.power(l2, 2))
+    :param alpha: Soft threshold of the tubular shape weighting term.
+    :type alpha: float between 0 and 1
 
-        enhanced[index, :, :] = \
-            np.exp(-np.power(blobness, 2) / (2 * alpha**2)) * \
-            (1 - np.exp(-np.power(structurness, 2) / (2 * beta**2)))
-        enhanced[index, l2 > 0] = np.finfo(enhanced.dtype).eps
+    :param beta: Soft threshold of the intensity response.
+    :type beta: float between 0 and 1
 
-    return enhanced.max(axis=0)
+    :return: The multiscale vesselness map and the corresponding vector field
+    of the directions with the less intensity variation.
+    :rtype: tuple of numpy.ndarray
+    """
+    vesselness = np.zeros((len(scales),) + image.shape)
+    directions = np.zeros((len(scales), 2) + image.shape)
+
+    for n, scale in enumerate(scales):
+        hxx, hyy, hxy = _sha.single_scale_hessian(image, scale)
+        (l1, l2), (v1, _) = _sha.hessian_eigen_decomposition(hxx, hyy, hxy)
+        vesselness[n] = _sha.single_scale_vesselness(l1, l2, alpha, beta)
+        directions[n] = v1
+
+    ss, si, sj = vesselness.shape
+    scale_selection = vesselness.argmax(axis=0)
+
+    return (vesselness[scale_selection,
+                       np.tile(np.arange(si).reshape(si, 1), (1, sj)),
+                       np.tile(np.arange(sj).reshape(1, sj), (si, 1))],
+            directions[scale_selection,
+                       np.tile(np.arange(2).reshape(2, 1, 1), (1, si, sj)),
+                       np.tile(np.arange(si).reshape(1, si, 1), (2, 1, sj)),
+                       np.tile(np.arange(sj).reshape(1, 1, sj), (2, si, 1))])
+
+
+def reconstruct_fibers(vesselness, principal_directions, length):
+    pass  # TODO: implement fibers reconstruction
+
+
+def estimate_medial_axis(reconstruction):
+    pass  # TODO: implement medial axis estimation
+
+
+if __name__ == '__main__':
+    import argparse
+    from skimage import io
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('input', type=str, help='Path to input image')
+    parser.add_argument('--alpha', type=float, default=0.5)
+    parser.add_argument('--beta', type=float, default=0.2)
+    parser.add_argument('--scales', type=float, nargs=3, default=[3, 5, 5],
+                        help='Scales to use in pixels (minimum, maximum, '
+                             'number of scales).')
+    args = parser.parse_args()
+
+    input_image = io.imread(args.input)
+
+    vesselness, directions = vesselness_filter(
+        input_image,
+        np.linspace(args.scales[0], args.scales[1],
+                    int(args.scales[2])).tolist(),
+        alpha=args.alpha, beta=args.beta)
