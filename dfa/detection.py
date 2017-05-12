@@ -7,6 +7,8 @@ Note that only quite straight fibers are detected for now.
 """
 import numpy as np
 from skimage.measure import label
+from skimage.morphology import skeletonize
+from scipy.interpolate import splprep, splev
 
 from dfa import _scale_space_hessian as _sha
 from dfa import _structuring_segments as _ss
@@ -121,37 +123,32 @@ def estimate_medial_axis(reconstruction, threshold, degree=3):
     :rtype: list of tuples of float
     """
     # Threshold vesselness map and get connected components
-    labels = label(reconstruction >= threshold)
+    skeletons = skeletonize(reconstruction >= threshold)
+    labels = label(skeletons)
     coordinates = []
 
+    j, i = np.meshgrid(range(labels.shape[1]), range(labels.shape[0]))
+
     for l in range(1, labels.max() + 1):
-        # Get points coordinate for current component
-        j, i = np.meshgrid(range(labels.shape[1]), range(labels.shape[0]))
-        x = j[labels == l]
-        x = x.reshape(x.size, 1)
-        y = i[labels == l]
-        y = y.reshape(y.size, 1)
+        fiber_skeleton = np.equal(labels, l)
+        number_of_pixels = fiber_skeleton.sum()
 
-        # Fit a polynome with least-squares
-        xm = np.ones((x.size, 1))
-        for d in range(1, degree + 1):
-            xm = np.hstack((xm, np.power(x, d)))
-        b = np.dot(np.dot(np.linalg.inv(np.dot(xm.T, xm)), xm.T), y)
+        if number_of_pixels > 30:
+            # we assume the skeleton has only one branch (it must be pruned)
+            splines, t = splprep(
+                np.vstack((j[fiber_skeleton], i[fiber_skeleton])), s=5)
+            t_sampled = np.linspace(t.min(), t.max(), number_of_pixels)
+            x, y = splev(t_sampled, splines)
+            coordinates.append((x, y))
 
-        # Get medial axis coordinates
-        x = np.linspace(x.min(), x.max())
-        coordinates.append(
-            (x, (np.tile(b, (1, x.size)) *
-                 np.power(np.tile(x, (b.size, 1)),
-                          np.tile(np.arange(b.size).reshape(b.size, 1),
-                                  (1, x.size)))).sum(axis=0)))
-
-    return coordinates
+    return coordinates, labels
 
 
 if __name__ == '__main__':
     import argparse
     from skimage import io
+
+    from matplotlib import pyplot as plt
 
     parser = argparse.ArgumentParser()
     parser.add_argument('input', type=str, help='Path to input image')
@@ -176,16 +173,33 @@ if __name__ == '__main__':
 
     input_image = io.imread(args.input)
 
+    plt.imshow(input_image, cmap='gray', aspect='equal')
+    plt.show()
+
     vesselness, directions = vesselness_filter(
         input_image,
         np.linspace(args.scales[0], args.scales[1],
                     int(args.scales[2])).tolist(),
         alpha=args.alpha, beta=args.beta)
 
+    plt.imshow(vesselness, cmap='gray', aspect='equal')
+    plt.show()
+
     reconstructed_vesselness = reconstruct_fibers(
         vesselness, directions, args.reconstruction_extent,
         (args.scales[0]+args.scales[1])/2)
 
-    coordinates = estimate_medial_axis(reconstructed_vesselness,
-                                       args.vesselness_threshold,
-                                       args.polynomial_degree)
+    plt.imshow(reconstructed_vesselness, cmap='gray', aspect='equal')
+    plt.show()
+
+    coordinates, labels = estimate_medial_axis(reconstructed_vesselness,
+                                               args.vesselness_threshold,
+                                               args.polynomial_degree)
+
+    plt.imshow(labels, cmap='gray', aspect='equal')
+    plt.show()
+
+    plt.imshow(input_image, cmap='gray', aspect='equal')
+    for c in coordinates:
+        plt.plot(*c, '-r')
+    plt.show()
