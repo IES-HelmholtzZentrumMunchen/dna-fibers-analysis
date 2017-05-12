@@ -366,16 +366,17 @@ def structuring_segments(directions, thickness, length, scaling=100, flat=True):
     a scaling factor.
     :type flat: bool
 
-    :return: Map of structuring segments.
-    :rtype: numpy.ndarray
+    :return: Map of structuring segments from image space to structuring
+    elements space.
+    :rtype: dict
     """
     k = length // 2 + 1
     family = _segments_family(range(180), thickness, length, k, scaling, flat)
     angles = np.mod(np.round(_vectors2angles(directions)), 180).astype('int')
 
-    segments = np.zeros(directions.shape[1:] + (2 * k + 1, 2 * k + 1))
-    for i in range(segments.shape[0]):
-        for j in range(segments.shape[1]):
-            segments[i, j, :] = family[angles[i, j]]
+    segments = dict()
+    for i in range(directions.shape[1]):
+        for j in range(directions.shape[2]):
+            segments[i, j] = family[angles[i, j]]
 
     return segments

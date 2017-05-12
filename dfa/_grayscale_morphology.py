@@ -16,7 +16,7 @@ def varying_filtering_2d(image, structuring_elements, function_map,
     :type image: numpy.ndarray
 
     :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: numpy.ndarray
+    :type structuring_elements: dict
 
     :param function_map: Function of the filter domain used when mapping.
     :type function_map: function
@@ -29,8 +29,8 @@ def varying_filtering_2d(image, structuring_elements, function_map,
     """
     filtered = np.zeros(image.shape)
 
-    ki = structuring_elements.shape[2] // 2
-    kj = structuring_elements.shape[3] // 2
+    ki = structuring_elements[0, 0].shape[0] // 2
+    kj = structuring_elements[0, 0].shape[1] // 2
 
     oj, oi = np.meshgrid(range(-kj, kj + 1), range(-ki, ki + 1))
 
@@ -38,7 +38,7 @@ def varying_filtering_2d(image, structuring_elements, function_map,
         for j in range(kj, image.shape[1] - kj):
             filtered[i, j] = function_reduce(
                 function_map(image[i + oi, j + oj],
-                             structuring_elements[i, j, :]))
+                             structuring_elements[i, j]))
 
     return filtered
 
@@ -51,7 +51,7 @@ def varying_dilation(image, structuring_elements):
     :type image: numpy.ndarray
 
     :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: numpy.ndarray
+    :type structuring_elements: dict
 
     :return: The dilated image.
     :rtype: numpy.ndarray
@@ -67,7 +67,7 @@ def varying_erosion(image, structuring_elements):
     :type image: numpy.ndarray
 
     :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: numpy.ndarray
+    :type structuring_elements: dict
 
     :return: The eroded image.
     :rtype: numpy.ndarray
@@ -84,7 +84,7 @@ def varying_opening(image, structuring_elements):
     :type image: numpy.ndarray
 
     :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: numpy.ndarray
+    :type structuring_elements: dict
 
     :return: The opened image.
     :rtype: numpy.ndarray
@@ -101,7 +101,7 @@ def varying_closing(image, structuring_elements):
     :type image: numpy.ndarray
 
     :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: numpy.ndarray
+    :type structuring_elements: dict
 
     :return: The closed image.
     :rtype: numpy.ndarray
@@ -123,7 +123,7 @@ def adjunct_varying_filtering_2d(image, structuring_elements, function_map,
     :type image: numpy.ndarray
 
     :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: numpy.ndarray
+    :type structuring_elements: dict
 
     :param function_map: Function of the filter domain used when mapping.
     :type function_map: function
@@ -140,8 +140,8 @@ def adjunct_varying_filtering_2d(image, structuring_elements, function_map,
     filtered = np.zeros(image.shape)
     filtered[:] = initialization
 
-    ki = structuring_elements.shape[2] // 2
-    kj = structuring_elements.shape[3] // 2
+    ki = structuring_elements[0, 0].shape[0] // 2
+    kj = structuring_elements[0, 0].shape[1] // 2
 
     oj, oi = np.meshgrid(range(-kj, kj + 1), range(-ki, ki + 1))
 
@@ -149,7 +149,7 @@ def adjunct_varying_filtering_2d(image, structuring_elements, function_map,
         for j in range(kj, image.shape[1] - kj):
             filtered[i + oi, j + oj] = function_reduce(
                 filtered[i + oi, j + oj],
-                function_map(image[i, j], structuring_elements[i, j, :]))
+                function_map(image[i, j], structuring_elements[i, j]))
 
     filtered[filtered == initialization] = 0
 
@@ -168,7 +168,7 @@ def adjunct_varying_dilation(image, structuring_elements):
     :type image: numpy.ndarray
 
     :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: numpy.ndarray
+    :type structuring_elements: dict
 
     :return: The dilated image with the adjunct of the erosion.
     :rtype: numpy.ndarray
@@ -189,7 +189,7 @@ def adjunct_varying_erosion(image, structuring_elements):
     :type image: numpy.ndarray
 
     :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: numpy.ndarray
+    :type structuring_elements: dict
 
     :return: The eroded image with the adjunct of the dilation.
     :rtype: numpy.ndarray
@@ -211,7 +211,7 @@ def adjunct_varying_opening(image, structuring_elements, adjunct_dilation=True):
     :type image: numpy.ndarray
 
     :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: numpy.ndarray
+    :type structuring_elements: dict
 
     :param adjunct_dilation: Use adjunct of erosion as dilation (True by
     default).
@@ -238,7 +238,7 @@ def adjunct_varying_closing(image, structuring_elements, adjunct_dilation=True):
     :type image: numpy.ndarray
 
     :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: numpy.ndarray
+    :type structuring_elements: dict
 
     :param adjunct_dilation: Use adjunct of erosion as dilation (True by
     default).
