@@ -254,3 +254,55 @@ def adjunct_varying_closing(image, structuring_elements, adjunct_dilation=True):
     else:
         return adjunct_varying_erosion(
             varying_dilation(image, structuring_elements), structuring_elements)
+
+
+def morphological_regularization(image, directions, structuring_elements):
+    """
+    Regularize the directions field using guided morphological dilation.
+
+    It computes grayscale adjunct filtering of directions field, guided with an
+    image and with a (possibly) varying structuring element.
+
+    This is particularly important when using varying structuring elements, as
+    the standard operators do not take into account the varying elements.
+
+    :param image: Image used as guide.
+    :type image: numpy.ndarray
+
+    :param directions: The directions to regularize.
+    :type directions: numpy.ndarray
+
+    :param structuring_elements: Structuring elements possibly varying.
+    :type structuring_elements: dict
+
+    :return: The filtered image with the adjunct operator.
+    :rtype: numpy.ndarray
+    """
+    guide = np.zeros(image.shape)
+    guide[:] = -np.inf
+
+    regularized = np.zeros(directions.shape)
+
+    ki = structuring_elements[0, 0].shape[0] // 2
+    kj = structuring_elements[0, 0].shape[1] // 2
+
+    oj, oi = np.meshgrid(range(-kj, kj + 1), range(-ki, ki + 1))
+
+    field_expansion = np.zeros((2,) + oi.shape)
+
+    for i in range(ki, image.shape[0] - ki):
+        for j in range(kj, image.shape[1] - kj):
+            expansion = np.add(image[i, j], structuring_elements[i, j])
+            condition = np.less(guide[i + oi, j + oj], expansion)
+
+            guide[i + oi[condition], j + oj[condition]] = expansion[condition]
+
+            field_expansion[0] = np.add(directions[0, i, j],
+                                        structuring_elements[i, j])
+            field_expansion[1] = np.add(directions[1, i, j],
+                                        structuring_elements[i, j])
+
+            regularized[:, i + oi[condition], j + oj[condition]] = \
+                field_expansion[:, condition]
+
+    return regularized

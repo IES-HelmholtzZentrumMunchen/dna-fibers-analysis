@@ -91,11 +91,8 @@ def reconstruct_fibers(vesselness, directions, length, size):
 
     # Regularize the vector field with a simple morphological dilation
     segments = _ss.structuring_segments(directions, size, length, 0)
-    regularized_directions = np.zeros(directions.shape)
-    regularized_directions[0] = _gm.adjunct_varying_dilation(
-        directions[0], segments)
-    regularized_directions[1] = _gm.adjunct_varying_dilation(
-        directions[1], segments)
+    regularized_directions = _gm.morphological_regularization(
+        vesselness, directions, segments)
     segments = _ss.structuring_segments(regularized_directions, size, length, 0)
 
     # Reconstruct by morphological closing
