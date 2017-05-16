@@ -87,7 +87,7 @@ def gaussian_second_derivative_kernel(sigma, k):
     return v
 
 
-def single_scale_hessian(image, size):
+def single_scale_hessian(image, size, gamma=1):
     """
     Compute the Hessian matrix for an image using the scale-space theory.
 
@@ -96,6 +96,10 @@ def single_scale_hessian(image, size):
 
     :param size: Size of the current scale-space.
     :type size: strictly positive float
+
+    :param gamma: Gamma-normalization of the derivatives (see scale-space
+    theory). If no scale is preferred, it should be set to 1 (default).
+    :type gamma: positive float
 
     :return: The Hessian matrix elements for input image (hxx, hyy, hxy).
     :rtype: tuple of numpy.ndarray
@@ -115,7 +119,9 @@ def single_scale_hessian(image, size):
                                  gaussian_first_derivative_kernel(size, k).T),
                      mode='same')
 
-    return hxx, hyy, hxy
+    factor = size ** gamma  # t ** (2*gamma/2)
+
+    return factor * hxx, factor * hyy, factor * hxy
 
 
 def hessian_eigen_decomposition(hxx, hyy, hxy):
