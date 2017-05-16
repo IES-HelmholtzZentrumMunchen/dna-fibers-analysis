@@ -15,7 +15,7 @@ from dfa import _structuring_segments as _ss
 from dfa import _grayscale_morphology as _gm
 
 
-def vesselness_filter(image, scales, alpha, beta):
+def vesselness_filter(image, scales, alpha=0.5, beta=None, gamma=1):
     """
     Enhance fiber image using a multi-scale vesselness filter.
 
@@ -29,11 +29,18 @@ def vesselness_filter(image, scales, alpha, beta):
     :param scales: Sizes range.
     :type scales: list of float or iterable of float
 
-    :param alpha: Soft threshold of the tubular shape weighting term.
+    :param alpha: Soft threshold of the tubular shape weighting term. Default is
+    the recommended value (i.e. 0.5).
     :type alpha: float between 0 and 1
 
-    :param beta: Soft threshold of the intensity response.
-    :type beta: float between 0 and 1
+    :param beta: Soft threshold of the intensity response (intensity-dependent).
+    If not specified (None, default), the parameter is automatically estimated
+    as proposed in Frangi et al.
+    :type beta: positive float
+
+    :param gamma: Gamma-normalization of the derivatives (see scale-space
+    theory). If no scale is preferred, it should be set to 1 (default).
+    :type gamma: positive float
 
     :return: The multiscale vesselness map and the corresponding vector field
     of the directions with the less intensity variation.
@@ -43,7 +50,7 @@ def vesselness_filter(image, scales, alpha, beta):
     directions = np.zeros((len(scales), 2) + image.shape)
 
     for n, scale in enumerate(scales):
-        hxx, hyy, hxy = _sha.single_scale_hessian(image, scale)
+        hxx, hyy, hxy = _sha.single_scale_hessian(image, scale, gamma)
         (l1, l2), (v1, _) = _sha.hessian_eigen_decomposition(hxx, hyy, hxy)
         vesselness[n] = _sha.single_scale_vesselness(l1, l2, alpha, beta)
         directions[n] = v1
@@ -150,8 +157,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('input', type=str, help='Path to input image')
     parser.add_argument('--alpha', type=float, default=0.5)
-    parser.add_argument('--beta', type=float, default=0.2)
-    parser.add_argument('--scales', type=float, nargs=3, default=[3, 5, 5],
+    parser.add_argument('--beta', type=float, default=None)
+    parser.add_argument('--gamma', type=float, default=1)
+    parser.add_argument('--scales', type=float, nargs=3, default=[2, 4, 5],
                         help='Scales to use in pixels (minimum, maximum, '
                              'number of scales).')
     parser.add_argument('--no-flat', action='store_true',
@@ -175,9 +183,9 @@ if __name__ == '__main__':
 
     vesselness, directions = vesselness_filter(
         input_image,
-        np.linspace(args.scales[0], args.scales[1],
-                    int(args.scales[2])).tolist(),
-        alpha=args.alpha, beta=args.beta)
+        scales=np.linspace(args.scales[0], args.scales[1],
+                           int(args.scales[2])).tolist(),
+        alpha=args.alpha, beta=args.beta, gamma=args.gamma)
 
     plt.imshow(vesselness, cmap='gray', aspect='equal')
     plt.show()
