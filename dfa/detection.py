@@ -106,7 +106,7 @@ def reconstruct_fibers(vesselness, directions, length, size):
     return _gm.adjunct_varying_closing(vesselness, segments)
 
 
-def estimate_medial_axis(reconstruction, threshold, degree=3):
+def estimate_medial_axis(reconstruction, threshold):
     """
     Estimate the medial axis of the detected fibers from the reconstructed
     vesselness map.
@@ -119,9 +119,6 @@ def estimate_medial_axis(reconstruction, threshold, degree=3):
 
     :param threshold: Threshold to use with the vesselness map.
     :type threshold: integer between 0 and 1
-
-    :param degree: Degree of the fitted polynomial.
-    :type degree: positive int
 
     :return: Coordinates of the medial axis lines of corresponding fibers.
     :rtype: list of tuples of float
@@ -171,9 +168,6 @@ if __name__ == '__main__':
     parser.add_argument('--vesselness-threshold', type=float, default=0.25,
                         help='Threshold used to binarize the vesselness map ('
                              'default is 0.25).')
-    parser.add_argument('--polynomial-degree', type=int, default=3,
-                        help='The degree of the polynomial fitted to estimate '
-                             'the medial axis of the fibers (default is 3).')
     args = parser.parse_args()
 
     input_image = io.imread(args.input)
@@ -198,8 +192,7 @@ if __name__ == '__main__':
     plt.show()
 
     coordinates, labels = estimate_medial_axis(reconstructed_vesselness,
-                                               args.vesselness_threshold,
-                                               args.polynomial_degree)
+                                               args.vesselness_threshold)
 
     plt.imshow(labels, cmap='gray', aspect='equal')
     plt.show()
