@@ -13,6 +13,7 @@ from scipy.interpolate import splprep, splev
 from dfa import _scale_space_hessian as _sha
 from dfa import _structuring_segments as _ss
 from dfa import _grayscale_morphology as _gm
+from dfa import _skeleton_pruning as _sk
 
 
 def vesselness_filter(image, scales, alpha=0.5, beta=None, gamma=1):
@@ -131,11 +132,12 @@ def estimate_medial_axis(reconstruction, threshold):
     j, i = np.meshgrid(range(labels.shape[1]), range(labels.shape[0]))
 
     for l in range(1, labels.max() + 1):
-        fiber_skeleton = np.equal(labels, l)
+        # fiber_skeleton = np.equal(labels, l)
+        fiber_skeleton = _sk.prune_min(np.equal(labels, l))
         number_of_pixels = fiber_skeleton.sum()
 
         if number_of_pixels > 30:
-            # we assume the skeleton has only one branch (it must be pruned)
+            # we assume the skeleton has only one branch (it is pruned)
             splines, t = splprep(
                 np.vstack((j[fiber_skeleton], i[fiber_skeleton])), s=5)
             t_sampled = np.linspace(t.min(), t.max(), number_of_pixels)
