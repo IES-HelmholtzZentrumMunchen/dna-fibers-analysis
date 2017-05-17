@@ -16,7 +16,7 @@ from dfa import _grayscale_morphology as _gm
 from dfa import _skeleton_pruning as _sk
 
 
-def vesselness_filter(image, scales, alpha=0.5, beta=None, gamma=1):
+def fiberness_filter(image, scales, alpha=0.5, beta=None, gamma=1):
     """
     Enhance fiber image using a multi-scale vesselness filter.
 
@@ -43,32 +43,32 @@ def vesselness_filter(image, scales, alpha=0.5, beta=None, gamma=1):
     theory). If no scale is preferred, it should be set to 1 (default).
     :type gamma: positive float
 
-    :return: The multiscale vesselness map and the corresponding vector field
+    :return: The multiscale fiberness map and the corresponding vector field
     of the directions with the less intensity variation.
     :rtype: tuple of numpy.ndarray
     """
-    vesselness = np.zeros((len(scales),) + image.shape)
+    fiberness = np.zeros((len(scales),) + image.shape)
     directions = np.zeros((len(scales), 2) + image.shape)
 
     for n, scale in enumerate(scales):
         hxx, hyy, hxy = _sha.single_scale_hessian(image, scale, gamma)
         (l1, l2), (v1, _) = _sha.hessian_eigen_decomposition(hxx, hyy, hxy)
-        vesselness[n] = _sha.single_scale_vesselness(l1, l2, alpha, beta)
+        fiberness[n] = _sha.single_scale_vesselness(l1, l2, alpha, beta)
         directions[n] = v1
 
-    ss, si, sj = vesselness.shape
-    scale_selection = vesselness.argmax(axis=0)
+    ss, si, sj = fiberness.shape
+    scale_selection = fiberness.argmax(axis=0)
 
-    return (vesselness[scale_selection,
-                       np.tile(np.arange(si).reshape(si, 1), (1, sj)),
-                       np.tile(np.arange(sj).reshape(1, sj), (si, 1))],
+    return (fiberness[scale_selection,
+                      np.tile(np.arange(si).reshape(si, 1), (1, sj)),
+                      np.tile(np.arange(sj).reshape(1, sj), (si, 1))],
             directions[scale_selection,
                        np.tile(np.arange(2).reshape(2, 1, 1), (1, si, sj)),
                        np.tile(np.arange(si).reshape(1, si, 1), (2, 1, sj)),
                        np.tile(np.arange(sj).reshape(1, 1, sj), (2, si, 1))])
 
 
-def reconstruct_fibers(vesselness, directions, length, size):
+def reconstruct_fibers(fiberness, directions, length, size):
     """
     Reconstruct fibers disconnections from vesselness map and directions of
     less intensity variations.
@@ -79,8 +79,8 @@ def reconstruct_fibers(vesselness, directions, length, size):
     International Symposium on Biomedical Imaging: From Nano to Macro, pp.
     1011-1014
 
-    :param vesselness: Input vesselness map.
-    :type vesselness: numpy.ndarray
+    :param fiberness: Input vesselness map.
+    :type fiberness: numpy.ndarray
 
     :param directions: Vector field of less intensity variations of input image.
     :type directions: numpy.ndarray
@@ -100,11 +100,11 @@ def reconstruct_fibers(vesselness, directions, length, size):
     # Regularize the vector field with a simple morphological dilation
     segments = _ss.structuring_segments(directions, size, length, 0)
     regularized_directions = _gm.morphological_regularization(
-        vesselness, directions, segments)
+        fiberness, directions, segments)
     segments = _ss.structuring_segments(regularized_directions, size, length, 0)
 
     # Reconstruct by morphological closing
-    return _gm.adjunct_varying_closing(vesselness, segments)
+    return _gm.adjunct_varying_closing(fiberness, segments)
 
 
 def _order_skeleton_points(skeleton):
@@ -140,15 +140,15 @@ def _order_skeleton_points(skeleton):
 def estimate_medial_axis(reconstruction, threshold, smoothing=10):
     """
     Estimate the medial axis of the detected fibers from the reconstructed
-    vesselness map.
+    fiberness map.
 
     This current implementation uses a parametric B-Spline fitting to estimate,
     separately, the medial axis of the fibers.
 
-    :param reconstruction: Reconstructed vesselness map.
+    :param reconstruction: Reconstructed fiberness map.
     :type reconstruction: numpy.ndarray
 
-    :param threshold: Threshold to use with the vesselness map.
+    :param threshold: Threshold to use with the fiberness map.
     :type threshold: integer between 0 and 1
 
     :param smoothing: Smoothing of the B-Spline fitting (in pixels).
@@ -186,24 +186,38 @@ if __name__ == '__main__':
     from matplotlib import pyplot as plt
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('input', type=str, help='Path to input image')
-    parser.add_argument('--alpha', type=float, default=0.5)
-    parser.add_argument('--beta', type=float, default=None)
-    parser.add_argument('--gamma', type=float, default=1)
-    parser.add_argument('--scales', type=float, nargs=3, default=[2, 4, 5],
-                        help='Scales to use in pixels (minimum, maximum, '
-                             'number of scales).')
-    parser.add_argument('--no-flat', action='store_true',
-                        help='Use non-flat structuring elements for fiber '
-                             'reconstruction (by default use flat structuring '
-                             'elements).')
-    parser.add_argument('--reconstruction-extent', type=float, default=20,
-                        help='Reconstruction extent in pixels (default is 20).')
-    parser.add_argument('--vesselness-threshold', type=float, default=0.25,
-                        help='Threshold used to binarize the vesselness map ('
-                             'default is 0.25).')
-    parser.add_argument('--smoothing', type=int, default=10,
-                        help='Smoothing of the output fibers (default is 10).')
+
+    group_images = parser.add_argument_group('Images')
+    group_images.add_argument('input', type=str, help='Path to input image')
+
+    group_detection = parser.add_argument_group('Detection')
+    group_detection.add_argument('--alpha', type=float, default=0.5)
+    group_detection.add_argument('--beta', type=float, default=None)
+    group_detection.add_argument('--gamma', type=float, default=1)
+    group_detection.add_argument('--scales', type=float, nargs=3,
+                                 default=[2, 4, 5],
+                                 help='Scales to use in pixels (minimum, '
+                                      'maximum, number of scales).')
+
+    group_reconstruction = parser.add_argument_group('Reconstruction')
+    group_reconstruction.add_argument('--no-flat', action='store_true',
+                                      help='Use non-flat structuring elements '
+                                           'for fiber reconstruction (by '
+                                           'default use flat structuring '
+                                           'elements).')
+    group_reconstruction.add_argument('--reconstruction-extent', type=float,
+                                      default=20,
+                                      help='Reconstruction extent in pixels '
+                                           '(default is 20).')
+
+    group_medial = parser.add_argument_group('Medial axis')
+    group_medial.add_argument('--fiberness-threshold', type=float,
+                              default=0.25,
+                              help='Threshold used to binarize the vesselness '
+                                   'map (default is 0.25).')
+    group_medial.add_argument('--smoothing', type=int, default=10,
+                              help='Smoothing of the output fibers '
+                                   '(default is 10).')
     args = parser.parse_args()
 
     input_image = io.imread(args.input)
@@ -211,25 +225,26 @@ if __name__ == '__main__':
     plt.imshow(input_image, cmap='gray', aspect='equal')
     plt.show()
 
-    vesselness, directions = vesselness_filter(
+    fiberness, directions = fiberness_filter(
         input_image,
         scales=np.linspace(args.scales[0], args.scales[1],
                            int(args.scales[2])).tolist(),
         alpha=args.alpha, beta=args.beta, gamma=args.gamma)
 
-    plt.imshow(vesselness, cmap='gray', aspect='equal')
+    plt.imshow(fiberness, cmap='gray', aspect='equal')
     plt.show()
 
     reconstructed_vesselness = reconstruct_fibers(
-        vesselness, directions, args.reconstruction_extent,
-        (args.scales[0]+args.scales[1])/2)
+        fiberness, directions,
+        length=args.reconstruction_extent,
+        size=(args.scales[0]+args.scales[1])/2)
 
     plt.imshow(reconstructed_vesselness, cmap='gray', aspect='equal')
     plt.show()
 
-    coordinates = estimate_medial_axis(reconstructed_vesselness,
-                                       args.vesselness_threshold,
-                                       args.smoothing)
+    coordinates = estimate_medial_axis(
+        reconstructed_vesselness,
+        threshold=args.fiberness_threshold, smoothing=args.smoothing)
 
     plt.imshow(input_image, cmap='gray', aspect='equal')
     for c in coordinates:
