@@ -185,7 +185,7 @@ def hessian_eigen_decomposition(hxx, hyy, hxy):
     return (l1, l2), (v1, v2)
 
 
-def single_scale_vesselness(l1, l2, alpha=0.5, beta=None):
+def single_scale_vesselness(l1, l2, alpha=0.5, beta=0.5):
     """
     Compute the vesselness using the scale-space theory.
 
@@ -205,9 +205,8 @@ def single_scale_vesselness(l1, l2, alpha=0.5, beta=None):
     the recommended value (i.e. 0.5).
     :type alpha: float between 0 and 1
 
-    :param beta: Soft threshold of the intensity response (intensity-dependent).
-    If not specified (None, default), the parameter is automatically estimated
-    as proposed in Frangi et al.
+    :param beta: Soft threshold of the intensity response (intensity-dependent)
+    as a percentage of maximal Hessian norm (as proposed in Frangi et al.).
     :type beta: positive float
 
     :return: The vesselness map.
@@ -222,8 +221,7 @@ def single_scale_vesselness(l1, l2, alpha=0.5, beta=None):
     s[l2_is_negative] = np.sqrt(
         np.power(l1[l2_is_negative], 2) + np.power(l2[l2_is_negative], 2))
 
-    if beta is None:
-        beta = s.max() / 2
+    beta *= s.max()
 
     vesselness = np.zeros(l1.shape)
     vesselness[l2_is_negative] = np.exp(

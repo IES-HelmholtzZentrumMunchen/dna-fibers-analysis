@@ -16,7 +16,7 @@ from dfa import _grayscale_morphology as _gm
 from dfa import _skeleton_pruning as _sk
 
 
-def fiberness_filter(image, scales, alpha=0.5, beta=None, gamma=1):
+def fiberness_filter(image, scales, alpha=0.5, beta=0.5, gamma=1):
     """
     Enhance fiber image using a multi-scale vesselness filter.
 
@@ -34,9 +34,8 @@ def fiberness_filter(image, scales, alpha=0.5, beta=None, gamma=1):
     the recommended value (i.e. 0.5).
     :type alpha: float between 0 and 1
 
-    :param beta: Soft threshold of the intensity response (intensity-dependent).
-    If not specified (None, default), the parameter is automatically estimated
-    as proposed in Frangi et al.
+    :param beta: Soft threshold of the intensity response (intensity-dependent)
+    as a percentage of maximal Hessian norm (as proposed in Frangi et al.).
     :type beta: positive float
 
     :param gamma: Gamma-normalization of the derivatives (see scale-space
@@ -137,7 +136,7 @@ def _order_skeleton_points(skeleton):
     return x, y
 
 
-def estimate_medial_axis(reconstruction, threshold, smoothing=10):
+def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10):
     """
     Estimate the medial axis of the detected fibers from the reconstructed
     fiberness map.
@@ -191,13 +190,19 @@ if __name__ == '__main__':
     group_images.add_argument('input', type=str, help='Path to input image')
 
     group_detection = parser.add_argument_group('Detection')
-    group_detection.add_argument('--alpha', type=float, default=0.5)
-    group_detection.add_argument('--beta', type=float, default=None)
-    group_detection.add_argument('--gamma', type=float, default=1)
+    group_detection.add_argument('--fiber-sensitivity', type=float,
+                                 default=0.5,
+                                 help='Sensitivity of detection to geometry in'
+                                      'percentage (default is 0.5).')
+    group_detection.add_argument('--intensity-sensitivity', type=float,
+                                 default=0.5,
+                                 help='Sensitivity of detection to intensity in'
+                                      ' percentage (default is 0.5).')
     group_detection.add_argument('--scales', type=float, nargs=3,
                                  default=[2, 4, 5],
                                  help='Scales to use in pixels (minimum, '
-                                      'maximum, number of scales).')
+                                      'maximum, number of scales). Default is '
+                                      '2 4 5.')
 
     group_reconstruction = parser.add_argument_group('Reconstruction')
     group_reconstruction.add_argument('--no-flat', action='store_true',
@@ -211,13 +216,9 @@ if __name__ == '__main__':
                                            '(default is 20).')
 
     group_medial = parser.add_argument_group('Medial axis')
-    group_medial.add_argument('--fiberness-threshold', type=float,
-                              default=0.25,
-                              help='Threshold used to binarize the vesselness '
-                                   'map (default is 0.25).')
-    group_medial.add_argument('--smoothing', type=int, default=10,
+    group_medial.add_argument('--smoothing', type=int, default=20,
                               help='Smoothing of the output fibers '
-                                   '(default is 10).')
+                                   '(default is 20).')
     args = parser.parse_args()
 
     input_image = io.imread(args.input)
@@ -229,7 +230,7 @@ if __name__ == '__main__':
         input_image,
         scales=np.linspace(args.scales[0], args.scales[1],
                            int(args.scales[2])).tolist(),
-        alpha=args.alpha, beta=args.beta, gamma=args.gamma)
+        alpha=args.fiber_sensitivity, beta=1-args.intensity_sensitivity)
 
     plt.imshow(fiberness, cmap='gray', aspect='equal')
     plt.show()
@@ -243,8 +244,7 @@ if __name__ == '__main__':
     plt.show()
 
     coordinates = estimate_medial_axis(
-        reconstructed_vesselness,
-        threshold=args.fiberness_threshold, smoothing=args.smoothing)
+        reconstructed_vesselness, smoothing=args.smoothing)
 
     plt.imshow(input_image, cmap='gray', aspect='equal')
     for c in coordinates:
