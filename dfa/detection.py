@@ -136,7 +136,8 @@ def _order_skeleton_points(skeleton):
     return x, y
 
 
-def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10):
+def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10,
+                         min_length=30):
     """
     Estimate the medial axis of the detected fibers from the reconstructed
     fiberness map.
@@ -153,6 +154,10 @@ def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10):
     :param smoothing: Smoothing of the B-Spline fitting (in pixels).
     :type smoothing: strictly positive int
 
+    :param min_length: Approximative minimal length of fibers in pixels
+    (default is 30).
+    :type min_length: strictly positive int
+
     :return: Coordinates of the medial axis lines of corresponding fibers.
     :rtype: list of tuples of float
     """
@@ -166,7 +171,7 @@ def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10):
         fiber_skeleton = _sk.prune_min(np.equal(labels, l))
         number_of_pixels = fiber_skeleton.sum()
 
-        if number_of_pixels > 30:
+        if number_of_pixels >= min_length:
             # we assume the skeleton has only one branch (it is pruned)
             # noinspection PyTupleAssignmentBalance
             splines, u = splprep(
@@ -210,7 +215,7 @@ if __name__ == '__main__':
                                            'for fiber reconstruction (by '
                                            'default use flat structuring '
                                            'elements).')
-    group_reconstruction.add_argument('--reconstruction-extent', type=float,
+    group_reconstruction.add_argument('--reconstruction-extent', type=int,
                                       default=20,
                                       help='Reconstruction extent in pixels '
                                            '(default is 20).')
@@ -219,6 +224,9 @@ if __name__ == '__main__':
     group_medial.add_argument('--smoothing', type=int, default=20,
                               help='Smoothing of the output fibers '
                                    '(default is 20).')
+    group_medial.add_argument('--fibers-minimal-length', type=int, default=30,
+                              help='Minimal length of a fiber in pixels '
+                                   'default is 30).')
     args = parser.parse_args()
 
     input_image = io.imread(args.input)
@@ -244,7 +252,8 @@ if __name__ == '__main__':
     plt.show()
 
     coordinates = estimate_medial_axis(
-        reconstructed_vesselness, smoothing=args.smoothing)
+        reconstructed_vesselness, smoothing=args.smoothing,
+        min_length=args.fibers_minimal_length)
 
     plt.imshow(input_image, cmap='gray', aspect='equal')
     for c in coordinates:
