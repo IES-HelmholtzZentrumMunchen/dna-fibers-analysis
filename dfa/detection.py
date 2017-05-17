@@ -107,12 +107,42 @@ def reconstruct_fibers(vesselness, directions, length, size):
     return _gm.adjunct_varying_closing(vesselness, segments)
 
 
-def estimate_medial_axis(reconstruction, threshold):
+def _order_skeleton_points(skeleton):
+    """
+    Gives the list of points corresponding to the skeleton, in the consecutive
+    order.
+
+    :param skeleton: Input skeleton.
+    :type skeleton: numpy.ndarray
+
+    :return: Lists of ordered coordinates values
+    :rtype: tuple of lists of int
+    """
+    connectivity = _sk.skeleton_connectivity(skeleton)
+    endpoints = connectivity == 2
+    j, i = np.meshgrid(range(skeleton.shape[1]), range(skeleton.shape[0]))
+    x0, xn = j[endpoints]
+    y0, yn = i[endpoints]
+    skeleton[y0, x0] = 0
+    x = [x0]
+    y = [y0]
+    oj, oi = np.meshgrid(range(-1, 2), range(-1, 2))
+
+    while x[-1] != xn or y[-1] != yn:
+        next_point = skeleton[y[-1] + oi, x[-1] + oj] > 0
+        x.append(x[-1] + int(oj[next_point]))
+        y.append(y[-1] + int(oi[next_point]))
+        skeleton[y[-1], x[-1]] = 0
+
+    return x, y
+
+
+def estimate_medial_axis(reconstruction, threshold, smoothing=10):
     """
     Estimate the medial axis of the detected fibers from the reconstructed
     vesselness map.
 
-    This current implementation uses a polynomial fitting to estimate,
+    This current implementation uses a parametric B-Spline fitting to estimate,
     separately, the medial axis of the fibers.
 
     :param reconstruction: Reconstructed vesselness map.
@@ -120,6 +150,9 @@ def estimate_medial_axis(reconstruction, threshold):
 
     :param threshold: Threshold to use with the vesselness map.
     :type threshold: integer between 0 and 1
+
+    :param smoothing: Smoothing of the B-Spline fitting (in pixels).
+    :type smoothing: strictly positive int
 
     :return: Coordinates of the medial axis lines of corresponding fibers.
     :rtype: list of tuples of float
@@ -129,8 +162,6 @@ def estimate_medial_axis(reconstruction, threshold):
     labels = label(skeletons)
     coordinates = []
 
-    j, i = np.meshgrid(range(labels.shape[1]), range(labels.shape[0]))
-
     for l in range(1, labels.max() + 1):
         # fiber_skeleton = np.equal(labels, l)
         fiber_skeleton = _sk.prune_min(np.equal(labels, l))
@@ -138,13 +169,14 @@ def estimate_medial_axis(reconstruction, threshold):
 
         if number_of_pixels > 30:
             # we assume the skeleton has only one branch (it is pruned)
-            splines, t = splprep(
-                np.vstack((j[fiber_skeleton], i[fiber_skeleton])), s=5)
-            t_sampled = np.linspace(t.min(), t.max(), number_of_pixels)
-            x, y = splev(t_sampled, splines)
+            # noinspection PyTupleAssignmentBalance
+            splines, u = splprep(
+                np.vstack(_order_skeleton_points(fiber_skeleton)), s=smoothing)
+            u_sampled = np.linspace(u.min(), u.max(), number_of_pixels)
+            x, y = splev(u_sampled, splines)
             coordinates.append((x, y))
 
-    return coordinates, labels
+    return coordinates
 
 
 if __name__ == '__main__':
@@ -170,6 +202,8 @@ if __name__ == '__main__':
     parser.add_argument('--vesselness-threshold', type=float, default=0.25,
                         help='Threshold used to binarize the vesselness map ('
                              'default is 0.25).')
+    parser.add_argument('--smoothing', type=int, default=10,
+                        help='Smoothing of the output fibers (default is 10).')
     args = parser.parse_args()
 
     input_image = io.imread(args.input)
@@ -193,11 +227,9 @@ if __name__ == '__main__':
     plt.imshow(reconstructed_vesselness, cmap='gray', aspect='equal')
     plt.show()
 
-    coordinates, labels = estimate_medial_axis(reconstructed_vesselness,
-                                               args.vesselness_threshold)
-
-    plt.imshow(labels, cmap='gray', aspect='equal')
-    plt.show()
+    coordinates = estimate_medial_axis(reconstructed_vesselness,
+                                       args.vesselness_threshold,
+                                       args.smoothing)
 
     plt.imshow(input_image, cmap='gray', aspect='equal')
     for c in coordinates:
