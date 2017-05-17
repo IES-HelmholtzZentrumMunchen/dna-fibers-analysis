@@ -178,7 +178,8 @@ def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10,
                 np.vstack(_order_skeleton_points(fiber_skeleton)), s=smoothing)
             u_sampled = np.linspace(u.min(), u.max(), number_of_pixels)
             x, y = splev(u_sampled, splines)
-            coordinates.append((x, y))
+            coordinates.append((x.reshape(x.size, 1),
+                                y.reshape(y.size, 1)))
 
     return coordinates
 
@@ -186,7 +187,7 @@ def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10,
 if __name__ == '__main__':
     import os
     import argparse
-    from dfa import _utilities
+    from dfa import _utilities as _ut
     from skimage import io
 
     def _check_valid_path(path):
@@ -226,7 +227,7 @@ if __name__ == '__main__':
 
         return variable
 
-    @_utilities.static_vars(n=0, l=[])
+    @_ut.static_vars(n=0, l=[])
     def _check_scales(variable):
         """ Check the scales validity. """
         try:
@@ -302,25 +303,16 @@ if __name__ == '__main__':
 
     input_image = io.imread(args.input)
 
-    # plt.imshow(input_image, cmap='gray', aspect='equal')
-    # plt.show()
-
     fiberness, directions = fiberness_filter(
         input_image,
         scales=np.linspace(args.scales[0], args.scales[1],
                            int(args.scales[2])).tolist(),
         alpha=args.fiber_sensitivity, beta=1-args.intensity_sensitivity)
 
-    # plt.imshow(fiberness, cmap='gray', aspect='equal')
-    # plt.show()
-
     reconstructed_vesselness = reconstruct_fibers(
         fiberness, directions,
         length=args.reconstruction_extent,
         size=(args.scales[0]+args.scales[1])/2)
-
-    # plt.imshow(reconstructed_vesselness, cmap='gray', aspect='equal')
-    # plt.show()
 
     coordinates = estimate_medial_axis(
         reconstructed_vesselness, smoothing=args.smoothing,
@@ -333,4 +325,7 @@ if __name__ == '__main__':
             plt.plot(*c, '-r')
         plt.show()
     else:
-        print('Saving to {}...'.format(args.output))
+        _ut.write_points_to_txt(
+            args.output,
+            os.path.splitext(os.path.basename(args.input))[0],
+            coordinates)
