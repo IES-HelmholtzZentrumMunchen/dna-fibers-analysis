@@ -184,26 +184,90 @@ def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10,
 
 
 if __name__ == '__main__':
+    import os
     import argparse
+    from dfa import _utilities
     from skimage import io
 
-    from matplotlib import pyplot as plt
+    def _check_valid_path(path):
+        """ Check for existing path (directory or file). """
+        if not os.path.isdir(path) and not os.path.isfile(path):
+            raise argparse.ArgumentTypeError('The given path is not a '
+                                             'valid path!')
+
+        return path
+
+    def _check_float_0_1(variable):
+        """ Check for floats in ]0, 1]. """
+        try:
+            variable = float(variable)
+        except ValueError:
+            raise argparse.ArgumentTypeError('The given variable cannot be '
+                                             'converted to float!')
+
+        if variable < 1e-10 or variable > 1:
+            raise argparse.ArgumentTypeError('The given variable is out of the '
+                                             'valid range (range is ]0, 1])')
+
+        return variable
+
+    def _check_positive_int(variable):
+        """ Check for positive integers. """
+        try:
+            variable = int(variable)
+        except ValueError:
+            raise argparse.ArgumentTypeError('The given variable cannot be '
+                                             'converted to int!')
+
+        if variable <= 0:
+            raise argparse.ArgumentTypeError('The given variable is out of '
+                                             'the valid range (range is '
+                                             ']0, +inf[).')
+
+        return variable
+
+    @_utilities.static_vars(n=0, l=[])
+    def _check_scales(variable):
+        """ Check the scales validity. """
+        try:
+            variable = int(variable)
+        except ValueError:
+            raise argparse.ArgumentTypeError('The given variable cannot be '
+                                             'converted to int!')
+
+        if variable <= 0:
+            raise argparse.ArgumentTypeError('The given variable is out of '
+                                             'the valid range (range is '
+                                             ']0, +inf[).')
+
+        if _check_scales.n == 1 and variable < _check_scales.l[-1]:
+            raise argparse.ArgumentTypeError('The second scale must be greater '
+                                             'than the first one!')
+
+        _check_scales.n += 1
+        _check_scales.l.append(variable)
+
+        return variable
+
 
     parser = argparse.ArgumentParser()
 
     group_images = parser.add_argument_group('Images')
-    group_images.add_argument('input', type=str, help='Path to input image')
+    group_images.add_argument('input', type=_check_valid_path,
+                              help='Path to input image.')
 
     group_detection = parser.add_argument_group('Detection')
-    group_detection.add_argument('--fiber-sensitivity', type=float,
-                                 default=0.5,
-                                 help='Sensitivity of detection to geometry in'
-                                      'percentage (default is 0.5).')
-    group_detection.add_argument('--intensity-sensitivity', type=float,
-                                 default=0.5,
+    group_detection.add_argument('--fiber-sensitivity',
+                                 type=_check_float_0_1, default=0.5,
+                                 help='Sensitivity of detection to geometry in '
+                                      'percentage (default is 0.5, valid range '
+                                      'is ]0, 1]).')
+    group_detection.add_argument('--intensity-sensitivity',
+                                 type=_check_float_0_1, default=0.5,
                                  help='Sensitivity of detection to intensity in'
-                                      ' percentage (default is 0.5).')
-    group_detection.add_argument('--scales', type=float, nargs=3,
+                                      ' percentage (default is 0.5, valid '
+                                      'range is ]0, 1]).')
+    group_detection.add_argument('--scales', type=_check_scales, nargs=3,
                                  default=[2, 4, 5],
                                  help='Scales to use in pixels (minimum, '
                                       'maximum, number of scales). Default is '
@@ -215,24 +279,31 @@ if __name__ == '__main__':
                                            'for fiber reconstruction (by '
                                            'default use flat structuring '
                                            'elements).')
-    group_reconstruction.add_argument('--reconstruction-extent', type=int,
-                                      default=20,
+    group_reconstruction.add_argument('--reconstruction-extent',
+                                      type=_check_positive_int, default=20,
                                       help='Reconstruction extent in pixels '
-                                           '(default is 20).')
+                                           '(default is 20, range '
+                                           'is ]0, +inf[).')
 
     group_medial = parser.add_argument_group('Medial axis')
-    group_medial.add_argument('--smoothing', type=int, default=20,
+    group_medial.add_argument('--smoothing', type=_check_positive_int,
+                              default=20,
                               help='Smoothing of the output fibers '
-                                   '(default is 20).')
-    group_medial.add_argument('--fibers-minimal-length', type=int, default=30,
+                                   '(default is 20, range is is ]0, +inf[).')
+    group_medial.add_argument('--fibers-minimal-length',
+                              type=_check_positive_int, default=30,
                               help='Minimal length of a fiber in pixels '
-                                   'default is 30).')
+                                   'default is 30, range is ]0, +inf[).')
+    group_medial.add_argument('--output', type=_check_valid_path,
+                              default=None,
+                              help='Output path for saving detected fibers '
+                                   '(default is None).')
     args = parser.parse_args()
 
     input_image = io.imread(args.input)
 
-    plt.imshow(input_image, cmap='gray', aspect='equal')
-    plt.show()
+    # plt.imshow(input_image, cmap='gray', aspect='equal')
+    # plt.show()
 
     fiberness, directions = fiberness_filter(
         input_image,
@@ -240,22 +311,26 @@ if __name__ == '__main__':
                            int(args.scales[2])).tolist(),
         alpha=args.fiber_sensitivity, beta=1-args.intensity_sensitivity)
 
-    plt.imshow(fiberness, cmap='gray', aspect='equal')
-    plt.show()
+    # plt.imshow(fiberness, cmap='gray', aspect='equal')
+    # plt.show()
 
     reconstructed_vesselness = reconstruct_fibers(
         fiberness, directions,
         length=args.reconstruction_extent,
         size=(args.scales[0]+args.scales[1])/2)
 
-    plt.imshow(reconstructed_vesselness, cmap='gray', aspect='equal')
-    plt.show()
+    # plt.imshow(reconstructed_vesselness, cmap='gray', aspect='equal')
+    # plt.show()
 
     coordinates = estimate_medial_axis(
         reconstructed_vesselness, smoothing=args.smoothing,
         min_length=args.fibers_minimal_length)
 
-    plt.imshow(input_image, cmap='gray', aspect='equal')
-    for c in coordinates:
-        plt.plot(*c, '-r')
-    plt.show()
+    if args.output is None:
+        from matplotlib import pyplot as plt
+        plt.imshow(input_image, cmap='gray', aspect='equal')
+        for c in coordinates:
+            plt.plot(*c, '-r')
+        plt.show()
+    else:
+        print('Saving to {}...'.format(args.output))
