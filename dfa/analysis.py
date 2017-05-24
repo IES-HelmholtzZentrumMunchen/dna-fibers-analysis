@@ -10,6 +10,7 @@ intensity ratio derivative, to choose the channels pattern.
 """
 import numpy as np
 import pandas as pd
+import copy
 
 from dfa import modeling, _tree
 
@@ -63,11 +64,10 @@ def _select_possible_patterns(x, y, model=modeling.standard,
             select = np.array(range(x.size)) != i
             reg = _tree.RegressionTree()
             reg = reg.fit(x[select], y[select])
-            error += error_func(y[i],
-                                reg.predict(x[i],
-                                            constraint_func=
-                                            _alternate_constraint_func,
-                                            max_partitions=max_partitions))
+            error += error_func(
+                y[i], reg.predict(x[i],
+                                  constraint_func=_alternate_constraint_func,
+                                  max_partitions=max_partitions))
 
         return error
 
@@ -109,33 +109,73 @@ def _select_possible_patterns(x, y, model=modeling.standard,
     return selected_patterns
 
 
-def _choose_pattern(selected_patterns, min_error_improvement=0.05):
+def _choose_pattern(selected_patterns, x, y, discrepancy, contrast):
     """
     Choose the best pattern with given criterion.
 
     :param selected_patterns: Possible patterns.
     :type selected_patterns: list of tuples
 
-    :param min_error_improvement: Minimum error improvement necessary for a
-    given model to be kept. Default is 0.05 (%5 of the maximum error).
-    :type min_error_improvement: float
+    :param discrepancy: Factor of discrepancy regularization between amplitudes
+    of the same marker.
+    :type discrepancy: positive float
+
+    :param contrast: Factor of contrast regularization between amplitudes of
+    opposite markers.
+    :type contrast: positive float
 
     :return: Chosen pattern
     :rtype: tuple
     """
-    # FIXME select the pattern in a more clever way than just the minimal error
-    # Ideas:
-    # 1) choose simplest model if no significative improvement
-    # 2) filter out models with branch smaller than a threshold
-    # 3) filter out models with amplitude between branches smaller than a
-    # threshold
-    # 4) filter out models with too asymmetric amplitude of branches
-    selected_patterns.sort(key=lambda e: e[0])
-    return selected_patterns[0]
+    # NOTE maybe add also a model complexity regularization (branches)?
+    def _mean(l):
+        return sum(l) / len(l) if len(l) > 0 else 0
+
+    def _var(l, m):
+        return sum([(e - m) ** 2 for e in l])
+
+    def _regularize_patterns(patterns, discrepancy, contrast):
+        regularized_patterns = []
+
+        for error, splits, pattern in patterns:
+            if len(pattern) > 1:
+                bounds = copy.copy(splits)
+                bounds.insert(0, 0)
+                bounds.append(x.size - 1)
+
+                constants = ([], [])
+                for i in range(len(pattern)):
+                    constants[pattern[i]].append(
+                        y[bounds[i]:bounds[i + 1]].mean())
+
+                means = (_mean(constants[0]), _mean(constants[1]))
+
+                contrast_regularization = 1 / (means[0] - means[1]) ** 2
+                discrepancy_regularization = \
+                    (_var(constants[0], means[0]) +
+                     _var(constants[1], means[1])) \
+                    / (len(pattern) - 1)
+            else:
+                contrast_regularization = 0
+                discrepancy_regularization = 0
+
+            error += \
+                discrepancy * discrepancy_regularization + \
+                contrast * contrast_regularization
+
+            regularized_patterns.append((error, splits, pattern))
+
+        return regularized_patterns
+
+    regularized_patterns = _regularize_patterns(
+        selected_patterns, discrepancy, contrast)
+
+    regularized_patterns.sort(key=lambda e: e[0])
+    return regularized_patterns[0]
 
 
 def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
-            min_length=4, min_error_improvement=0.05):
+            min_length=4, discrepancy=0, contrast=0):
     """
     Detect the segments in profile and analyze it.
 
@@ -158,10 +198,13 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
     0.1419761 microns.
     :type min_length: strictly positive integer
 
-    :param min_error_improvement: Minimum error improvement necessary for a
-    given model to be kept, as a percentage (in range [0,1]). Default is 0.05
-    (%5 of the maximum error).
-    :type min_error_improvement: float
+    :param discrepancy: Factor of discrepancy regularization between amplitudes
+    of the same marker.
+    :type discrepancy: positive float
+
+    :param contrast: Factor of contrast regularization between amplitudes of
+    opposite markers.
+    :type contrast: positive float
 
     :return: A reference to a pattern defined in model and the lengths.
     :rtype: list of dict and list or None (if no pattern is found)
@@ -197,16 +240,6 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
         raise ValueError('Minimal length parameter must be strictly '
                          'positive!\nIt is equal to {}...'.format(min_length))
 
-    if type(min_error_improvement) != float:
-        raise TypeError('Minimum error improvement parameter must be '
-                        'of type float!\nIt is of type {}...'
-                         .format(type(min_error_improvement)))
-
-    if min_error_improvement < 0 or min_error_improvement > 1:
-        raise ValueError('Minimum error improvement parameter must be in '
-                         'range [0,1]!\nIt is {}...'
-                         .format(min_error_improvement))
-
     channels_indices = [1 + model.channels_names.index(cn)
                         for cn in channels_names]
 
@@ -217,7 +250,7 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
         x, y, model=model, min_length=min_length)
 
     _, splits, channels_pattern = _choose_pattern(
-        possible_patterns, min_error_improvement=min_error_improvement)
+        possible_patterns, x, y, discrepancy=discrepancy, contrast=contrast)
     splits.insert(0, 0)
     splits.append(x.size-1)
     lengths = np.diff(x[splits])
@@ -234,7 +267,7 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
 
 def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
              keys_names=None, channels_names=('CIdU', 'IdU'),
-             min_error_improvement=0.05):
+             discrepancy=0, contrast=0):
     """
     Detect the segments in each profile and analyze it.
 
@@ -265,9 +298,13 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
     appear in the profile.
     :type channels_names: tuple of str of size 2
 
-    :param min_error_improvement: Minimum error improvement necessary for a
-    given model to be kept. Default is 0.05 (%5 of the maximum error).
-    :type min_error_improvement: float
+    :param discrepancy: Factor of discrepancy regularization between amplitudes
+    of the same marker.
+    :type discrepancy: positive float
+
+    :param contrast: Factor of contrast regularization between amplitudes of
+    opposite markers.
+    :type contrast: positive float
 
     :return: A data structure containing the detailed measurements.
 
@@ -318,7 +355,7 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
     for key, profile in zip(keys, profiles):
         pattern, lengths = analyze(profile, model=model,
                                    channels_names=channels_names,
-                                   min_error_improvement=min_error_improvement)
+                                   discrepancy=discrepancy, contrast=contrast)
         model.append_sample(pattern, lengths)
 
         for length, channel in zip(lengths, pattern['channels']):
@@ -460,17 +497,6 @@ if __name__ == '__main__':
     import copy
     import argparse
 
-    def check_min_error_improvement(s):
-        """ Range checking for minimum error improvement value. """
-        value = float(s)
-
-        if value < 0 or value > 1:
-            raise argparse.ArgumentTypeError('The value of the minimum error'
-                                             ' improvement argument must be '
-                                             'within range [0, 1]!')
-
-        return value
-
     # Parse input arguments
     parser = argparse.ArgumentParser()
 
@@ -498,11 +524,14 @@ if __name__ == '__main__':
                              help='Path to the model to use (default will use '
                                   'the standard model defined in the '
                                   'dfa.modeling module).')
-    group_model.add_argument('--min_error_improvement', default=0.05,
-                             type=check_min_error_improvement,
-                             help='Minimum error improvement used to filter '
-                                  'out unnecessary complex models (default is '
-                                  '0.05, acceptable range is [0,1]).')
+    group_model.add_argument('--discrepancy', type=float, default=0,
+                             help='Discrepancy regularization on intensity of '
+                                  'branches of the same channel (default is '
+                                  '0, i.e. deactivated).')
+    group_model.add_argument('--contrast', type=float, default=0,
+                             help='Contrast regularization between intensities '
+                                  'of branches of opposite channels (default '
+                                  'is 0, i.e. deactivated).')
     group_model.add_argument('--output_model', type=str, default=None,
                              help='Output path for saving the model (default '
                                   'is None).')
@@ -587,7 +616,7 @@ if __name__ == '__main__':
     model.initialize_model()
     detailed_analysis = analyzes(
         profiles, model=model, keys=keys, keys_names=args.scheme,
-        min_error_improvement=args.min_error_improvement,
+        discrepancy=args.discrepancy, contrast=args.contrast,
         channels_names=args.channels_names)
 
     # Display or save results
