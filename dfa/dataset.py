@@ -90,18 +90,6 @@ class Dataset:
         :return: The elements of the next batch as a generator.
         :rtype: generator
         """
-        # if self._n_profile < self.profile_index.size:
-        #     if batch_size is None:
-        #         batch_size = self.profile_index.size
-        #
-        #     begin = self._n_profile
-        #     end = self._n_profile + batch_size
-        #     self._n_profile = end
-        #
-        #     for index in self.profile_index[begin:end]:
-        #         yield mapping(index)
-        # else:
-        #     return None
         if getattr(self, n) < getattr(self, index).size:
             if batch_size is None:
                 batch_size = getattr(self, index).size
@@ -123,7 +111,8 @@ class Dataset:
         set to the size of the dataset (default behaviour).
         :type batch_size: strictly positive int or None
 
-        :return: The images of the next batch as a generator.
+        :return: Tuples of the next batch as a generator. The tuples contain
+        the index, the image and the manually selected fibers.
         :rtype: generator
         """
         return self.next_batch(
@@ -144,7 +133,8 @@ class Dataset:
         set to the size of the dataset (default behaviour).
         :type batch_size: strictly positive int or None
 
-        :return: The profiles of the next batch as a generator.
+        :return: Tuples of the next batch as a generator. The tuples contain
+        the index, the profiles and the data view to the ground truth.
         :rtype: generator
         """
         return self.next_batch(
