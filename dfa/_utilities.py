@@ -103,7 +103,8 @@ def _read_points_from_imagej_roi(binaries):
     roi_type = get8()
     # Discard second Byte:
     get8()
-    if roi_type is not ImageJRoiType.polyline:
+    if roi_type is not ImageJRoiType.polyline and \
+       roi_type is not ImageJRoiType.line:
         raise NotImplementedError('Reading ImageJ roi: ROI type {} not '
                                   'supported!'.format(roi_type))
 
