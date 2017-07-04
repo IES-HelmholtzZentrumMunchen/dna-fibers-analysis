@@ -303,8 +303,13 @@ if __name__ == '__main__':
 
     input_image = io.imread(args.input)
 
+    if len(input_image.shape) == 2:
+        fiber_image = input_image
+    else:
+        fiber_image = input_image[:, :, :, 1].mean(axis=0)
+
     fiberness, directions = fiberness_filter(
-        input_image,
+        fiber_image,
         scales=np.linspace(args.scales[0], args.scales[1],
                            int(args.scales[2])).tolist(),
         alpha=args.fiber_sensitivity, beta=1-args.intensity_sensitivity)
@@ -320,7 +325,7 @@ if __name__ == '__main__':
 
     if args.output is None:
         from matplotlib import pyplot as plt
-        plt.imshow(input_image, cmap='gray', aspect='equal')
+        plt.imshow(fiber_image, cmap='gray', aspect='equal')
         for c in coordinates:
             plt.plot(*c, '-r')
         plt.show()
