@@ -4,9 +4,13 @@ Simulation module of the DNA fiber analysis package.
 Use this module to simulate synthetic images of DNA fibers. Both fiber
 segments and image degradations can be controlled.
 """
+from debtcollector import removals
+
 import numpy as np
 import scipy as sc
 from scipy import signal
+
+from scipy.interpolate import splprep, splev
 
 import skimage as ski
 from skimage import measure
@@ -15,6 +19,7 @@ from skimage import io
 from dfa import modeling
 
 
+@removals.remove
 def fiber(theta, rho, imshape, pattern, length, thickness=1.0, shift=0):
     """
     Simulate a straight fiber image (with no acquisition deterioration).
@@ -80,6 +85,73 @@ def fiber(theta, rho, imshape, pattern, length, thickness=1.0, shift=0):
         fiber_image[channel, select_segments] = 1.0
 
     return fiber_image
+
+
+def fiber_spline(angle, length, shift=(0, 0), step=4, interp_step=1,
+                 perturbations_force=0.5, bending_elasticity=2,
+                 bending_force=2):
+    """
+    Simulate a fiber path object with local and global perturbations.
+
+    :param angle: Orientation angle of the fiber to simulate (in degrees).
+    :type angle: float
+
+    :param length: Length of the fiber to simulate (in pixels.
+    :type length: float
+
+    :param shift: Translation vector of the fiber from image's center
+    (in pixels, default is [0, 0]).
+    :type shift: np.ndarray
+
+    :param step: Step size of control points along path (in pixels,
+    default is 4).
+    :type step: float
+
+    :param interp_step: Step size of sampled points along path (in pixels,
+    default is 1).
+    :type interp_step: float
+
+    :param perturbations_force: Force of the local perturbations along the
+    fiber path to simulate (range is ]0,+inf[, default is 0.5).
+    :type perturbations_force: float
+
+    :param bending_elasticity: Elasticity of the global perturbation bending
+    the fiber path to be simulated (range is ]0,+inf[, default is 2).
+    :type bending_elasticity: float
+
+    :param bending_force: Force of the global perturbation bending the fiber
+    path to be simulated (range is ]0+inf[, default is 0.5).
+    :type bending_force: float
+
+    :return:
+    """
+    # Find limit points of the fiber
+    radian_angle = np.pi * angle / 180.0
+    vx, vy = np.cos(radian_angle), np.sin(radian_angle)
+    c = length / 2.0
+    a, b = -c * np.array([vx, vy]) + shift, c * np.array([vx, vy]) + shift
+
+    # Create local perturbations along the fiber path
+    num_points = int(round(length/step))
+    x = np.linspace(a[0], b[0], num=num_points) + \
+        perturbations_force * np.random.randn(num_points)
+    y = np.linspace(a[1], b[1], num=num_points) + \
+        perturbations_force * np.random.randn(num_points)
+    u = np.linspace(0, 1, num=num_points)
+
+    # Create global perturbation along the fiber path
+    d = np.exp(-0.5 * (u - 0.25 * np.random.randn() - 0.5)**2
+               * bending_elasticity**2)
+    bending_force *= (-1)**np.random.binomial(1, 0.5)
+    x += -bending_force * vy * d + bending_force * vy
+    y += bending_force * vx * d - bending_force * vx
+
+    # Interpolate with B-Splines
+    splines = splprep(np.stack((x, y)), s=0, u=u)
+    xnew, ynew = splev(np.linspace(0, 1, num=int(round(length/interp_step))),
+                       splines[0])
+
+    return xnew, ynew
 
 
 def fibers(thetas, rhos, imshape, thicknesses, patterns, lengths, shifts):
