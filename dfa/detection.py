@@ -232,6 +232,42 @@ def coarse_fibers_orientation_distance(f1, f2):
     return 180 * np.arccos(angle) / np.pi
 
 
+def fibers_spatial_distance(f1, f2):
+    """
+    Pointwise spatial distance between two fibers.
+
+    The distance is computed as the mean of minimal distances between fibers
+    in a pointwise manner. To make it symmetric, the average of both ways
+    is take as the final result.
+
+    :param f1: First fiber to compare.
+    :type f1: numpy.ndarray
+
+    :param f2: Second fiber to compare.
+    :type f2: numpy.ndarray
+
+    :return: The spatial distance between fibers (in spatial units).
+    :rtype: float
+    """
+    def _minimal_distances(f1, f2):
+        mean_distances = 0
+
+        for p in f1:
+            min_distance = np.linalg.norm(p - f2[0], ord=2)
+
+            for q in f2[1:]:
+                distance = np.linalg.norm(p - q, ord=2)
+
+                if distance < min_distance:
+                    min_distance = distance
+
+            mean_distances += min_distance
+
+        return mean_distances / f1.shape[0]
+
+    return (_minimal_distances(f1, f2) + _minimal_distances(f2, f1)) / 2
+
+
 if __name__ == '__main__':
     import os
     import argparse
