@@ -2,8 +2,6 @@
 Detection module of the DNA fiber analysis package.
 
 Use this module to detect fibers and extract their profiles.
-
-Note that only quite straight fibers are detected for now.
 """
 import numpy as np
 from skimage.measure import label
@@ -182,6 +180,56 @@ def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10,
                                 y.reshape(y.size, 1)))
 
     return coordinates
+
+
+def coarse_fibers_spatial_distance(f1, f2):
+    """
+    Coarse spatial distance between two fibers.
+
+    The coarse distance is computed as the euclidian distance between the
+    centers of mass of the considered fibers.
+
+    :param f1: First fiber to compare.
+    :type f1: numpy.ndarray
+
+    :param f2: Second fiber to compare.
+    :type f2: numpy.ndarray
+
+    :return: The coarse spatial distance between fibers (in spatial units).
+    :rtype: float
+    """
+    cm_f1 = f1.mean(axis=0)
+    cm_f2 = f2.mean(axis=0)
+
+    return np.linalg.norm(cm_f1 - cm_f2, ord=2)
+
+
+def coarse_fibers_orientation_distance(f1, f2):
+    """
+    Coarse orientation distance between two fibers.
+
+    The global orientations of fibers are computed and compared.
+
+    :param f1: First fiber to compare.
+    :type f1: numpy.ndarray
+
+    :param f2: Second fiber to compare.
+    :type f2: numpy.ndarray
+
+    :return: The coarse orientation distance between fibers (in degrees).
+    :rtype: float
+    """
+    orient_f1 = f1[-1, :] - f1[0, :]
+    orient_f2 = f2[-1, :] - f2[0, :]
+
+    angle = (orient_f1 * orient_f2).sum() / \
+            (np.linalg.norm(orient_f1, ord=2) *
+             np.linalg.norm(orient_f2, ord=2))
+
+    if angle > 1:
+        angle = 1
+
+    return 180 * np.arccos(angle) / np.pi
 
 
 if __name__ == '__main__':
