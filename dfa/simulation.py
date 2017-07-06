@@ -69,7 +69,7 @@ def fiber(theta, rho, imshape, pattern, length, thickness=1.0, shift=0):
 
     # Compute simulated image (in multiple channels)
     full_shape = list(imshape)
-    full_shape.insert(0, np.unique(pattern).size)
+    full_shape.insert(0, 2)
     fiber_image = np.zeros(full_shape)
 
     for index, channel in enumerate(pattern):
@@ -388,7 +388,7 @@ if __name__ == '__main__':
                             binning=args.binning)
 
     if args.output is None:
-        ski.io.imshow(degraded_image, cmap='gray')
+        ski.io.imshow(degraded_image[0], cmap='gray')
         ski.io.show()
     else:
         ski.io.imsave(args.output, degraded_image.astype('int16'))
