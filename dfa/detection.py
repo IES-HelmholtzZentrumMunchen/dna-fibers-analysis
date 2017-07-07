@@ -232,13 +232,76 @@ def coarse_fibers_orientation_distance(f1, f2):
     return 180 * np.arccos(angle) / np.pi
 
 
-def fibers_spatial_distance(f1, f2):
+def match_fibers_pairs(l1, l2, max_spatial_distance=5,
+                       max_orientation_distance=30):
+    """
+    Match pairs of fibers from two given lists.
+
+    The coarse distance distance between fibers are computed and the
+    generated distance map is traversed by minimal distance first to generate
+    the pairs, until no pair can be created.
+
+    The fibers are associated once. This means that if one list is bigger than
+    the other, there will be some fibers from the biggest that will have
+    no match in the other list.
+
+    Also, the maximal distance parameters allow to not associate fibers that
+    are to far away from each other and do not share a similar orientation.
+
+    :param l1: First list of fibers.
+    :type l1: list of numpy.ndarray
+
+    :param l2: Second list of fibers.
+    :type l2: list of numpy.ndarray
+
+    :param max_spatial_distance: Maximal spatial distance accepted to be
+    associated (in spatial units, default is 5).
+    :type max_spatial_distance: positive float
+
+    :param max_orientation_distance: Maximal orientation distance accepted to
+    be associated (in degrees, default is 30).
+    :type max_orientation_distance: float within range [0, 180[
+
+    :return: The matched pairs of fibers.
+    :rtype: list of tuples of numpy.ndarray
+    """
+    # Build distance map
+    spatial_dist = np.zeros((len(l1), len(l2)))
+    orientation_dist = np.zeros((len(l1), len(l2)))
+
+    for i, f1 in enumerate(l1):
+        for j, f2 in enumerate(l2):
+            spatial_dist[i, j] = coarse_fibers_spatial_distance(
+                np.vstack(f1).T, np.vstack(f2).T)
+            orientation_dist[i, j] = coarse_fibers_orientation_distance(
+                np.vstack(f1).T, np.vstack(f2).T)
+
+    # Find pairs
+    matches = []
+
+    for k in range(min(spatial_dist.shape)):
+        i, j = np.unravel_index(spatial_dist.argmin(), spatial_dist.shape)
+
+        if spatial_dist[i, j] <= max_spatial_distance and \
+           orientation_dist[i, j] <= max_orientation_distance:
+            matches.append((l1[i], l2[j]))
+            spatial_dist[i, :] = spatial_dist.max()
+            spatial_dist[:, j] = spatial_dist.max()
+        else:
+            break
+
+    return matches
+
+
+def fibers_spatial_distances(f1, f2):
     """
     Pointwise spatial distance between two fibers.
 
-    The distance is computed as the mean of minimal distances between fibers
-    in a pointwise manner. To make it symmetric, the average of both ways
-    is take as the final result.
+    The distance returned are the mean of minimal distances between fibers
+    in a pointwise manner and the modified Hausdorff distance.
+
+    To make distances symmetric, the maximal values of both ways are taken as
+    the final results.
 
     :param f1: First fiber to compare.
     :type f1: numpy.ndarray
@@ -246,11 +309,12 @@ def fibers_spatial_distance(f1, f2):
     :param f2: Second fiber to compare.
     :type f2: numpy.ndarray
 
-    :return: The spatial distance between fibers (in spatial units).
-    :rtype: float
+    :return: The spatial distances between fibers (in spatial units) (mean and
+    Hausdorff).
+    :rtype: tuple of floats
     """
-    def _minimal_distances(f1, f2):
-        mean_distances = 0
+    def _closest_distances(f1, f2):
+        closest_distances = []
 
         for p in f1:
             min_distance = np.linalg.norm(p - f2[0], ord=2)
@@ -261,11 +325,15 @@ def fibers_spatial_distance(f1, f2):
                 if distance < min_distance:
                     min_distance = distance
 
-            mean_distances += min_distance
+            closest_distances.append(min_distance)
 
-        return mean_distances / f1.shape[0]
+        return closest_distances
 
-    return (_minimal_distances(f1, f2) + _minimal_distances(f2, f1)) / 2
+    closest_distances_f1 = _closest_distances(f1, f2)
+    closest_distances_f2 = _closest_distances(f2, f1)
+
+    return (max(np.mean(closest_distances_f1), np.mean(closest_distances_f2)),
+            max(np.max(closest_distances_f1), np.max(closest_distances_f2)))
 
 
 if __name__ == '__main__':
