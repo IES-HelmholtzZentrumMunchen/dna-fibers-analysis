@@ -235,9 +235,9 @@ def coarse_fibers_orientation_distance(f1, f2):
     orient_f1 = f1[-1, :] - f1[0, :]
     orient_f2 = f2[-1, :] - f2[0, :]
 
-    angle = (orient_f1 * orient_f2).sum() / \
-            (np.linalg.norm(orient_f1, ord=2) *
-             np.linalg.norm(orient_f2, ord=2))
+    angle = np.abs((orient_f1 * orient_f2).sum() /
+                   (np.linalg.norm(orient_f1, ord=2) *
+                    np.linalg.norm(orient_f2, ord=2)))
 
     if angle > 1:
         angle = 1
