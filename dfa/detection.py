@@ -182,7 +182,8 @@ def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10,
     return coordinates
 
 
-def detect_fibers(image, scales, alpha, beta, length, size, smoothing, min_length):
+def detect_fibers(image, scales, alpha, beta, length, size, smoothing,
+                  min_length):
     fiberness, directions = fiberness_filter(
         image, scales=scales, alpha=alpha, beta=beta)
 
@@ -481,21 +482,6 @@ if __name__ == '__main__':
         size=(args.scales[0]+args.scales[1])/2,
         smoothing=args.smoothing,
         min_length=args.fibers_minimal_length)
-
-    # fiberness, directions = fiberness_filter(
-    #     fiber_image,
-    #     scales=np.linspace(args.scales[0], args.scales[1],
-    #                        int(args.scales[2])).tolist(),
-    #     alpha=args.fiber_sensitivity, beta=1-args.intensity_sensitivity)
-    #
-    # reconstructed_vesselness = reconstruct_fibers(
-    #     fiberness, directions,
-    #     length=args.reconstruction_extent,
-    #     size=(args.scales[0]+args.scales[1])/2)
-    #
-    # coordinates = estimate_medial_axis(
-    #     reconstructed_vesselness, smoothing=args.smoothing,
-    #     min_length=args.fibers_minimal_length)
 
     if args.output is None:
         from matplotlib import pyplot as plt
