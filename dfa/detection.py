@@ -291,6 +291,7 @@ def match_fibers_pairs(l1, l2, max_spatial_distance=5,
 
     # Find pairs
     matches = []
+    indices = []
 
     for k in range(min(spatial_dist.shape)):
         i, j = np.unravel_index(spatial_dist.argmin(), spatial_dist.shape)
@@ -298,12 +299,13 @@ def match_fibers_pairs(l1, l2, max_spatial_distance=5,
         if spatial_dist[i, j] <= max_spatial_distance and \
            orientation_dist[i, j] <= max_orientation_distance:
             matches.append((l1[i], l2[j]))
+            indices.append((i, j))
             spatial_dist[i, :] = spatial_dist.max()
             spatial_dist[:, j] = spatial_dist.max()
         else:
             break
 
-    return matches
+    return matches, indices
 
 
 def fibers_spatial_distances(f1, f2):
