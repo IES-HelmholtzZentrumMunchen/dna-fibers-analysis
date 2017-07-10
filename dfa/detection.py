@@ -245,7 +245,7 @@ def coarse_fibers_orientation_distance(f1, f2):
     return 180 * np.arccos(angle) / np.pi
 
 
-def match_fibers_pairs(l1, l2, max_spatial_distance=5,
+def match_fibers_pairs(l1, l2, max_spatial_distance=50,
                        max_orientation_distance=30):
     """
     Match pairs of fibers from two given lists.
@@ -268,7 +268,7 @@ def match_fibers_pairs(l1, l2, max_spatial_distance=5,
     :type l2: list of numpy.ndarray
 
     :param max_spatial_distance: Maximal spatial distance accepted to be
-    associated (in spatial units, default is 5).
+    associated (in spatial units, default is 50).
     :type max_spatial_distance: positive float
 
     :param max_orientation_distance: Maximal orientation distance accepted to
@@ -290,22 +290,16 @@ def match_fibers_pairs(l1, l2, max_spatial_distance=5,
                 np.vstack(f1).T, np.vstack(f2).T)
 
     # Find pairs
-    matches = []
-    indices = []
-
     for k in range(min(spatial_dist.shape)):
         i, j = np.unravel_index(spatial_dist.argmin(), spatial_dist.shape)
 
         if spatial_dist[i, j] <= max_spatial_distance and \
            orientation_dist[i, j] <= max_orientation_distance:
-            matches.append((l1[i], l2[j]))
-            indices.append((i, j))
+            yield i, j
             spatial_dist[i, :] = spatial_dist.max()
             spatial_dist[:, j] = spatial_dist.max()
         else:
             break
-
-    return matches, indices
 
 
 def fibers_spatial_distances(f1, f2):
@@ -348,6 +342,8 @@ def fibers_spatial_distances(f1, f2):
     closest_distances_f2 = _closest_distances(f2, f1)
 
     return (max(np.mean(closest_distances_f1), np.mean(closest_distances_f2)),
+            max(np.median(closest_distances_f1),
+                np.median(closest_distances_f2)),
             max(np.max(closest_distances_f1), np.max(closest_distances_f2)))
 
 
