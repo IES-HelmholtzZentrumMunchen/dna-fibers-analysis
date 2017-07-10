@@ -421,10 +421,10 @@ if __name__ == '__main__':
                                       ' percentage (default is 0.5, valid '
                                       'range is ]0, 1]).')
     group_detection.add_argument('--scales', type=_check_scales, nargs=3,
-                                 default=[2, 4, 5],
+                                 default=[2, 4, 3],
                                  help='Scales to use in pixels (minimum, '
                                       'maximum, number of scales). Default is '
-                                      '2 4 5.')
+                                      '2 4 3.')
 
     group_reconstruction = parser.add_argument_group('Reconstruction')
     group_reconstruction.add_argument('--no-flat', action='store_true',
