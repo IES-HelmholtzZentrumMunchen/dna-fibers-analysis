@@ -154,6 +154,38 @@ def fiber_spline(angle, length, shift=(0, 0), step=4, interp_step=1,
     return xnew, ynew
 
 
+def fiber_disconnections(fiber_points, disc_prob=0.2, return_prob=0.5):
+    """
+    Simulate disconnections in fiber.
+
+    The disconnections are modeled as a state of a Markov process. The points
+    sampled on the fiber path define a Markov chain and those points can have
+    two states: not disconnected or disconnected. The corresponding probabilities
+    rule the random apparitions of the disconnections.
+
+    :param fiber_points: Points of the input fiber.
+    :type fiber_points: tuple of numpy.ndarray
+
+    :param disc_prob: Probability to have disconnections (default is 0.2).
+    :type disc_prob: float
+
+    :param return_prob: Probability to stop the disconnection (default is 0.5).
+    :type return_prob: float
+
+    :return: Degraded points of the input fibers.
+    """
+    state = 1  # initial state is no disconnected
+    select = []  # points with not disconnected state will be selected
+
+    for _ in fiber_points[0]:
+        if state == 1:
+            select.append(1-np.random.binomial(1, disc_prob) == 1)
+        else:
+            select.append(np.random.binomial(1, return_prob) == 1)
+
+    return fiber_points[0][select], fiber_points[1][select]
+
+
 def fibers(thetas, rhos, imshape, thicknesses, patterns, lengths, shifts):
     """
     Simulate straight fibers images (with no acquisition deterioration).
