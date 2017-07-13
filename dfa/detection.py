@@ -157,7 +157,7 @@ def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10,
     :type min_length: strictly positive int
 
     :return: Coordinates of the medial axis lines of corresponding fibers.
-    :rtype: list of tuples of float
+    :rtype: list of numpy.ndarray
     """
     # Threshold vesselness map and get connected components
     skeletons = skeletonize(reconstruction >= threshold)
@@ -176,8 +176,7 @@ def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10,
                 np.vstack(_order_skeleton_points(fiber_skeleton)), s=smoothing)
             u_sampled = np.linspace(u.min(), u.max(), number_of_pixels)
             x, y = splev(u_sampled, splines)
-            coordinates.append((x.reshape(x.size, 1),
-                                y.reshape(y.size, 1)))
+            coordinates.append(np.vstack((x, y)))
 
     return coordinates
 
@@ -212,8 +211,8 @@ def coarse_fibers_spatial_distance(f1, f2):
     :return: The coarse spatial distance between fibers (in spatial units).
     :rtype: float
     """
-    cm_f1 = f1.mean(axis=0)
-    cm_f2 = f2.mean(axis=0)
+    cm_f1 = f1.mean(axis=1)
+    cm_f2 = f2.mean(axis=1)
 
     return np.linalg.norm(cm_f1 - cm_f2, ord=2)
 
@@ -233,8 +232,8 @@ def coarse_fibers_orientation_distance(f1, f2):
     :return: The coarse orientation distance between fibers (in degrees).
     :rtype: float
     """
-    orient_f1 = f1[-1, :] - f1[0, :]
-    orient_f2 = f2[-1, :] - f2[0, :]
+    orient_f1 = f1[:, -1] - f1[:, 0]
+    orient_f2 = f2[:, -1] - f2[:, 0]
 
     angle = np.abs((orient_f1 * orient_f2).sum() /
                    (np.linalg.norm(orient_f1, ord=2) *
@@ -285,10 +284,8 @@ def match_fibers_pairs(l1, l2, max_spatial_distance=50,
 
     for i, f1 in enumerate(l1):
         for j, f2 in enumerate(l2):
-            spatial_dist[i, j] = coarse_fibers_spatial_distance(
-                np.vstack(f1).T, np.vstack(f2).T)
-            orientation_dist[i, j] = coarse_fibers_orientation_distance(
-                np.vstack(f1).T, np.vstack(f2).T)
+            spatial_dist[i, j] = coarse_fibers_spatial_distance(f1, f2)
+            orientation_dist[i, j] = coarse_fibers_orientation_distance(f1, f2)
 
     # Find pairs
     for k in range(min(spatial_dist.shape)):
@@ -326,10 +323,10 @@ def fibers_spatial_distances(f1, f2):
     def _closest_distances(f1, f2):
         closest_distances = []
 
-        for p in f1:
-            min_distance = np.linalg.norm(p - f2[0], ord=2)
+        for p in f1.T:
+            min_distance = np.linalg.norm(p - f2[:, 0], ord=2)
 
-            for q in f2[1:]:
+            for q in f2.T[1:]:
                 distance = np.linalg.norm(p - q, ord=2)
 
                 if distance < min_distance:

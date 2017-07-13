@@ -25,11 +25,11 @@ def write_points_to_txt(path, prefix, coordinates):
 
     :param coordinates: Coordinates of the medial axis lines of corresponding
     fibers.
-    :type coordinates: list of tuples of float
+    :type coordinates: list of numpy.ndarray
     """
-    for index, (x, y) in enumerate(coordinates):
+    for index, points in enumerate(coordinates):
         np.savetxt(os.path.join(path, '{}_fiber-{}.txt'.format(prefix, index)),
-                   np.hstack((y, x)))
+                   points[::-1].T)
 
 
 class ImageJRoiType:
