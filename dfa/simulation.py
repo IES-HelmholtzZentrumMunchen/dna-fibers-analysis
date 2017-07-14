@@ -154,14 +154,54 @@ def fiber_spline(angle, length, shift=(0, 0), step=4, interp_step=1,
     return xnew, ynew
 
 
+def fiber_inhomogeneity(num_of_points, local_force=0.05, global_force=1,
+                        global_rate=1.5):
+    """
+    Simulate signal inhomogeneity in fiber.
+
+    The intensity factors are simulated using local and global perturbations of
+    a even illumination (every point with intensity set to 1).
+
+    :param num_of_points: Number of points on the fiber.
+    :type num_of_points: strictly positive int
+
+    :param local_force: Force of local signal inhomogeneity (default is 0.05).
+    :type local_force: float
+
+    :param global_force: Force of the global signal inhomogeneity.
+    :type global_force: float
+
+    :param global_rate: Rate of modulation of the global signal inhomogeneity.
+    :type global_rate: float
+
+    :return: Sequence of inhomogeneity factors.
+    :rtype: numpy.ndarray
+    """
+    t = np.arange(0, num_of_points)
+    s = np.ones(num_of_points)
+
+    # Create local inhomogeneity
+    s += local_force * np.random.randn(num_of_points)
+
+    # Create global inhomogeneity
+    dd = np.abs(0.5 * (t.max()-t.min()) * np.random.randn())
+    print(dd)
+    global_rate /= num_of_points
+    d = np.exp(-0.5 * (t - dd)**2
+               * global_rate**2)
+    s *= global_force * d
+
+    return s
+
+
 def fiber_disconnections(fiber_points, disc_prob=0.2, return_prob=0.5):
     """
     Simulate disconnections in fiber.
 
     The disconnections are modeled as a state of a Markov process. The points
     sampled on the fiber path define a Markov chain and those points can have
-    two states: not disconnected or disconnected. The corresponding probabilities
-    rule the random apparitions of the disconnections.
+    two states: not disconnected or disconnected. The corresponding
+    probabilities rule the random apparitions of the disconnections.
 
     :param fiber_points: Points of the input fiber.
     :type fiber_points: tuple of numpy.ndarray
