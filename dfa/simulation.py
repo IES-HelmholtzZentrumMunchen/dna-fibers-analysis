@@ -154,7 +154,7 @@ def fiber_spline(angle, length, shift=(0, 0), step=4, interp_step=1,
     return xnew, ynew
 
 
-def fiber_inhomogeneity(num_of_points, local_force=0.05, global_force=1,
+def fiber_inhomogeneity(num_of_points, local_force=0.05, global_force=0.25,
                         global_rate=1.5):
     """
     Simulate signal inhomogeneity in fiber.
@@ -168,10 +168,12 @@ def fiber_inhomogeneity(num_of_points, local_force=0.05, global_force=1,
     :param local_force: Force of local signal inhomogeneity (default is 0.05).
     :type local_force: float
 
-    :param global_force: Force of the global signal inhomogeneity.
+    :param global_force: Force of the global signal inhomogeneity (default is
+    0.25).
     :type global_force: float
 
-    :param global_rate: Rate of modulation of the global signal inhomogeneity.
+    :param global_rate: Rate of modulation of the global signal inhomogeneity
+    (default is 1.5).
     :type global_rate: float
 
     :return: Sequence of inhomogeneity factors.
@@ -184,14 +186,13 @@ def fiber_inhomogeneity(num_of_points, local_force=0.05, global_force=1,
     s += local_force * np.random.randn(num_of_points)
 
     # Create global inhomogeneity
-    dd = np.abs(0.5 * (t.max()-t.min()) * np.random.randn())
-    print(dd)
     global_rate /= num_of_points
-    d = np.exp(-0.5 * (t - dd)**2
+    d = np.exp(-0.5 * (t - np.abs(0.5 *
+                                  (t.max()-t.min()) * np.random.randn()))**2
                * global_rate**2)
-    s *= global_force * d
+    s += global_force * d
 
-    return s
+    return s - s.min() + 1
 
 
 def fiber_disconnections(fiber_points, disc_prob=0.2, return_prob=0.5):
