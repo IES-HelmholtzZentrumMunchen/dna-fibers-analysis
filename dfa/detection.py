@@ -5,7 +5,7 @@ Use this module to detect fibers and extract their profiles.
 """
 import numpy as np
 from skimage.measure import label
-from skimage.morphology import skeletonize
+from skimage.morphology import skeletonize, binary_dilation, disk
 from scipy.interpolate import splprep, splev
 
 from dfa import _scale_space_hessian as _sha
@@ -65,7 +65,7 @@ def fiberness_filter(image, scales, alpha=0.5, beta=0.5, gamma=1):
                        np.tile(np.arange(sj).reshape(1, 1, sj), (2, si, 1))])
 
 
-def reconstruct_fibers(fiberness, directions, length, size):
+def reconstruct_fibers(fiberness, directions, length, size, mask, extent_mask):
     """
     Reconstruct fibers disconnections from vesselness map and directions of
     less intensity variations.
@@ -88,6 +88,14 @@ def reconstruct_fibers(fiberness, directions, length, size):
     :param size: Thickness of the structuring segment.
     :type size: strictly positive int
 
+    :param mask:  Mask of where could be fibers. It is useful to speed up the
+    process, for instance when not the whole image contains interesting fibers.
+    :type mask: numpy.ndarray
+
+    :param extent_mask: Mask of where the reconstructed fibers could be. It
+    should contain the fibers mask and the parts to be reconstructed.
+    :type extent_mask: numpy.ndarray
+
     :return: The reconstructed vesselness map.
     :rtype: numpy.ndarray
     """
@@ -97,11 +105,11 @@ def reconstruct_fibers(fiberness, directions, length, size):
     # Regularize the vector field with a simple morphological dilation
     segments = _ss.structuring_segments(directions, size, length, 0)
     regularized_directions = _gm.morphological_regularization(
-        fiberness, directions, segments)
+        fiberness, directions, segments, mask)
     segments = _ss.structuring_segments(regularized_directions, size, length, 0)
 
     # Reconstruct by morphological closing
-    return _gm.adjunct_varying_closing(fiberness, segments)
+    return _gm.adjunct_varying_closing(fiberness, segments, mask, extent_mask)
 
 
 def _order_skeleton_points(skeleton):
@@ -182,12 +190,59 @@ def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10,
 
 
 def detect_fibers(image, scales, alpha, beta, length, size, smoothing,
-                  min_length):
+                  min_length, fiberness_threshold=0.5, extent_mask=None):
+    """
+    Convenience method of the fibers detection pipeline.
+
+    :param image: Input image.
+    :type image: numpy.ndarray
+
+    :param scales: The fibers are searched within these scales.
+    :type scales: list of float or iterable of float
+
+    :param alpha: Soft threshold of the tubular shape weighting term. Default is
+    the recommended value (i.e. 0.5).
+    :type alpha: float between 0 and 1
+
+    :param beta: Soft threshold of the intensity response (intensity-dependent)
+    as a percentage of maximal Hessian norm (as proposed in Frangi et al.).
+    :type beta: positive float
+
+    :param length: Length of the structuring segment.
+    :type length: strictly positive int
+
+    :param size: Thickness of the structuring segment.
+    :type size: strictly positive int
+
+    :param smoothing: Smoothing of the B-Spline fitting (in pixels).
+    :type smoothing: strictly positive int
+
+    :param min_length: Approximative minimal length of fibers in pixels
+    (default is 30).
+    :type min_length: strictly positive int
+
+    :param fiberness_threshold: Threshold used on the fiberness map (default
+    is 0.5).
+    :type fiberness_threshold: float between 0 and 1
+
+    :param extent_mask: Mask where the fibers will be detected.
+    :type extent_mask: numpy.ndarray
+
+    :return: Coordinates of the medial axis lines of corresponding fibers.
+    :rtype: list of numpy.ndarray
+    """
     fiberness, directions = fiberness_filter(
         image, scales=scales, alpha=alpha, beta=beta)
 
+    if extent_mask is None:
+        mask = fiberness >= fiberness_threshold
+        extent_mask = binary_dilation(mask, disk(length))
+    else:
+        mask = extent_mask
+
     reconstructed_vesselness = reconstruct_fibers(
-        fiberness, directions, length=length, size=size)
+        fiberness, directions, length=length, size=size, mask=mask,
+        extent_mask=extent_mask)
 
     coordinates = estimate_medial_axis(
         reconstructed_vesselness, smoothing=smoothing, min_length=min_length)
@@ -434,6 +489,9 @@ if __name__ == '__main__':
                                  help='Scales to use in pixels (minimum, '
                                       'maximum, number of scales). Default is '
                                       '2 4 3.')
+    group_detection.add_argument('--mask', type=_check_valid_path, default='',
+                                 help='Mask where to search for fibers '
+                                      '(default is automatic masking).')
 
     group_reconstruction = parser.add_argument_group('Reconstruction')
     group_reconstruction.add_argument('--no-flat', action='store_true',
@@ -469,6 +527,11 @@ if __name__ == '__main__':
     else:
         fiber_image = input_image[:, :, :, 1].mean(axis=0)
 
+    if args.mask == '':
+        extent_mask = None
+    else:
+        extent_mask = io.imread(args.mask)
+
     coordinates = detect_fibers(
         fiber_image,
         scales=np.linspace(args.scales[0], args.scales[1],
@@ -478,7 +541,8 @@ if __name__ == '__main__':
         length=args.reconstruction_extent,
         size=(args.scales[0]+args.scales[1])/2,
         smoothing=args.smoothing,
-        min_length=args.fibers_minimal_length)
+        min_length=args.fibers_minimal_length,
+        extent_mask=extent_mask)
 
     if args.output is None:
         from matplotlib import pyplot as plt
