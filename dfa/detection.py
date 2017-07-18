@@ -414,6 +414,14 @@ if __name__ == '__main__':
 
         return path
 
+    def _check_valid_or_empty_path(path):
+        """ Check for existing path (directory or file). """
+        if path != '' and not os.path.isdir(path) and not os.path.isfile(path):
+            raise argparse.ArgumentTypeError('The given path is not a '
+                                             'valid path!')
+
+        return path
+
     def _check_float_0_1(variable):
         """ Check for floats in ]0, 1]. """
         try:
@@ -489,7 +497,8 @@ if __name__ == '__main__':
                                  help='Scales to use in pixels (minimum, '
                                       'maximum, number of scales). Default is '
                                       '2 4 3.')
-    group_detection.add_argument('--mask', type=_check_valid_path, default='',
+    group_detection.add_argument('--mask', type=_check_valid_or_empty_path,
+                                 default='',
                                  help='Mask where to search for fibers '
                                       '(default is automatic masking).')
 
