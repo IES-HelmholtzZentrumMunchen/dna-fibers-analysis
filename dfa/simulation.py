@@ -258,6 +258,7 @@ def fibers(thetas, rhos, imshape, thicknesses, patterns, lengths, shifts):
     deterioration.
     :rtype: list of numpy.ndarray with shape imshape
     """
+    # TODO change to generate fibers points in batch
     fiber_images = []
 
     for theta, rho, thickness, \
@@ -304,7 +305,7 @@ def rfibers(imshape, number, theta_range, rho_range, thickness_range,
     deterioration.
     :rtype: list of numpy.ndarray with shapes imshape
     """
-
+    # TODO change to generate randomly the fibers in batch
     patterns, lengths = model.simulate_patterns(number)
 
     return fibers((np.abs(np.diff(theta_range)) * np.random.rand(number) +
@@ -320,6 +321,48 @@ def rfibers(imshape, number, theta_range, rho_range, thickness_range,
                    np.min(shift_range)).tolist())
 
 
+def image_by_diffraction(shape, fibers_points, fibers_signal, psf, pos=0):
+    """
+    Create a diffraction limited image from points along fiber paths.
+
+    :param shape: Shape of the output image.
+    :type shape: tuple of int
+
+    :param fibers_points: Coordinates points in image space of the fiber paths.
+    :type fibers_points: list of numpy.ndarray
+
+    :param fibers_signal: Signal power of each points along fiber paths.
+    :type fibers_signal: list of numpy.ndarray
+
+    :param psf: 3D image of the PSF used for diffraction simulation.
+    :type psf: numpy.ndarray
+
+    :param pos: Position in the PSF z-stack used to simulate out-of-focus.
+    :type pos: int
+
+    :return: Simulated diffraction-limited image.
+    :rtype: numpy.ndarray
+    """
+    # initialize output
+    output_image = np.zeros(np.add(shape, psf.shape[:-1]))
+    half_x = psf.shape[2] // 2
+    half_y = psf.shape[1] // 2
+    half_z = psf.shape[0] // 2
+
+    # add diffracted dirac sources to image (psf at each fibers point)
+    for fiber_points, fiber_signal in zip(fibers_points, fibers_signal):
+        for x, y, signal in zip(fiber_points[0], fiber_points[1], fiber_signal):
+            rx = round(x)
+            ry = round(y)
+
+            output_image[int(ry):int(ry) + psf.shape[1],
+                         int(rx):int(rx) + psf.shape[2]] += \
+                signal * psf[half_z - pos]
+
+    return output_image[half_y:-half_y, half_x:-half_x]
+
+
+@removals.remove
 def diffraction(input_image, psf, pos=0):
     """
     Simulate an out of focus effect on a single section with the specified PSF.
@@ -407,12 +450,14 @@ def image(fiber_objects, zindices, psf, binning=1, snr=20):
     zindices = np.array(zindices)
     fiber_objects = np.array(fiber_objects)
 
+    # TODO is it really necessary to normalize?
     # The most in-focus section is used to normalize intensities
     most_centered_zindex = np.abs(zindices)
     most_centered_zindex.sort()
     most_centered_zindex = most_centered_zindex[0]
     normalizing_constant = 1.0
 
+    # TODO change to use the new diffracted-limited image generation
     # Group fibers on the same z-index to speed-up the process
     for zindex in np.unique(zindices):
         current_section = np.zeros(final.shape)
@@ -429,6 +474,7 @@ def image(fiber_objects, zindices, psf, binning=1, snr=20):
     final /= normalizing_constant
     final[final < 0] = 0
 
+    # TODO remove the now uncessary binning
     # We should do the binning first and then the shot noise. But since
     # a sum of Poisson random variables is also a Poisson random variable,
     # the results is formally equivalent as doing the binning last.
@@ -456,7 +502,7 @@ def rimage(fiber_objects, zindex_range, psf, binning=1, snr=10):
     :param binning: Binning of output final image, i.e. quantization (default is
     the same as input).
     :type binning: strictly positive int
-
+f
     :param snr: Signal-to-noise ratio of the simulated image (in dB).
     :type snr: float
 
