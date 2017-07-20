@@ -508,31 +508,65 @@ if __name__ == '__main__':
                               help='Number of fiber segments to simulate '
                                    '(default: 30).')
     fibers_group.add_argument('--orientation', type=float, nargs=2,
-                              default=[-0.3, -0.5],
+                              default=[30, 40],
                               help='Orientation range of fibers '
-                                   '(default: [-0.3, -0.5]).')
-    fibers_group.add_argument('--thickness', type=float, nargs=2,
-                              default=[5, 6],
-                              help='Thickness range of fibers '
-                                   '(default: [5, 6]).')
+                                   '(in degrees, default: [30, 40]).')
     fibers_group.add_argument('--model', type=str, default=None,
                               help='Path to model file (default: '
                                    'internal standard).')
-    fibers_group.add_argument('--location', type=float, nargs=2,
-                              default=[-0.5, 0.5],
+    fibers_group.add_argument('--location', type=float, nargs=4,
+                              default=[100, 924, 100, 924],
                               help='Coordinates range of fiber center '
-                                   '(default: [-0.5, 0.5]).')
+                                   '(<x_min> <x_max> <y_min> <y_max>, '
+                                   'in pixels, default: '
+                                   '[100, 924, 100, 924]).')
+    fibers_group.add_argument('--perturbations-force-range', type=float,
+                              nargs=2, default=[0.1, 0.2],
+                              help='Local perturbations of the fiber path '
+                                   '(default is [0.1, 0.2]).')
+    fibers_group.add_argument('--bending-elasticity-range', type=float,
+                              nargs=2, default=[1, 3],
+                              help='Elasticity of the global bending of the '
+                                   'fiber path (default is [1, 3]).')
+    fibers_group.add_argument('--bending-force-range', type=float,
+                              nargs=2, default=[10, 20],
+                              help='Force of the global bending of the fiber '
+                                   'path (default is [10, 20]).')
+    fibers_group.add_argument('--disconnection-probability-range', type=float,
+                              nargs=2, default=[0.05, 0.1],
+                              help='Probability of disconnections happening '
+                                   'on the fiber path (default is '
+                                   '[0.05, 0.1]).')
+    fibers_group.add_argument('--return-probability-range', type=float,
+                              nargs=2, default=[0.5, 0.7],
+                              help='Probability of recovering when the fiber '
+                                   'path is disconnected (default is '
+                                   '[0.5, 0.7]).')
+    fibers_group.add_argument('--local-force-range', type=float, nargs=2,
+                              default=[0.05, 0.2],
+                              help='Force of local signal inhomogeneity '
+                                   '(default is [0.05, 0.2]).')
+    fibers_group.add_argument('--global-force-range', type=float, nargs=2,
+                              default=[5, 15],
+                              help='Force of global signal inhomogeneity '
+                                   '(default is [5, 15]).')
+    fibers_group.add_argument('--global-rate-range', type=float, nargs=2,
+                              default=[0.5, 1.5],
+                              help='Rate of global signal inhomogeneity '
+                                   '(default is [0.5, 1.5]).')
 
     image_group = parser.add_argument_group('Image degradations')
+    image_group.add_argument('--shape', type=int, nargs=2, default=[1024, 1024],
+                             help='Shape of the output image (default is'
+                                  '[1024, 1024]). Note that the pixel size'
+                                  'is the same as the PSF pixel size.')
     image_group.add_argument('psf_file', type=str, default=None,
                              help='Path to 3D PSF file.')
-    image_group.add_argument('--binning', type=int, default=2,
-                             help='Binning of image output (default: 2).')
-    image_group.add_argument('--z_index', type=int, nargs=2, default=[-15, 15],
+    image_group.add_argument('--z_index', type=int, nargs=2, default=[-1, 1],
                              help='Z-index of fiber objects '
-                                  '(default: [-15, 15]).')
-    image_group.add_argument('--snr', type=float, default=5,
-                             help='SNR in decibels (default: 5).')
+                                  '(default: [-1, 1]).')
+    image_group.add_argument('--snr', type=float, default=7,
+                             help='SNR in decibels (default: 7).')
 
     args = parser.parse_args()
 
@@ -541,25 +575,28 @@ if __name__ == '__main__':
     else:
         args.model = modeling.Model.load(args.model)
 
-    highres_shape = (1024, 1024)
-    args.location[0] *= highres_shape[0]
-    args.location[1] *= highres_shape[1]
-
     from skimage import io
 
     simulated_psf = ski.io.imread(args.psf_file)
-    fibers_images = rfibers(imshape=highres_shape, number=args.number,
-                            theta_range=args.orientation,
-                            rho_range=args.location,
-                            thickness_range=args.thickness,
-                            model=args.model,
-                            shift_range=args.location)
-    degraded_image = rimage(fibers_images, zindex_range=args.z_index,
-                            psf=simulated_psf, snr=args.snr,
-                            binning=args.binning)
+
+    fibers_objects = rfibers(
+        number=args.number, angle_range=args.orientation,
+        shift_range=[tuple(args.location[:2]), tuple(args.location[2:])],
+        perturbations_force_range=args.perturbations_force_range,
+        bending_elasticity_range=args.bending_elasticity_range,
+        bending_force_range=args.bending_force_range,
+        disc_prob_range=args.disconnection_probability_range,
+        return_prob_range=args.return_probability_range,
+        local_force_range=args.local_force_range,
+        global_force_range=args.global_force_range,
+        global_rate_range=args.global_rate_range, model=args.model)
+
+    degraded_image = rimage(
+        fiber_objects=fibers_objects, shape=args.shape,
+        zindex_range=args.z_index, psf=simulated_psf, snr=args.snr)
 
     if args.output is None:
-        ski.io.imshow(degraded_image[0], cmap='gray')
+        ski.io.imshow(degraded_image, cmap='gray')
         ski.io.show()
     else:
         ski.io.imsave(args.output, degraded_image.astype('int16'))
