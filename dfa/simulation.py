@@ -509,6 +509,11 @@ if __name__ == '__main__':
     else:
         args.model = modeling.Model.load(args.model)
 
+    import os
+
+    if not os.path.exists(os.path.dirname(args.output)):
+        raise ValueError('The output path does not exist!')
+
     from skimage import io
 
     simulated_psf = io.imread(args.psf_file)
@@ -530,7 +535,27 @@ if __name__ == '__main__':
         zindex_range=args.z_index, psf=simulated_psf, snr=args.snr)
 
     if args.output is None:
-        io.imshow_collection([*degraded_image], cmap='gray')
-        io.show()
+        from matplotlib import pyplot as plt
+
+        _, axes = plt.subplots(1, degraded_image.shape[0])
+
+        for i, channel in enumerate(degraded_image):
+            axes[i].imshow(channel, cmap='gray', aspect='equal')
+
+            for fiber_object, _ in fibers_objects:
+                axes[i].plot(*fiber_object, '-c', alpha=0.2)
+
+        plt.show()
     else:
+        path = os.path.dirname(args.output)
+        name, _ = os.path.splitext(os.path.basename(args.output))
+
         io.imsave(args.output, degraded_image.astype('int16'))
+
+        import _utilities as _ut
+
+        fibers_output = os.path.join(path, '{}_fibers'.format(name))
+        os.mkdir(fibers_output)
+        _ut.write_points_to_txt(
+            fibers_output, name,
+            [fiber_object for fiber_object, _ in fibers_objects])
