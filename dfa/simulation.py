@@ -79,8 +79,8 @@ def fiber(angle, length, shift=(0, 0), step=4, interp_step=1,
     return np.vstack((xnew, ynew))
 
 
-def fiber_inhomogeneity(num_of_points, local_force=0.05, global_force=0.25,
-                        global_rate=1.5):
+def fiber_inhomogeneity(num_of_points, number_of_channels, pattern, length,
+                        local_force=0.05, global_force=0.25, global_rate=1.5):
     """
     Simulate signal inhomogeneity in fiber.
 
@@ -89,6 +89,15 @@ def fiber_inhomogeneity(num_of_points, local_force=0.05, global_force=0.25,
 
     :param num_of_points: Number of points on the fiber.
     :type num_of_points: strictly positive int
+
+    :param number_of_channels: Number of channels of the output image.
+    :type number_of_channels: int
+
+    :param pattern: The input patterns of the fibers to simulate.
+    :type pattern: list of int
+
+    :param length: The lengths of the input pattern segments to simulate.
+    :type length: list of float
 
     :param local_force: Force of local signal inhomogeneity (default is 0.05).
     :type local_force: float
@@ -105,19 +114,30 @@ def fiber_inhomogeneity(num_of_points, local_force=0.05, global_force=0.25,
     :rtype: numpy.ndarray
     """
     t = np.arange(0, num_of_points)
-    s = np.ones(num_of_points)
+    u = t / t.max()
+    length_cumsum = np.cumsum([0.] + length) / sum(length)
+    s = np.zeros((number_of_channels, num_of_points))
 
-    # Create local inhomogeneity
-    s += local_force * np.random.randn(num_of_points)
-
-    # Create global inhomogeneity
+    # create global inhomogeneity
     global_rate /= num_of_points
     d = np.exp(-0.5 * (t - np.abs(0.5 *
                                   (t.max()-t.min()) * np.random.randn()))**2
                * global_rate**2)
-    s += global_force * d
 
-    return s - s.min() + 1
+    for i in range(len(s)):
+        # create channel signal (following pattern)
+        for j in range(len(pattern)):
+            if pattern[j] == i:
+                s[i, np.bitwise_and(length_cumsum[j] <= u,
+                                    u <= length_cumsum[j+1])] = 1
+
+        # create local inhomogeneity
+        s[i] += local_force * np.random.randn(num_of_points)
+
+        s[i] += global_force * d
+        s[i] -= s[i].min()
+
+    return s
 
 
 def fiber_disconnections(fiber_points, disc_prob=0.2, return_prob=0.5):
@@ -153,12 +173,22 @@ def fiber_disconnections(fiber_points, disc_prob=0.2, return_prob=0.5):
     return fiber_points[:, select]
 
 
-def fibers(geom_props, disc_props, signal_props):
+def fibers(number_of_channels, patterns, lengths, geom_props, disc_props,
+           signal_props):
     """
     Simulate fibers fluophores as points in image space.
 
     .. seealso:: dfa.simulation.fiber_spline,
     dfa.simulation.fiber_disconnections, dfa.simulation.fiber_inhomogeneity
+
+    :param number_of_channels: Number of channels of the output image.
+    :type number_of_channels: int
+
+    :param patterns: The input patterns of the fibers to simulate.
+    :type patterns: list of list of int
+
+    :param lengths: The lengths of the input pattern segments to simulate.
+    :type lengths: list of list of float
 
     :param geom_props: Geometrical properties (see dfa.simulation.fiber_spline).
     :type geom_props: list of dict
@@ -176,10 +206,11 @@ def fibers(geom_props, disc_props, signal_props):
     """
     fiber_objects = []
 
-    for geom_prop, disc_prop, signal_prop in \
-            zip(geom_props, disc_props, signal_props):
+    for pattern, length, geom_prop, disc_prop, signal_prop in \
+            zip(patterns, lengths, geom_props, disc_props, signal_props):
         f = fiber_disconnections(fiber(**geom_prop), **disc_prop)
-        s = fiber_inhomogeneity(f.shape[1], **signal_prop)
+        s = fiber_inhomogeneity(f.shape[1], number_of_channels,
+                                pattern, length, **signal_prop)
         fiber_objects.append((f, s))
 
     return fiber_objects
@@ -205,6 +236,7 @@ def rfibers(number, angle_range, shift_range, perturbations_force_range,
                np.min(sampling_range)
 
     patterns, lengths = model.simulate_patterns(number)
+    number_of_channels = len(model.channels_names)
 
     geom_props = []
 
@@ -241,7 +273,8 @@ def rfibers(number, angle_range, shift_range, perturbations_force_range,
             'local_force': local_forces[i], 'global_force': global_forces[i],
             'global_rate': global_rates[i]})
 
-    return fibers(geom_props, disc_props, signal_props)
+    return fibers(number_of_channels, patterns, lengths,
+                  geom_props, disc_props, signal_props)
 
 
 def image_by_diffraction(shape, fibers_points, fibers_signal, psf,
@@ -273,7 +306,8 @@ def image_by_diffraction(shape, fibers_points, fibers_signal, psf,
         positions = [0] * len(fibers_points)
 
     # initialize output
-    output_image = np.zeros(np.add(shape, psf.shape[:-1]))
+    output_image = np.zeros((len(fibers_signal[0]),) +
+                            tuple(np.add(shape, psf.shape[:-1])))
     half_x = psf.shape[2] // 2
     half_y = psf.shape[1] // 2
     half_z = psf.shape[0] // 2
@@ -281,16 +315,24 @@ def image_by_diffraction(shape, fibers_points, fibers_signal, psf,
     # add diffracted dirac sources to image (psf at each fibers point)
     for fiber_points, fiber_signal, position in zip(fibers_points,
                                                     fibers_signal, positions):
-        for x, y, signal in zip(fiber_points[0], fiber_points[1], fiber_signal):
-            rx = round(x)
-            ry = round(y)
+        for i in range(len(fiber_signal)):
+            for x, y, signal \
+                    in zip(fiber_points[0], fiber_points[1], fiber_signal[i]):
+                rx = round(x)
+                ry = round(y)
 
-            if 0 <= rx < shape[1] and 0 <= ry < shape[0]:
-                output_image[int(ry):int(ry) + psf.shape[1],
-                             int(rx):int(rx) + psf.shape[2]] += \
-                    signal * psf[half_z - position]
+                if 0 <= rx < shape[1] and 0 <= ry < shape[0]:
+                    output_image[i,
+                                 int(ry):int(ry) + psf.shape[1],
+                                 int(rx):int(rx) + psf.shape[2]] += \
+                        signal * psf[half_z - position]
 
-    return output_image[half_y:-half_y, half_x:-half_x]
+    # normalize
+    for i in range(output_image.shape[0]):
+        if output_image[i].max() > 0:
+            output_image[i] /= output_image[i].max()
+
+    return output_image[:, half_y:-half_y, half_x:-half_x]
 
 
 def shot_noise(input_image, snr):
@@ -307,10 +349,15 @@ def shot_noise(input_image, snr):
     :rtype: numpy.ndarray with same shape as input_image
     """
     # When poisson noise, we have parameter lambda = 10^(SNR_dB / 5)
-    input_image = np.round(input_image * np.power(10, snr / 5))
-    background = np.equal(input_image, 0)
-    input_image[background] = np.random.rand(input_image[background].size)
-    return np.random.poisson(np.round(input_image).astype(int))
+    for i in range(input_image.shape[0]):
+        input_image[i] = np.round(input_image[i] * np.power(10, snr / 5))
+        background = np.equal(input_image[i], 0)
+        input_image[i, background] = np.random.rand(
+            input_image[i, background].size)
+        input_image[i] = np.random.poisson(
+            np.round(input_image[i]).astype(int))
+
+    return input_image
 
 
 def image(fiber_objects, shape, zindices, psf, snr=20):
@@ -344,7 +391,7 @@ def image(fiber_objects, shape, zindices, psf, snr=20):
     clean_image = image_by_diffraction(
         shape, *zip(*fiber_objects), psf, zindices)
 
-    return shot_noise(clean_image / clean_image.max(), snr)
+    return shot_noise(clean_image, snr)
 
 
 def rimage(fiber_objects, shape, zindex_range, psf, snr=10):
@@ -366,7 +413,7 @@ def rimage(fiber_objects, shape, zindex_range, psf, snr=10):
 
     :param psf: PSF used to simulate the microscope's diffraction of light.
     :type psf: numpy.ndarray with 3 dimensions
-f
+
     :param snr: Signal-to-noise ratio of the simulated image (in dB).
     :type snr: float
 
@@ -408,7 +455,7 @@ if __name__ == '__main__':
                                    'in pixels, default: '
                                    '[100, 924, 100, 924]).')
     fibers_group.add_argument('--perturbations-force-range', type=float,
-                              nargs=2, default=[0.1, 0.2],
+                              nargs=2, default=[0.1, 0.3],
                               help='Local perturbations of the fiber path '
                                    '(default is [0.1, 0.2]).')
     fibers_group.add_argument('--bending-elasticity-range', type=float,
@@ -434,9 +481,9 @@ if __name__ == '__main__':
                               help='Force of local signal inhomogeneity '
                                    '(default is [0.05, 0.2]).')
     fibers_group.add_argument('--global-force-range', type=float, nargs=2,
-                              default=[5, 15],
+                              default=[2, 5],
                               help='Force of global signal inhomogeneity '
-                                   '(default is [5, 15]).')
+                                   '(default is [2, 5]).')
     fibers_group.add_argument('--global-rate-range', type=float, nargs=2,
                               default=[0.5, 1.5],
                               help='Rate of global signal inhomogeneity '
@@ -483,7 +530,7 @@ if __name__ == '__main__':
         zindex_range=args.z_index, psf=simulated_psf, snr=args.snr)
 
     if args.output is None:
-        io.imshow_collection([degraded_image, degraded_image], cmap='gray')
+        io.imshow_collection([*degraded_image], cmap='gray')
         io.show()
     else:
         io.imsave(args.output, degraded_image.astype('int16'))
