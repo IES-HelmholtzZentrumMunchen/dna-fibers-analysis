@@ -361,8 +361,6 @@ def image_by_diffraction(shape, fibers_points, fibers_signal, psf,
             rx = round(x)
             ry = round(y)
 
-            # print(rx, rx+psf.shape[2], ry, ry+psf.shape[1], psf.shape)
-
             if 0 <= rx < shape[1] and 0 <= ry < shape[0]:
                 output_image[int(ry):int(ry) + psf.shape[1],
                              int(rx):int(rx) + psf.shape[2]] += \
@@ -422,8 +420,10 @@ def shot_noise(input_image, snr):
     :rtype: numpy.ndarray with same shape as input_image
     """
     # When poisson noise, we have parameter lambda = 10^(SNR_dB / 5)
-    return np.random.poisson(np.round(input_image *
-                                      np.power(10, snr/5)).astype(int))
+    input_image = np.round(input_image * np.power(10, snr / 5))
+    background = np.equal(input_image, 0)
+    input_image[background] = np.random.rand(input_image[background].size)
+    return np.random.poisson(np.round(input_image).astype(int))
 
 
 def image(fiber_objects, shape, zindices, psf, snr=20):
@@ -454,8 +454,10 @@ def image(fiber_objects, shape, zindices, psf, snr=20):
     :return: Final simulated image of fibers with acquisition artefacts.
     :rtype: numpy.ndarray with 2 dimensions and shape outshape
     """
-    return shot_noise(image_by_diffraction(
-        shape, *zip(*fiber_objects), psf, zindices)+1, snr)
+    clean_image = image_by_diffraction(
+        shape, *zip(*fiber_objects), psf, zindices)
+
+    return shot_noise(clean_image / clean_image.max(), snr)
 
 
 def rimage(fiber_objects, shape, zindex_range, psf, snr=10):

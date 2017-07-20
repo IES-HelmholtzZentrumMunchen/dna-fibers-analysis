@@ -240,6 +240,12 @@ def detect_fibers(image, scales, alpha, beta, length, size, smoothing,
     else:
         mask = extent_mask
 
+    from matplotlib import pyplot as plt
+    _, axes = plt.subplots(1, 2)
+    axes[0].imshow(mask, cmap='gray', aspect='equal')
+    axes[1].imshow(extent_mask, cmap='gray', aspect='equal')
+    plt.show()
+
     reconstructed_vesselness = reconstruct_fibers(
         fiberness, directions, length=length, size=size, mask=mask,
         extent_mask=extent_mask)
