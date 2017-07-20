@@ -12,9 +12,8 @@ from scipy import signal
 
 from scipy.interpolate import splprep, splev
 
-import skimage as ski
-from skimage import measure
-from skimage import io
+# import skimage as ski
+# from skimage import io
 
 from dfa import modeling
 
@@ -577,7 +576,7 @@ if __name__ == '__main__':
 
     from skimage import io
 
-    simulated_psf = ski.io.imread(args.psf_file)
+    simulated_psf = io.imread(args.psf_file)
 
     fibers_objects = rfibers(
         number=args.number, angle_range=args.orientation,
@@ -596,7 +595,7 @@ if __name__ == '__main__':
         zindex_range=args.z_index, psf=simulated_psf, snr=args.snr)
 
     if args.output is None:
-        ski.io.imshow(degraded_image, cmap='gray')
-        ski.io.show()
+        io.imshow_collection([degraded_image, degraded_image], cmap='gray')
+        io.show()
     else:
-        ski.io.imsave(args.output, degraded_image.astype('int16'))
+        io.imsave(args.output, degraded_image.astype('int16'))
