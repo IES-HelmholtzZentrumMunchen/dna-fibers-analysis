@@ -4,91 +4,16 @@ Simulation module of the DNA fiber analysis package.
 Use this module to simulate synthetic images of DNA fibers. Both fiber
 segments and image degradations can be controlled.
 """
-from debtcollector import removals
-
 import numpy as np
-import scipy as sc
-from scipy import signal
 
 from scipy.interpolate import splprep, splev
-
-# import skimage as ski
-# from skimage import io
 
 from dfa import modeling
 
 
-@removals.remove
-def fiber(theta, rho, imshape, pattern, length, thickness=1.0, shift=0):
-    """
-    Simulate a straight fiber image (with no acquisition deterioration).
-
-    The fibers are simulated as straights lines with the Hesse normal form
-    parametrization. The arguments of the function make possible to create all
-    kinds of straight lines (fibers) by choosing thickness, length and
-    shift in the direction of the fiber.
-
-    :param theta: Angle of the Hesse normal form parametrization.
-    :type theta: float between -pi/2 and pi/2
-
-    :param rho: Distance to origin of the Hesse normal form parametrization.
-    :type rho: float or int
-
-    :param imshape: Shape of the generated image of fiber (2D image only).
-    :type imshape: tuple of int with 2 elements
-
-    :param pattern: Channel pattern of the simulated fiber.
-    :type pattern: list of int with same size as length
-
-    :param length: Lengths of the branches of the simulated fiber.
-    :type length: list of strictly positive float or int
-
-    :param thickness: Thickness of the generated fiber (default is 1).
-    :type thickness: strictly positive float or int
-
-    :param shift: Shift of the generated fiber toward a direction or another.
-    :type shift: float or int
-
-    :return: A 2D image of the simulated fiber without acquisition
-    deterioration.
-    :rtype: numpy.ndarray with shape (np.unique(pattern).size, imshape)
-    """
-    cos_theta = np.cos(theta)
-    sin_theta = np.sin(theta)
-
-    # Create a centered coordinate system
-    x, y = np.meshgrid(range(-imshape[0]//2, imshape[0]//2),
-                       range(-imshape[1]//2, imshape[1]//2))
-
-    # Use distance maps to handle segments' localizations
-    distance_to_line = np.abs(rho - (x * cos_theta + y * sin_theta))
-    distance_on_line = (x * np.cos(theta + np.pi/2.0) +
-                        y * np.sin(theta + np.pi/2.0)) + shift
-
-    select_line = distance_to_line < thickness/2.0
-
-    # Compute the branches points from length
-    length = np.array(length)
-    points = np.append([0], length.cumsum()) - length.sum() / 2.0
-
-    # Compute simulated image (in multiple channels)
-    full_shape = list(imshape)
-    full_shape.insert(0, 2)
-    fiber_image = np.zeros(full_shape)
-
-    for index, channel in enumerate(pattern):
-        select_branch = np.bitwise_and(
-            distance_on_line >= points[index],
-            distance_on_line <= points[index+1])
-        select_segments = np.bitwise_and(select_line, select_branch)
-        fiber_image[channel, select_segments] = 1.0
-
-    return fiber_image
-
-
-def fiber_spline(angle, length, shift=(0, 0), step=4, interp_step=1,
-                 perturbations_force=0.5, bending_elasticity=2,
-                 bending_force=2):
+def fiber(angle, length, shift=(0, 0), step=4, interp_step=1,
+          perturbations_force=0.5, bending_elasticity=2,
+          bending_force=2):
     """
     Simulate a fiber path object with local and global perturbations.
 
@@ -253,7 +178,7 @@ def fibers(geom_props, disc_props, signal_props):
 
     for geom_prop, disc_prop, signal_prop in \
             zip(geom_props, disc_props, signal_props):
-        f = fiber_disconnections(fiber_spline(**geom_prop), **disc_prop)
+        f = fiber_disconnections(fiber(**geom_prop), **disc_prop)
         s = fiber_inhomogeneity(f.shape[1], **signal_prop)
         fiber_objects.append((f, s))
 
@@ -366,43 +291,6 @@ def image_by_diffraction(shape, fibers_points, fibers_signal, psf,
                     signal * psf[half_z - position]
 
     return output_image[half_y:-half_y, half_x:-half_x]
-
-
-@removals.remove
-def diffraction(input_image, psf, pos=0):
-    """
-    Simulate an out of focus effect on a single section with the specified PSF.
-
-    Convolve the 2D input image with the 3D PSF at the desired position in order
-    to simulate out of focus effect. When an object is not in the focal plane,
-    its contribution to the focal plane is approximately equals to its
-    convolution with the PSF at the given Z-position.
-
-    The convolution is done in Fourier space, in order to speed up the
-    computation.
-
-    :param input_image: Input single section image.
-    :type input_image: numpy.ndarray with 2 space dimensions and 1 for channels
-
-    :param psf: PSF used to simulate the microscope's diffraction of light.
-    :type psf: numpy.ndarray with 3 dimensions
-
-    :param pos: Relative position of input single section against the center of
-    the PSF (default is 0, i.e. in focal plane).
-    :type pos: int between -psf.shape[0]//2 and psf.shape[0]//2
-
-    :return: The input single section with the requested out of focus.
-    :rtype: numpy.ndarray with same shape as input_image
-    """
-    output_image = np.zeros(input_image.shape)
-
-    for channel in range(input_image.shape[0]):
-        output_image[channel, :, :] = sc.signal.fftconvolve(
-            input_image[channel, :, :],
-            psf[psf.shape[0] // 2 - pos, :, :],
-            mode='same')
-
-    return output_image
 
 
 def shot_noise(input_image, snr):
