@@ -14,7 +14,7 @@ from dfa import _grayscale_morphology as _gm
 from dfa import _skeleton_pruning as _sk
 
 
-def fiberness_filter(image, scales, alpha=0.5, beta=0.5, gamma=1):
+def fiberness_filter(image, scales, alpha=0.5, beta=1.0, gamma=1):
     """
     Enhance fiber image using a multi-scale vesselness filter.
 
@@ -32,8 +32,9 @@ def fiberness_filter(image, scales, alpha=0.5, beta=0.5, gamma=1):
     the recommended value (i.e. 0.5).
     :type alpha: float between 0 and 1
 
-    :param beta: Soft threshold of the intensity response (intensity-dependent)
-    as a percentage of maximal Hessian norm (as proposed in Frangi et al.).
+    :param beta: Soft threshold of the intensity response (intensity dynamic-
+    dependent) as a percentage of an automatically estimated parameter. Default
+    is 1.0, i.e. the parameter as it is automatically estimated.
     :type beta: positive float
 
     :param gamma: Gamma-normalization of the derivatives (see scale-space
@@ -204,8 +205,8 @@ def detect_fibers(image, scales, alpha, beta, length, size, smoothing,
     the recommended value (i.e. 0.5).
     :type alpha: float between 0 and 1
 
-    :param beta: Soft threshold of the intensity response (intensity-dependent)
-    as a percentage of maximal Hessian norm (as proposed in Frangi et al.).
+    :param beta: Soft threshold of the intensity response (intensity dynamic-
+    dependent) as a percentage of an automatically estimated parameter.
     :type beta: positive float
 
     :param length: Length of the structuring segment.
@@ -239,12 +240,6 @@ def detect_fibers(image, scales, alpha, beta, length, size, smoothing,
         extent_mask = binary_dilation(mask, disk(length))
     else:
         mask = extent_mask
-
-    from matplotlib import pyplot as plt
-    _, axes = plt.subplots(1, 2)
-    axes[0].imshow(mask, cmap='gray', aspect='equal')
-    axes[1].imshow(extent_mask, cmap='gray', aspect='equal')
-    plt.show()
 
     reconstructed_vesselness = reconstruct_fibers(
         fiberness, directions, length=length, size=size, mask=mask,
@@ -457,6 +452,21 @@ if __name__ == '__main__':
 
         return variable
 
+    def _check_positive_float(variable):
+        """ Check for positive floating point numbers. """
+        try:
+            variable = float(variable)
+        except ValueError:
+            raise argparse.ArgumentTypeError('The given variable cannot be '
+                                             'converted to float!')
+
+        if variable <= 0:
+            raise argparse.ArgumentTypeError('The given variable is out of '
+                                             'the valid range (range is '
+                                             ']0, +inf[).')
+
+        return variable
+
     @_ut.static_vars(n=0, l=[])
     def _check_scales(variable):
         """ Check the scales validity. """
@@ -494,10 +504,10 @@ if __name__ == '__main__':
                                       'percentage (default is 0.5, valid range '
                                       'is ]0, 1]).')
     group_detection.add_argument('--intensity-sensitivity',
-                                 type=_check_float_0_1, default=0.5,
+                                 type=_check_positive_float, default=0.5,
                                  help='Sensitivity of detection to intensity in'
                                       ' percentage (default is 0.5, valid '
-                                      'range is ]0, 1]).')
+                                      'range is ]0, +inf[).')
     group_detection.add_argument('--scales', type=_check_scales, nargs=3,
                                  default=[2, 4, 3],
                                  help='Scales to use in pixels (minimum, '
@@ -535,6 +545,9 @@ if __name__ == '__main__':
                                    '(default is None).')
     args = parser.parse_args()
 
+    # TODO we would need to use bioformat library to load image data.
+    # It is important since the standard skimage reading method does not
+    # really support multi-channels composite images.
     input_image = io.imread(args.input)
 
     if len(input_image.shape) == 2:
@@ -552,7 +565,7 @@ if __name__ == '__main__':
         scales=np.linspace(args.scales[0], args.scales[1],
                            int(args.scales[2])).tolist(),
         alpha=args.fiber_sensitivity,
-        beta=1-args.intensity_sensitivity,
+        beta=1 / args.intensity_sensitivity,
         length=args.reconstruction_extent,
         size=(args.scales[0]+args.scales[1])/2,
         smoothing=args.smoothing,

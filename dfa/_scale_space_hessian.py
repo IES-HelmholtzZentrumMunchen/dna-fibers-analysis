@@ -185,7 +185,7 @@ def hessian_eigen_decomposition(hxx, hyy, hxy):
     return (l1, l2), (v1, v2)
 
 
-def single_scale_vesselness(l1, l2, alpha=0.5, beta=0.5):
+def single_scale_vesselness(l1, l2, alpha=0.5, beta=1.0):
     """
     Compute the vesselness using the scale-space theory.
 
@@ -205,8 +205,9 @@ def single_scale_vesselness(l1, l2, alpha=0.5, beta=0.5):
     the recommended value (i.e. 0.5).
     :type alpha: float between 0 and 1
 
-    :param beta: Soft threshold of the intensity response (intensity-dependent)
-    as a percentage of maximal Hessian norm (as proposed in Frangi et al.).
+    :param beta: Soft threshold of the intensity response (intensity dynamic-
+    dependent) as a percentage of an automatically estimated parameter. Default
+    is 1.0, i.e. the parameter as it is automatically estimated.
     :type beta: positive float
 
     :return: The vesselness map.
@@ -221,7 +222,7 @@ def single_scale_vesselness(l1, l2, alpha=0.5, beta=0.5):
     s[l2_is_negative] = np.sqrt(
         np.power(l1[l2_is_negative], 2) + np.power(l2[l2_is_negative], 2))
 
-    beta *= s.max()
+    beta *= structurness_parameter_auto(s)
 
     vesselness = np.zeros(l1.shape)
     vesselness[l2_is_negative] = np.exp(
@@ -229,3 +230,54 @@ def single_scale_vesselness(l1, l2, alpha=0.5, beta=0.5):
         (1 - np.exp(-0.5 * np.power(s[l2_is_negative] / beta, 2)))
 
     return vesselness
+
+
+def structurness_parameter_auto(structurness, res=128):
+    """
+    Automatically estimate the structurness drop parameter from the
+    structurness image.
+
+    The parameter is estimated using an histogram-based method: the optimal
+    point value is calculated geometrically, by the triangle thresholding
+    method (see Zack GW, Rogers WE, Latt SA (1977), "Automatic measurement of
+    sister chromatid exchange frequency", J. Histochem. Cytochem.
+    25 (7): 741–53, PMID 70454). The estimated point is the point that has the
+    largest distance to the line drawn between the mode and the maximal value.
+
+    Note that the zero values are not taken into account when computing
+    the histogram.
+
+    :param structurness: Structurness image measured from Hessian tensors.
+    :type structurness: numpy.ndarray
+
+    :param res: Resolution used for computing the histogram (number of bins).
+    :type res: int
+
+    :return: The estimated drop parameter.
+    :rtype: float
+    """
+    hy, hx = np.histogram(structurness[structurness > 0], res)
+    hx = hx[:-1] + np.diff(hx)
+
+    i = hy.argmax()
+    ax, ay = hx[i], hy[i]
+    bx, by = hx[-1], hy[-1]
+
+    slope = (by - ay) / (bx - ax)
+    intercept = ay - slope * ax
+
+    vx = bx - ax
+    vy = by - ay
+
+    max_distance = 0
+    parameter = 0
+    for x, y in zip(hx[i+1:-1], hy[i+1:-1]):
+        cx = (vx * x + vy * y - vy * intercept) / (vx + vy * slope)
+        cy = slope * cx + intercept
+        distance = np.sqrt((cx - x)**2 + (cy - y)**2)
+
+        if distance > max_distance:
+            max_distance = distance
+            parameter = x
+
+    return parameter
