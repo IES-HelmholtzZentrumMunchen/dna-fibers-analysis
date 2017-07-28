@@ -5,7 +5,7 @@ Use this module to detect fibers and extract their profiles.
 """
 import numpy as np
 from skimage.measure import label
-from skimage.morphology import skeletonize, binary_dilation, disk
+from skimage.morphology import skeletonize, binary_dilation, disk, white_tophat
 from scipy.interpolate import splprep, splev
 
 from dfa import _scale_space_hessian as _sha
@@ -233,7 +233,8 @@ def detect_fibers(image, scales, alpha, beta, length, size, smoothing,
     :rtype: list of numpy.ndarray
     """
     fiberness, directions = fiberness_filter(
-        image, scales=scales, alpha=alpha, beta=beta)
+        white_tophat(image, disk(max(scales))),
+        scales=scales, alpha=alpha, beta=beta)
 
     if extent_mask is None:
         mask = fiberness >= fiberness_threshold
