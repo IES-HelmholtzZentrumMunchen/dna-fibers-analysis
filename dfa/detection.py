@@ -553,7 +553,7 @@ if __name__ == '__main__':
     if len(input_image.shape) == 2:
         fiber_image = input_image
     else:
-        fiber_image = input_image[:, :, :, 1].mean(axis=0)
+        fiber_image = input_image.sum(axis=0)
 
     if args.mask == '':
         extent_mask = None
