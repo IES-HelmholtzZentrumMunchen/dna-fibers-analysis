@@ -32,6 +32,28 @@ def write_points_to_txt(path, prefix, coordinates):
                    points[::-1].T)
 
 
+def read_points_from_txt(path, prefix):
+    """
+    Read points coordinates from text file.
+
+    :param path: Path to the folder containing the fibers files.
+    :type path: str
+
+    :param prefix: Prefix of the fibers filenames.
+    :type prefix: str
+
+    :return: Coordinates of the median-axis lines corresponding to fibers and
+    that have been red.
+    :rtype: list of numpy.ndarray
+    """
+    indices = [str(os.path.splitext(filename)[0].split('_')[-1]).split('-')[-1]
+               for filename in os.listdir(path)
+               if filename.startswith(prefix)]
+
+    return [np.loadtxt(os.path.join(path, '{}_fiber-{}.txt').format(
+        prefix, index)).T[::-1] for index in indices]
+
+
 class ImageJRoiType:
     polygon = 0
     rectangle = 1
