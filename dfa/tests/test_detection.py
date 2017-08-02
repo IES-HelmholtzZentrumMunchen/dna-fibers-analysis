@@ -9,7 +9,7 @@ from dfa import _utilities as _ut
 from skimage import io
 
 
-class TestKey(unittest.TestCase):
+class TestDetection(unittest.TestCase):
     def setUp(self):
         data_path = 'dfa/tests/data'
 
