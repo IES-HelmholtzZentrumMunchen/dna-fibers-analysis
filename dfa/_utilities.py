@@ -1,6 +1,7 @@
 """
 Module of utility functions.
 """
+import argparse
 import os
 import numpy as np
 
@@ -283,3 +284,90 @@ def read_points_from_imagej_zip(filename):
 #         points[:, 0] += top
 #
 #     return points
+def check_valid_path(path):
+    """ Check for existing path (directory or file). """
+    if not os.path.isdir(path) and not os.path.isfile(path):
+        raise argparse.ArgumentTypeError('The given path is not a '
+                                         'valid path!')
+
+    return path
+
+
+def check_valid_or_empty_path(path):
+    """ Check for existing path (directory or file). """
+    if path != '' and not os.path.isdir(path) and not os.path.isfile(path):
+        raise argparse.ArgumentTypeError('The given path is not a '
+                                         'valid path!')
+
+    return path
+
+
+def check_float_0_1(variable):
+    """ Check for floats in ]0, 1]. """
+    try:
+        variable = float(variable)
+    except ValueError:
+        raise argparse.ArgumentTypeError('The given variable cannot be '
+                                         'converted to float!')
+
+    if variable < 1e-10 or variable > 1:
+        raise argparse.ArgumentTypeError('The given variable is out of the '
+                                         'valid range (range is ]0, 1])')
+
+    return variable
+
+
+def check_positive_int(variable):
+    """ Check for positive integers. """
+    try:
+        variable = int(variable)
+    except ValueError:
+        raise argparse.ArgumentTypeError('The given variable cannot be '
+                                         'converted to int!')
+
+    if variable <= 0:
+        raise argparse.ArgumentTypeError('The given variable is out of '
+                                         'the valid range (range is '
+                                         ']0, +inf[).')
+
+    return variable
+
+
+def check_positive_float(variable):
+    """ Check for positive floating point numbers. """
+    try:
+        variable = float(variable)
+    except ValueError:
+        raise argparse.ArgumentTypeError('The given variable cannot be '
+                                         'converted to float!')
+
+    if variable <= 0:
+        raise argparse.ArgumentTypeError('The given variable is out of '
+                                         'the valid range (range is '
+                                         ']0, +inf[).')
+
+    return variable
+
+
+@static_vars(n=0, l=[])
+def check_scales(variable):
+    """ Check the scales validity. """
+    try:
+        variable = int(variable)
+    except ValueError:
+        raise argparse.ArgumentTypeError('The given variable cannot be '
+                                         'converted to int!')
+
+    if variable <= 0:
+        raise argparse.ArgumentTypeError('The given variable is out of '
+                                         'the valid range (range is '
+                                         ']0, +inf[).')
+
+    if check_scales.n == 1 and variable < check_scales.l[-1]:
+        raise argparse.ArgumentTypeError('The second scale must be greater '
+                                         'than the first one!')
+
+    check_scales.n += 1
+    check_scales.l.append(variable)
+
+    return variable

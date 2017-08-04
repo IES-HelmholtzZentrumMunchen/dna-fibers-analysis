@@ -258,113 +258,29 @@ if __name__ == '__main__':
     from dfa import _utilities as _ut
     from skimage import io
 
-    def _check_valid_path(path):
-        """ Check for existing path (directory or file). """
-        if not os.path.isdir(path) and not os.path.isfile(path):
-            raise argparse.ArgumentTypeError('The given path is not a '
-                                             'valid path!')
-
-        return path
-
-    def _check_valid_or_empty_path(path):
-        """ Check for existing path (directory or file). """
-        if path != '' and not os.path.isdir(path) and not os.path.isfile(path):
-            raise argparse.ArgumentTypeError('The given path is not a '
-                                             'valid path!')
-
-        return path
-
-    def _check_float_0_1(variable):
-        """ Check for floats in ]0, 1]. """
-        try:
-            variable = float(variable)
-        except ValueError:
-            raise argparse.ArgumentTypeError('The given variable cannot be '
-                                             'converted to float!')
-
-        if variable < 1e-10 or variable > 1:
-            raise argparse.ArgumentTypeError('The given variable is out of the '
-                                             'valid range (range is ]0, 1])')
-
-        return variable
-
-    def _check_positive_int(variable):
-        """ Check for positive integers. """
-        try:
-            variable = int(variable)
-        except ValueError:
-            raise argparse.ArgumentTypeError('The given variable cannot be '
-                                             'converted to int!')
-
-        if variable <= 0:
-            raise argparse.ArgumentTypeError('The given variable is out of '
-                                             'the valid range (range is '
-                                             ']0, +inf[).')
-
-        return variable
-
-    def _check_positive_float(variable):
-        """ Check for positive floating point numbers. """
-        try:
-            variable = float(variable)
-        except ValueError:
-            raise argparse.ArgumentTypeError('The given variable cannot be '
-                                             'converted to float!')
-
-        if variable <= 0:
-            raise argparse.ArgumentTypeError('The given variable is out of '
-                                             'the valid range (range is '
-                                             ']0, +inf[).')
-
-        return variable
-
-    @_ut.static_vars(n=0, l=[])
-    def _check_scales(variable):
-        """ Check the scales validity. """
-        try:
-            variable = int(variable)
-        except ValueError:
-            raise argparse.ArgumentTypeError('The given variable cannot be '
-                                             'converted to int!')
-
-        if variable <= 0:
-            raise argparse.ArgumentTypeError('The given variable is out of '
-                                             'the valid range (range is '
-                                             ']0, +inf[).')
-
-        if _check_scales.n == 1 and variable < _check_scales.l[-1]:
-            raise argparse.ArgumentTypeError('The second scale must be greater '
-                                             'than the first one!')
-
-        _check_scales.n += 1
-        _check_scales.l.append(variable)
-
-        return variable
-
-
     parser = argparse.ArgumentParser()
 
     group_images = parser.add_argument_group('Images')
-    group_images.add_argument('input', type=_check_valid_path,
+    group_images.add_argument('input', type=_ut.check_valid_path,
                               help='Path to input image.')
 
     group_detection = parser.add_argument_group('Detection')
     group_detection.add_argument('--fiber-sensitivity',
-                                 type=_check_float_0_1, default=0.5,
+                                 type=_ut.check_float_0_1, default=0.5,
                                  help='Sensitivity of detection to geometry in '
                                       'percentage (default is 0.5, valid range '
                                       'is ]0, 1]).')
     group_detection.add_argument('--intensity-sensitivity',
-                                 type=_check_positive_float, default=0.5,
+                                 type=_ut.check_positive_float, default=0.5,
                                  help='Sensitivity of detection to intensity in'
                                       ' percentage (default is 0.5, valid '
                                       'range is ]0, +inf[).')
-    group_detection.add_argument('--scales', type=_check_scales, nargs=3,
+    group_detection.add_argument('--scales', type=_ut.check_scales, nargs=3,
                                  default=[2, 4, 3],
                                  help='Scales to use in pixels (minimum, '
                                       'maximum, number of scales). Default is '
                                       '2 4 3.')
-    group_detection.add_argument('--mask', type=_check_valid_or_empty_path,
+    group_detection.add_argument('--mask', type=_ut.check_valid_or_empty_path,
                                  default='',
                                  help='Mask where to search for fibers '
                                       '(default is automatic masking).')
@@ -376,21 +292,21 @@ if __name__ == '__main__':
                                            'default use flat structuring '
                                            'elements).')
     group_reconstruction.add_argument('--reconstruction-extent',
-                                      type=_check_positive_int, default=20,
+                                      type=_ut.check_positive_int, default=20,
                                       help='Reconstruction extent in pixels '
                                            '(default is 20, range '
                                            'is ]0, +inf[).')
 
     group_medial = parser.add_argument_group('Medial axis')
-    group_medial.add_argument('--smoothing', type=_check_positive_int,
+    group_medial.add_argument('--smoothing', type=_ut.check_positive_int,
                               default=20,
                               help='Smoothing of the output fibers '
                                    '(default is 20, range is is ]0, +inf[).')
     group_medial.add_argument('--fibers-minimal-length',
-                              type=_check_positive_int, default=30,
+                              type=_ut.check_positive_int, default=30,
                               help='Minimal length of a fiber in pixels '
                                    'default is 30, range is ]0, +inf[).')
-    group_medial.add_argument('--output', type=_check_valid_path,
+    group_medial.add_argument('--output', type=_ut.check_valid_path,
                               default=None,
                               help='Output path for saving detected fibers '
                                    '(default is None).')
