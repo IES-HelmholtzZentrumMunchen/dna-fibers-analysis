@@ -302,6 +302,15 @@ def check_valid_or_empty_path(path):
     return path
 
 
+def check_valid_directory(path):
+    """ Check for existing directory. """
+    if not os.path.isdir(path):
+        raise argparse.ArgumentTypeError('The given path is not a valid '
+                                         'directory!')
+
+    return path
+
+
 def check_float_0_1(variable):
     """ Check for floats in ]0, 1]. """
     try:
