@@ -154,3 +154,40 @@ def fibers_spatial_distances(f1, f2):
             max(np.median(closest_distances_f1),
                 np.median(closest_distances_f2)),
             max(np.max(closest_distances_f1), np.max(closest_distances_f2)))
+
+
+if __name__ == '__main__':
+    import argparse
+    import os
+    from skimage import io
+    from dfa import _utilities as _ut
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('input', type=_ut.check_valid_path,
+                        help='Path to single image file or path to folder with '
+                             'multiple images.')
+    parser.add_argument('fibers', type=_ut.check_valid_directory,
+                        help='Path to directory containing fiber files.')
+
+    args = parser.parse_args()
+
+    # list image files and path
+    if os.path.isdir(args.input):
+        image_path = args.input
+        image_files = os.listdir(image_path)
+    else:
+        image_path, image_files = os.path.split(args.input)
+        image_files = [image_files]
+
+    # read all together
+    input_images = []
+    input_fibers = []
+
+    for filename in image_files:
+        basename, ext = os.path.splitext(filename)
+
+        if ext == '.tif':
+            input_images.append(
+                io.imread(os.path.join(image_path, filename)))
+            input_fibers.append(
+                _ut.read_points_from_txt(args.fibers, basename))
