@@ -343,34 +343,84 @@ if __name__ == '__main__':
                 _ut.read_points_from_txt(args.fibers, basename))
             input_names.append(basename)
 
+    # process
     extracted_fibers = extract_fibers(
         input_images, input_fibers, radius=args.radius)
+
+    # output
+    group_axes = None
+
+    if args.group_fibers:
+        from matplotlib import pyplot as plt
+
+        group_axes = []
+
+        for image_extracted_fiber, input_name \
+                in zip(extracted_fibers, input_names):
+            height = 2 * args.radius + 1
+            space = 5
+            offset = 15
+            group_image = np.zeros((
+                len(image_extracted_fiber) * height +
+                (len(image_extracted_fiber) - 1) * space,
+                max(extracted_fiber.shape[2]
+                    for extracted_fiber in image_extracted_fiber) + offset,
+                3), dtype='uint8')
+
+            for number, extracted_fiber in enumerate(image_extracted_fiber):
+                group_image[number * (height + space):
+                            number * (height + space) + height,
+                            offset:extracted_fiber.shape[2] + offset,
+                            0] = 255 * \
+                    _ut.norm_min_max(extracted_fiber[0], extracted_fiber)
+                group_image[number * (height + space):
+                            number * (height + space) + height,
+                            offset:extracted_fiber.shape[2] + offset,
+                            1] = 255 * \
+                    _ut.norm_min_max(extracted_fiber[1], extracted_fiber)
+
+            _, ax = plt.subplots(1, 1)
+            ax.imshow(group_image, aspect='equal')
+
+            for number in range(len(image_extracted_fiber)):
+                ax.text(0, number * (height + space) + height / 2 + 2,
+                        '#{}'.format(number), color='white')
+
+            ax.set_title(input_name)
+            ax.axis('off')
+
+            group_axes.append(ax)
 
     if args.output is None:
         from matplotlib import pyplot as plt
 
-        for image_extracted_fiber, input_name \
-                in zip(extracted_fibers, input_names):
-            for number, extracted_fiber in enumerate(image_extracted_fiber):
-                display_image = np.zeros(extracted_fiber.shape[1:] + (3,),
-                                         dtype='uint8')
-                display_image[:, :, 0] = 255 * \
-                    _ut.norm_min_max(extracted_fiber[0], extracted_fiber)
-                display_image[:, :, 1] = 255 * \
-                    _ut.norm_min_max(extracted_fiber[1], extracted_fiber)
+        if group_axes is not None:
+            for group_axe in group_axes:
+                plt.show(group_axe)
+        else:
+            for image_extracted_fiber, input_name \
+                    in zip(extracted_fibers, input_names):
+                for number, extracted_fiber in enumerate(image_extracted_fiber):
+                    display_image = np.zeros(extracted_fiber.shape[1:] + (3,),
+                                             dtype='uint8')
+                    display_image[:, :, 0] = 255 * \
+                        _ut.norm_min_max(extracted_fiber[0], extracted_fiber)
+                    display_image[:, :, 1] = 255 * \
+                        _ut.norm_min_max(extracted_fiber[1], extracted_fiber)
 
-                _, axes = plt.subplots(nrows=2, ncols=1, sharex='all')
+                    _, axes = plt.subplots(nrows=2, ncols=1, sharex='all')
 
-                axes[0].imshow(display_image, aspect='equal')
-                axes[0].set_title('Unfolded fiber')
-                axes[0].axis('off')
+                    axes[0].imshow(display_image, aspect='equal')
+                    axes[0].set_title('Unfolded fiber')
+                    axes[0].axis('off')
 
-                axes[1].plot(extracted_fiber[0].sum(axis=0), '-r')
-                axes[1].plot(extracted_fiber[1].sum(axis=0), '-g')
-                axes[1].set_title('Profiles')
-                axes[0].set_xlim(0, extracted_fiber.shape[2])
+                    axes[1].plot(extracted_fiber[0].sum(axis=0), '-r')
+                    axes[1].plot(extracted_fiber[1].sum(axis=0), '-g')
+                    axes[1].set_title('Profiles')
+                    axes[0].set_xlim(0, extracted_fiber.shape[2])
 
-                plt.suptitle('{} - fiber #{}'.format(input_name, number + 1))
-                plt.show()
+                    plt.suptitle('{} - fiber #{}'.format(
+                        input_name, number + 1))
+                    plt.show()
     else:
-        raise NotImplementedError('Not implemented yet!')
+        raise NotImplementedError
