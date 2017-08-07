@@ -380,3 +380,17 @@ def check_scales(variable):
     check_scales.l.append(variable)
 
     return variable
+
+
+def norm_min_max(data, norm_data=None):
+    """
+    Do a min-max normalization.
+
+    :param data: Input data array.
+    :type data: numpy.ndarray
+
+    :param norm_data: Data used to normalize. When set to None, the input data
+    is used (default).
+    :type norm_data: numpy.ndarray
+    """
+    return (data - norm_data.min()) / (norm_data.max() - norm_data.min())
