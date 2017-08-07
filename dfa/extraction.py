@@ -423,4 +423,20 @@ if __name__ == '__main__':
                         input_name, number + 1))
                     plt.show()
     else:
-        raise NotImplementedError
+        for image_extracted_fiber, input_name \
+                in zip(extracted_fibers, input_names):
+            for number, extracted_fiber, in enumerate(image_extracted_fiber):
+                np.savetxt(os.path.join(args.output,
+                                        '{}_fiber{}.csv'.format(input_name,
+                                                                number + 1)),
+                           np.vstack((range(extracted_fiber.shape[2]),
+                                      extracted_fiber[0].sum(axis=0),
+                                      extracted_fiber[1].sum(axis=0))).T,
+                           delimiter=',', header='X, Y1, Y2', comments='')
+
+        if group_axes is not None:
+            for input_name, group_axe in zip(input_names, group_axes):
+                plt.sca(group_axe)
+                plt.tight_layout()
+                plt.savefig(os.path.join(args.output,
+                                         '{}_fibers.png'.format(input_name)))
