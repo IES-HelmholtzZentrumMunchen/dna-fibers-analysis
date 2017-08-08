@@ -301,6 +301,7 @@ if __name__ == '__main__':
     import argparse
     import os
     from skimage import io
+    from matplotlib import pyplot as plt
     from dfa import _utilities as _ut
 
     parser = argparse.ArgumentParser()
@@ -347,13 +348,11 @@ if __name__ == '__main__':
     extracted_fibers = extract_fibers(
         input_images, input_fibers, radius=args.radius)
 
-    # output
-    group_axes = None
+    # prepare output
+    figures = None
 
     if args.group_fibers:
-        from matplotlib import pyplot as plt
-
-        group_axes = []
+        figures = []
 
         for image_extracted_fiber, input_name \
                 in zip(extracted_fibers, input_names):
@@ -364,7 +363,7 @@ if __name__ == '__main__':
                 len(image_extracted_fiber) * height +
                 (len(image_extracted_fiber) - 1) * space,
                 max(extracted_fiber.shape[2]
-                    for extracted_fiber in image_extracted_fiber) + offset,
+                    for extracted_fiber in image_extracted_fiber) + 2 * offset,
                 3), dtype='uint8')
 
             for number, extracted_fiber in enumerate(image_extracted_fiber):
@@ -379,50 +378,54 @@ if __name__ == '__main__':
                             1] = 255 * \
                     _ut.norm_min_max(extracted_fiber[1], extracted_fiber)
 
-            _, ax = plt.subplots(1, 1)
+            fig, ax = plt.subplots(1, 1)
             ax.imshow(group_image, aspect='equal')
 
             for number in range(len(image_extracted_fiber)):
                 ax.text(0, number * (height + space) + height / 2 + 2,
-                        '#{}'.format(number), color='white')
+                        '#{}'.format(number + 1), color='white')
 
             ax.set_title(input_name)
             ax.axis('off')
 
-            group_axes.append(ax)
-
-    if args.output is None:
-        from matplotlib import pyplot as plt
-
-        if group_axes is not None:
-            for group_axe in group_axes:
-                plt.show(group_axe)
-        else:
-            for image_extracted_fiber, input_name \
-                    in zip(extracted_fibers, input_names):
-                for number, extracted_fiber in enumerate(image_extracted_fiber):
-                    display_image = np.zeros(extracted_fiber.shape[1:] + (3,),
-                                             dtype='uint8')
-                    display_image[:, :, 0] = 255 * \
-                        _ut.norm_min_max(extracted_fiber[0], extracted_fiber)
-                    display_image[:, :, 1] = 255 * \
-                        _ut.norm_min_max(extracted_fiber[1], extracted_fiber)
-
-                    _, axes = plt.subplots(nrows=2, ncols=1, sharex='all')
-
-                    axes[0].imshow(display_image, aspect='equal')
-                    axes[0].set_title('Unfolded fiber')
-                    axes[0].axis('off')
-
-                    axes[1].plot(extracted_fiber[0].sum(axis=0), '-r')
-                    axes[1].plot(extracted_fiber[1].sum(axis=0), '-g')
-                    axes[1].set_title('Profiles')
-                    axes[0].set_xlim(0, extracted_fiber.shape[2])
-
-                    plt.suptitle('{} - fiber #{}'.format(
-                        input_name, number + 1))
-                    plt.show()
+            figures.append(('{}_fibers.png'.format(input_name), fig))
     else:
+        figures = []
+
+        for image_extracted_fiber, input_name \
+                in zip(extracted_fibers, input_names):
+            for number, extracted_fiber in enumerate(image_extracted_fiber):
+                display_image = np.zeros(extracted_fiber.shape[1:] + (3,),
+                                         dtype='uint8')
+                display_image[:, :, 0] = 255 * \
+                    _ut.norm_min_max(extracted_fiber[0],
+                                     extracted_fiber)
+                display_image[:, :, 1] = 255 * \
+                    _ut.norm_min_max(extracted_fiber[1],
+                                     extracted_fiber)
+
+                fig, axes = plt.subplots(nrows=2, ncols=1, sharex='all')
+
+                axes[0].imshow(display_image, aspect='equal')
+                axes[0].set_title('Unfolded fiber')
+                axes[0].axis('off')
+
+                axes[1].plot(extracted_fiber[0].sum(axis=0), '-r')
+                axes[1].plot(extracted_fiber[1].sum(axis=0), '-g')
+                axes[1].set_title('Profiles')
+                axes[0].set_xlim(0, extracted_fiber.shape[2])
+
+                fig.suptitle('{} - fiber #{}'.format(
+                    input_name, number + 1))
+
+                figures.append(('{}_fiber-{}.png'.format(input_name,
+                                                         number + 1), fig))
+
+    # output
+    if args.output is None:
+        plt.show()
+    else:
+        # export to csv the profiles
         for image_extracted_fiber, input_name \
                 in zip(extracted_fibers, input_names):
             for number, extracted_fiber, in enumerate(image_extracted_fiber):
@@ -434,9 +437,7 @@ if __name__ == '__main__':
                                       extracted_fiber[1].sum(axis=0))).T,
                            delimiter=',', header='X, Y1, Y2', comments='')
 
-        if group_axes is not None:
-            for input_name, group_axe in zip(input_names, group_axes):
-                plt.sca(group_axe)
-                plt.tight_layout()
-                plt.savefig(os.path.join(args.output,
-                                         '{}_fibers.png'.format(input_name)))
+        # export to png the grouped fibers or the single fibers + profiles
+        if figures is not None:
+            for name, fig in figures:
+                fig.savefig(os.path.join(args.output, name))
