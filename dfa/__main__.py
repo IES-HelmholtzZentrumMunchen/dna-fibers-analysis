@@ -9,10 +9,13 @@ from dfa import _utilities as _ut
 
 def pipeline_command(args):
     import os
+    import copy
     import progressbar
+    import pandas as pd
     from dfa import detection as det
     from dfa import extraction as ex
-    from matplotlib import pyplot as plt
+    from dfa import modeling as mod
+    from dfa import analysis as ana
 
     # non-user parameters
     alpha = 0.5
@@ -21,8 +24,29 @@ def pipeline_command(args):
 
     radius = 5
 
+    scheme = args.scheme + ['fiber']
+
     # read inputs
     images, names, masks = _ut.read_inputs(args.input, args.masks, '.tif')
+
+    # initialize output
+    if args.model is None:
+        model = copy.deepcopy(mod.standard)
+    else:
+        if not os.path.isfile(args.model):
+            raise ValueError(
+                'The input model argument must be a valid path'
+                ' to a text file!')
+
+        model = mod.Model.load(args.model)
+
+    model.initialize_model()
+
+    detailed_analysis = pd.DataFrame(
+        [], columns=['pattern', 'channel', 'length'],
+        index=pd.MultiIndex(levels=[[] for _ in range(len(scheme))],
+                            labels=[[] for _ in range(len(scheme))],
+                            name=scheme))
 
     # process image by image
     with progressbar.ProgressBar(max_value=len(images)) as bar:
@@ -60,14 +84,17 @@ def pipeline_command(args):
             extracted_fibers = ex.unfold_fibers(
                 image, fibers, radius=radius)
 
+            extracted_profiles = [np.vstack((range(extracted_fiber.shape[2]),
+                                             extracted_fiber[0].sum(axis=0),
+                                             extracted_fiber[1].sum(axis=0))).T
+                                  for extracted_fiber in extracted_fibers]
+
             if args.save_extracted_profiles:
-                for number, extracted_fiber, in enumerate(extracted_fibers):
+                for number, extracted_profile, in enumerate(extracted_profiles):
                     np.savetxt(os.path.join(
-                        args.output, '{}_fiber{}.csv'.format(
+                        args.output, '{}_fiber-{}.csv'.format(
                             name, number + 1)),
-                        np.vstack((range(extracted_fiber.shape[2]),
-                                   extracted_fiber[0].sum(axis=0),
-                                   extracted_fiber[1].sum(axis=0))).T,
+                        extracted_profile,
                         delimiter=',', header='X, Y1, Y2', comments='')
 
             if args.save_extracted_fibers:
@@ -84,7 +111,24 @@ def pipeline_command(args):
                 for filename, fig in figures:
                     fig.savefig(os.path.join(args.output, filename))
 
+            # analysis
+            keys = [tuple(name.split('-')[-len(args.scheme):]) + (num + 1,)
+                    for num in range(len(extracted_profiles))]
+
+            current_analysis = ana.analyzes(
+                extracted_profiles, model=model, keys=keys, keys_names=scheme,
+                discrepancy=args.discrepancy, contrast=args.contrast)
+
+            detailed_analysis = detailed_analysis.append(current_analysis)
+
             bar.update(num + 1)
+
+    detailed_analysis.to_csv(
+        os.path.join(args.output, args.output_name + '.csv'))
+
+    if args.save_model:
+        model.save(
+            os.path.join(args.output, args.output_name + '_model.txt'))
 
 
 def detection_command(args):
@@ -366,6 +410,13 @@ if __name__ == '__main__':
         '--save-extracted-profiles', action='store_true',
         help='Save intermediate files of extracted profiles (default is not '
              'saving).')
+    pipeline_inout.add_argument(
+        '--save-model', action='store_true',
+        help='Save output model (default is not saving).')
+    pipeline_inout.add_argument(
+        '--output-name', type=str, default='detailed_analysis',
+        help='Name of the output file containing the analysis (default '
+             'is ''detailed_analysis''.')
 
     pipeline_detection = parser_pipeline.add_argument_group('Detection')
     pipeline_detection.add_argument(
@@ -381,6 +432,26 @@ if __name__ == '__main__':
         type=_ut.check_positive_int, default=20,
         help='Reconstruction extent in pixels (default is 20, range is '
              ']0, +inf[).')
+
+    pipeline_analysis = parser_pipeline.add_argument_group('Analysis')
+    pipeline_analysis.add_argument(
+        '--model', type=_ut.check_valid_path, default=None,
+        help='Path to the model to use (default will use the standard model '
+             'defined in the dfa.modeling module).')
+    pipeline_analysis.add_argument(
+        '--discrepancy', type=float, default=0,
+        help='Discrepancy regularization on intensity of branches of the same '
+             'channel (default is 0, i.e. deactivated).')
+    pipeline_analysis.add_argument(
+        '--contrast', type=float, default=0,
+        help='Contrast regularization between intensities of branches of '
+             'opposite channels (default is 0, i.e. deactivated).')
+    pipeline_analysis.add_argument(
+        '--scheme', type=str, nargs='+',
+        default=['experiment', 'image'],
+        help='Names of the keys used as indexing of the results that can be '
+             'found in filename, separated by ''-'' (default is experiment, '
+             'image; there should be at least one name).')
 
     # detection command
     parser_detection = subparsers.add_parser(
