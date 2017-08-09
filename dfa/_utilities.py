@@ -408,6 +408,9 @@ def read_inputs(input_path, mask_path, ext):
 
         names = [os.path.basename(os.path.splitext(path)[0]) for path in paths]
 
+        # NOTE we would need to use bioformat library to load image data.
+        # It is important since the standard skimage reading method does not
+        # really support multi-channels composite images.
         return [io.imread(path) for path in paths], names
 
     images, names = _read_images_from_path(input_path, ext)
@@ -422,3 +425,76 @@ def read_inputs(input_path, mask_path, ext):
                          'number of images!')
 
     return images, names, masks
+
+
+def create_figures_from_fibers_images(names, extracted_fibers,
+                                      radius, group_fibers=False):
+    from matplotlib import pyplot as plt
+
+    figures = []
+
+    if group_fibers:
+        for image_extracted_fiber, name \
+                in zip(extracted_fibers, names):
+            height = 2 * radius + 1
+            space = 5
+            offset = 15
+            group_image = np.zeros((
+                len(image_extracted_fiber) * height +
+                (len(image_extracted_fiber) - 1) * space,
+                max(extracted_fiber.shape[2]
+                    for extracted_fiber in image_extracted_fiber) + 2 * offset,
+                3), dtype='uint8')
+
+            for number, extracted_fiber in enumerate(image_extracted_fiber):
+                group_image[number * (height + space):
+                            number * (height + space) + height,
+                            offset:extracted_fiber.shape[2] + offset,
+                            0] = 255 * \
+                    norm_min_max(extracted_fiber[0], extracted_fiber)
+                group_image[number * (height + space):
+                            number * (height + space) + height,
+                            offset:extracted_fiber.shape[2] + offset,
+                            1] = 255 * \
+                    norm_min_max(extracted_fiber[1], extracted_fiber)
+
+            fig, ax = plt.subplots(1, 1)
+            ax.imshow(group_image, aspect='equal')
+
+            for number in range(len(image_extracted_fiber)):
+                ax.text(0, number * (height + space) + height / 2 + 2,
+                        '#{}'.format(number + 1), color='white')
+
+            ax.set_title(name)
+            ax.axis('off')
+
+            figures.append(('{}_fibers.png'.format(name), fig))
+    else:
+        for image_extracted_fiber, name \
+                in zip(extracted_fibers, names):
+            for number, extracted_fiber in enumerate(image_extracted_fiber):
+                display_image = np.zeros(extracted_fiber.shape[1:] + (3,),
+                                         dtype='uint8')
+                display_image[:, :, 0] = 255 * \
+                    norm_min_max(extracted_fiber[0], extracted_fiber)
+                display_image[:, :, 1] = 255 * \
+                    norm_min_max(extracted_fiber[1], extracted_fiber)
+
+                fig, axes = plt.subplots(nrows=2, ncols=1, sharex='all')
+
+                axes[0].imshow(display_image, aspect='equal')
+                axes[0].set_title('Unfolded fiber')
+                axes[0].axis('off')
+
+                axes[1].plot(extracted_fiber[0].sum(axis=0), '-r')
+                axes[1].plot(extracted_fiber[1].sum(axis=0), '-g')
+                axes[1].set_title('Profiles')
+                axes[0].set_xlim(0, extracted_fiber.shape[2])
+
+                fig.suptitle('{} - fiber #{}'.format(
+                    name, number + 1))
+
+                figures.append(('{}_fiber-{}.png'.format(name,
+                                                         number + 1), fig))
+
+    return figures

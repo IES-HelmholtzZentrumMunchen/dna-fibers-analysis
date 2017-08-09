@@ -236,8 +236,8 @@ def unfold_fibers(image, fibers, radius=4):
     :param image: Input image.
     :type image: numpy.ndarray
 
-    :param fibers: Input fiber.
-    :type fibers: numpy.ndarray
+    :param fibers: Input fibers.
+    :type fibers: list of numpy.ndarray
 
     :param radius: Radius of the band along fiber axis to extract (default
     is 4).

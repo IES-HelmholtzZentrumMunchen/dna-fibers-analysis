@@ -9,42 +9,87 @@ from dfa import _utilities as _ut
 
 def pipeline_command(args):
     import os
-    from skimage import io
+    import progressbar
     from dfa import detection as det
+    from dfa import extraction as ex
+    from matplotlib import pyplot as plt
 
-    images, names, masks = _ut.read_inputs(args.input, args.mask, '.tif')
+    # non-user parameters
+    alpha = 0.5
+    smoothing = 20
+    min_length = 30
 
-    # process images
-    for image, name in zip(images, names):
-        # pre-process
-        if len(image.shape) > 2:
-            image = image.sum(axis=0)
+    radius = 5
 
-        # detection
-        fibers = det.detect_fibers(
-            image,
-            scales=[args.fiber_size - 1, args.fiber_size, args.fiber_size + 1],
-            alpha=0.5,
-            beta=1 / args.intensity_sensitivity,
-            length=args.reconstruction_extent,
-            size=args.fiber_size,
-            smoothing=20,
-            min_length=30,
-            extent_mask=None)
+    # read inputs
+    images, names, masks = _ut.read_inputs(args.input, args.masks, '.tif')
 
-        if args.save_detected_fibers:
-            _ut.write_points_to_txt(
-                args.output,
-                os.path.basename(name),
-                fibers)
+    # process image by image
+    with progressbar.ProgressBar(max_value=len(images)) as bar:
+        for num, (image, name) in enumerate(zip(images, names)):
+            # pre-processing
+            if len(image.shape) != 3:
+                raise ValueError('Input image {} does not have 3 channels! '
+                                 'Its shape is {}! '
+                                 'Only two-channels images are supported!'
+                                 .format(name, len(image.shape)))
+
+            flat_image = image.sum(axis=0)
+
+            # detection
+            fibers = det.detect_fibers(
+                flat_image,
+                scales=[args.fiber_size - 1,
+                        args.fiber_size,
+                        args.fiber_size + 1],
+                alpha=alpha,
+                beta=1 / args.intensity_sensitivity,
+                length=args.reconstruction_extent,
+                size=args.fiber_size,
+                smoothing=smoothing,
+                min_length=min_length,
+                extent_mask=None)
+
+            if args.save_detected_fibers:
+                _ut.write_points_to_txt(
+                    args.output,
+                    os.path.basename(name),
+                    fibers)
+
+            # extraction
+            extracted_fibers = ex.unfold_fibers(
+                image, fibers, radius=radius)
+
+            if args.save_extracted_profiles:
+                for number, extracted_fiber, in enumerate(extracted_fibers):
+                    np.savetxt(os.path.join(
+                        args.output, '{}_fiber{}.csv'.format(
+                            name, number + 1)),
+                        np.vstack((range(extracted_fiber.shape[2]),
+                                   extracted_fiber[0].sum(axis=0),
+                                   extracted_fiber[1].sum(axis=0))).T,
+                        delimiter=',', header='X, Y1, Y2', comments='')
+
+            if args.save_extracted_fibers:
+                figures = _ut.create_figures_from_fibers_images(
+                    [name], [extracted_fibers], radius, group_fibers=False)
+
+                for filename, fig in figures:
+                    fig.savefig(os.path.join(args.output, filename))
+
+            if args.save_grouped_fibers:
+                figures = _ut.create_figures_from_fibers_images(
+                    [name], [extracted_fibers], radius, group_fibers=True)
+
+                for filename, fig in figures:
+                    fig.savefig(os.path.join(args.output, filename))
+
+            bar.update(num + 1)
 
 
 def detection_command(args):
     from dfa import detection as det
 
-    # TODO we would need to use bioformat library to load image data.
-    # It is important since the standard skimage reading method does not
-    # really support multi-channels composite images.
     images, names, masks = _ut.read_inputs(args.input, args.mask, '.tif')
 
     for image, name, mask in zip(images, names, masks):
@@ -109,80 +154,10 @@ def extraction_command(args):
     extracted_fibers = ex.extract_fibers(
         input_images, input_fibers, radius=args.radius)
 
-    # prepare output
-    figures = None
-
-    if args.group_fibers:
-        figures = []
-
-        for image_extracted_fiber, input_name \
-                in zip(extracted_fibers, input_names):
-            height = 2 * args.radius + 1
-            space = 5
-            offset = 15
-            group_image = np.zeros((
-                len(image_extracted_fiber) * height +
-                (len(image_extracted_fiber) - 1) * space,
-                max(extracted_fiber.shape[2]
-                    for extracted_fiber in image_extracted_fiber) + 2 * offset,
-                3), dtype='uint8')
-
-            for number, extracted_fiber in enumerate(image_extracted_fiber):
-                group_image[number * (height + space):
-                            number * (height + space) + height,
-                            offset:extracted_fiber.shape[2] + offset,
-                            0] = 255 * \
-                    _ut.norm_min_max(extracted_fiber[0], extracted_fiber)
-                group_image[number * (height + space):
-                            number * (height + space) + height,
-                            offset:extracted_fiber.shape[2] + offset,
-                            1] = 255 * \
-                    _ut.norm_min_max(extracted_fiber[1], extracted_fiber)
-
-            fig, ax = plt.subplots(1, 1)
-            ax.imshow(group_image, aspect='equal')
-
-            for number in range(len(image_extracted_fiber)):
-                ax.text(0, number * (height + space) + height / 2 + 2,
-                        '#{}'.format(number + 1), color='white')
-
-            ax.set_title(input_name)
-            ax.axis('off')
-
-            figures.append(('{}_fibers.png'.format(input_name), fig))
-    else:
-        figures = []
-
-        for image_extracted_fiber, input_name \
-                in zip(extracted_fibers, input_names):
-            for number, extracted_fiber in enumerate(image_extracted_fiber):
-                display_image = np.zeros(extracted_fiber.shape[1:] + (3,),
-                                         dtype='uint8')
-                display_image[:, :, 0] = 255 * \
-                    _ut.norm_min_max(extracted_fiber[0],
-                                     extracted_fiber)
-                display_image[:, :, 1] = 255 * \
-                    _ut.norm_min_max(extracted_fiber[1],
-                                     extracted_fiber)
-
-                fig, axes = plt.subplots(nrows=2, ncols=1, sharex='all')
-
-                axes[0].imshow(display_image, aspect='equal')
-                axes[0].set_title('Unfolded fiber')
-                axes[0].axis('off')
-
-                axes[1].plot(extracted_fiber[0].sum(axis=0), '-r')
-                axes[1].plot(extracted_fiber[1].sum(axis=0), '-g')
-                axes[1].set_title('Profiles')
-                axes[0].set_xlim(0, extracted_fiber.shape[2])
-
-                fig.suptitle('{} - fiber #{}'.format(
-                    input_name, number + 1))
-
-                figures.append(('{}_fiber-{}.png'.format(input_name,
-                                                         number + 1), fig))
-
     # output
+    figures = _ut.create_figures_from_fibers_images(
+        input_names, extracted_fibers, args.radius, args.group_fibers)
+
     if args.output is None:
         plt.show()
     else:
@@ -373,6 +348,9 @@ if __name__ == '__main__':
         'output', type=_ut.check_valid_directory,
         help='Path to output directory, where all the outputs will be saved.')
     pipeline_inout.add_argument(
+        '--masks', type=_ut.check_valid_or_empty_path, default='',
+        help='Path to input masks of images (default is automatic masking).')
+    pipeline_inout.add_argument(
         '--save-detected-fibers', action='store_true',
         help='Save intermediate files of detected fibers (default is not '
              'saving).')
@@ -380,6 +358,10 @@ if __name__ == '__main__':
         '--save-extracted-fibers', action='store_true',
         help='Save intermediate files of extracted fibers (default is not '
              'saving).')
+    pipeline_inout.add_argument(
+        '--save-grouped-fibers', action='store_true',
+        help='Save intermediate files of extracted fibers grouped by image '
+             '(default is not saving).')
     pipeline_inout.add_argument(
         '--save-extracted-profiles', action='store_true',
         help='Save intermediate files of extracted profiles (default is not '
