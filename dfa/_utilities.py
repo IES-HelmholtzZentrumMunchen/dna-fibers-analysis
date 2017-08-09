@@ -4,6 +4,7 @@ Module of utility functions.
 import argparse
 import os
 import numpy as np
+from skimage import io
 
 
 def static_vars(**kwargs):
@@ -394,3 +395,30 @@ def norm_min_max(data, norm_data=None):
     :type norm_data: numpy.ndarray
     """
     return (data - norm_data.min()) / (norm_data.max() - norm_data.min())
+
+
+def read_inputs(input_path, mask_path, ext):
+    def _read_images_from_path(input_path, ext):
+        if os.path.isdir(input_path):
+            paths = [os.path.join(input_path, filename)
+                     for filename in os.listdir(input_path)
+                     if filename.endswith(ext)]
+        else:
+            paths = [input_path]
+
+        names = [os.path.basename(os.path.splitext(path)[0]) for path in paths]
+
+        return [io.imread(path) for path in paths], names
+
+    images, names = _read_images_from_path(input_path, ext)
+
+    if mask_path == '':
+        masks = [None] * len(images)
+    else:
+        masks, _ = _read_images_from_path(mask_path, ext)
+
+    if len(masks) != len(images):
+        raise ValueError('The number of masks is not the same as the'
+                         'number of images!')
+
+    return images, names, masks

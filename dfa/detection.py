@@ -227,7 +227,7 @@ def detect_fibers(image, scales, alpha, beta, length, size, smoothing,
     :type fiberness_threshold: float between 0 and 1
 
     :param extent_mask: Mask where the fibers will be detected.
-    :type extent_mask: numpy.ndarray
+    :type extent_mask: numpy.ndarray or None
 
     :return: Coordinates of the medial axis lines of corresponding fibers.
     :rtype: list of numpy.ndarray

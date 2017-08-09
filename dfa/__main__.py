@@ -8,52 +8,72 @@ from dfa import _utilities as _ut
 
 
 def pipeline_command(args):
-    print(args)
+    import os
+    from skimage import io
+    from dfa import detection as det
+
+    images, names, masks = _ut.read_inputs(args.input, args.mask, '.tif')
+
+    # process images
+    for image, name in zip(images, names):
+        # pre-process
+        if len(image.shape) > 2:
+            image = image.sum(axis=0)
+
+        # detection
+        fibers = det.detect_fibers(
+            image,
+            scales=[args.fiber_size - 1, args.fiber_size, args.fiber_size + 1],
+            alpha=0.5,
+            beta=1 / args.intensity_sensitivity,
+            length=args.reconstruction_extent,
+            size=args.fiber_size,
+            smoothing=20,
+            min_length=30,
+            extent_mask=None)
+
+        if args.save_detected_fibers:
+            _ut.write_points_to_txt(
+                args.output,
+                os.path.basename(name),
+                fibers)
 
 
 def detection_command(args):
-    import os
-    from skimage import io
     from dfa import detection as det
 
     # TODO we would need to use bioformat library to load image data.
     # It is important since the standard skimage reading method does not
     # really support multi-channels composite images.
-    input_image = io.imread(args.input)
+    images, names, masks = _ut.read_inputs(args.input, args.mask, '.tif')
 
-    if len(input_image.shape) == 2:
-        fiber_image = input_image
-    else:
-        fiber_image = input_image.sum(axis=0)
+    for image, name, mask in zip(images, names, masks):
+        if len(image.shape) == 2:
+            fiber_image = image
+        else:
+            fiber_image = image.sum(axis=0)
 
-    if args.mask == '':
-        extent_mask = None
-    else:
-        extent_mask = io.imread(args.mask)
+        coordinates = det.detect_fibers(
+            fiber_image,
+            scales=np.linspace(args.scales[0], args.scales[1],
+                               int(args.scales[2])).tolist(),
+            alpha=args.fiber_sensitivity,
+            beta=1 / args.intensity_sensitivity,
+            length=args.reconstruction_extent,
+            size=(args.scales[0]+args.scales[1])/2,
+            smoothing=args.smoothing,
+            min_length=args.fibers_minimal_length,
+            extent_mask=mask)
 
-    coordinates = det.detect_fibers(
-        fiber_image,
-        scales=np.linspace(args.scales[0], args.scales[1],
-                           int(args.scales[2])).tolist(),
-        alpha=args.fiber_sensitivity,
-        beta=1 / args.intensity_sensitivity,
-        length=args.reconstruction_extent,
-        size=(args.scales[0]+args.scales[1])/2,
-        smoothing=args.smoothing,
-        min_length=args.fibers_minimal_length,
-        extent_mask=extent_mask)
-
-    if args.output is None:
-        from matplotlib import pyplot as plt
-        plt.imshow(fiber_image, cmap='gray', aspect='equal')
-        for c in coordinates:
-            plt.plot(*c, '-r')
-        plt.show()
-    else:
-        _ut.write_points_to_txt(
-            args.output,
-            os.path.splitext(os.path.basename(args.input))[0],
-            coordinates)
+        if args.output is None:
+            from matplotlib import pyplot as plt
+            plt.imshow(fiber_image, cmap='gray', aspect='equal')
+            for c in coordinates:
+                plt.plot(*c, '-r')
+            plt.show()
+        else:
+            _ut.write_points_to_txt(
+                args.output, name, coordinates)
 
 
 def extraction_command(args):
@@ -334,13 +354,51 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         prog='python3 -m dfa',
         description='DNA fibers analysis pipeline in python.')
+    subparsers = parser.add_subparsers(
+        title='available commands', dest='command')
+    subparsers.required = True
 
     # pipeline command
-    parser.add_argument(
-        '--input', type=_ut.check_valid_path,
-        help='Path to input image(s). It can be folder or file.')
-    parser.set_defaults(func=pipeline_command)
-    subparsers = parser.add_subparsers(title='available commands')
+    parser_pipeline = subparsers.add_parser(
+        'pipeline', help='run the full analysis pipeline',
+        description='Run the full analysis pipeline, though with a limited '
+                    'set of accessible parameters.')
+    parser_pipeline.set_defaults(func=pipeline_command)
+
+    pipeline_inout = parser_pipeline.add_argument_group('Input/Output')
+    pipeline_inout.add_argument(
+        'input', type=_ut.check_valid_path,
+        help='Path to input image(s). It can be either folder or file.')
+    pipeline_inout.add_argument(
+        'output', type=_ut.check_valid_directory,
+        help='Path to output directory, where all the outputs will be saved.')
+    pipeline_inout.add_argument(
+        '--save-detected-fibers', action='store_true',
+        help='Save intermediate files of detected fibers (default is not '
+             'saving).')
+    pipeline_inout.add_argument(
+        '--save-extracted-fibers', action='store_true',
+        help='Save intermediate files of extracted fibers (default is not '
+             'saving).')
+    pipeline_inout.add_argument(
+        '--save-extracted-profiles', action='store_true',
+        help='Save intermediate files of extracted profiles (default is not '
+             'saving).')
+
+    pipeline_detection = parser_pipeline.add_argument_group('Detection')
+    pipeline_detection.add_argument(
+        '--intensity-sensitivity',
+        type=_ut.check_positive_float, default=0.7,
+        help='Sensitivity of detection to intensity in percentage (default is '
+             '0.5, valid range is ]0, +inf[).')
+    pipeline_detection.add_argument(
+        '--fiber-size', type=float, default=3,
+        help='Size in pixels of fiber''s average width (default is 3).')
+    pipeline_detection.add_argument(
+        '--reconstruction-extent',
+        type=_ut.check_positive_int, default=20,
+        help='Reconstruction extent in pixels (default is 20, range is '
+             ']0, +inf[).')
 
     # detection command
     parser_detection = subparsers.add_parser(
@@ -361,7 +419,7 @@ if __name__ == '__main__':
              '0.5, valid range is ]0, 1]).')
     detection_detection.add_argument(
         '--intensity-sensitivity',
-        type=_ut.check_positive_float, default=0.5,
+        type=_ut.check_positive_float, default=0.7,
         help='Sensitivity of detection to intensity in percentage (default is '
              '0.5, valid range is ]0, +inf[).')
     detection_detection.add_argument(
