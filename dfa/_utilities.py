@@ -30,8 +30,9 @@ def write_points_to_txt(path, prefix, coordinates):
     :type coordinates: list of numpy.ndarray
     """
     for index, points in enumerate(coordinates):
-        np.savetxt(os.path.join(path, '{}_fiber-{}.txt'.format(prefix, index)),
-                   points[::-1].T)
+        np.savetxt(
+            os.path.join(path, '{}_fiber-{}.txt'.format(prefix, index + 1)),
+            points[::-1].T)
 
 
 def read_points_from_txt(path, prefix):
@@ -53,7 +54,7 @@ def read_points_from_txt(path, prefix):
                if filename.startswith(prefix)]
 
     return [np.loadtxt(os.path.join(path, '{}_fiber-{}.txt').format(
-        prefix, index)).T[::-1] for index in indices]
+        prefix, index + 1)).T[::-1] for index in indices]
 
 
 class ImageJRoiType:
