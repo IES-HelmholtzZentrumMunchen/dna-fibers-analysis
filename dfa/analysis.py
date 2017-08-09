@@ -249,20 +249,23 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
     possible_patterns = _select_possible_patterns(
         x, y, model=model, min_length=min_length)
 
-    _, splits, channels_pattern = _choose_pattern(
-        possible_patterns, x, y, discrepancy=discrepancy, contrast=contrast)
-    splits.insert(0, 0)
-    splits.append(x.size-1)
-    lengths = np.diff(x[splits])
+    if len(possible_patterns) > 0:
+        _, splits, channels_pattern = _choose_pattern(
+            possible_patterns, x, y, discrepancy=discrepancy, contrast=contrast)
+        splits.insert(0, 0)
+        splits.append(x.size-1)
+        lengths = np.diff(x[splits])
 
-    pattern = model.search(channels_pattern)
+        pattern = model.search(channels_pattern)
 
-    # Handle the symmetric case for match the pattern in the same order
-    if pattern is None:
-        pattern = model.search(channels_pattern[::-1])
-        lengths = lengths[::-1]
+        # Handle the symmetric case for match the pattern in the same order
+        if pattern is None:
+            pattern = model.search(channels_pattern[::-1])
+            lengths = lengths[::-1]
 
-    return pattern, lengths
+        return pattern, lengths
+    else:
+        return None, None
 
 
 def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
@@ -356,14 +359,16 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
         pattern, lengths = analyze(profile, model=model,
                                    channels_names=channels_names,
                                    discrepancy=discrepancy, contrast=contrast)
-        model.append_sample(pattern, lengths)
 
-        for length, channel in zip(lengths, pattern['channels']):
-            s = pd.Series({labels[0]: pattern['name'],
-                           labels[1]: model.channels_names[channel],
-                           labels[2]: length},
-                          name=key)
-            detailed_analysis = detailed_analysis.append(s)
+        if pattern is not None and lengths is not None:
+            model.append_sample(pattern, lengths)
+
+            for length, channel in zip(lengths, pattern['channels']):
+                s = pd.Series({labels[0]: pattern['name'],
+                               labels[1]: model.channels_names[channel],
+                               labels[2]: length},
+                              name=key)
+                detailed_analysis = detailed_analysis.append(s)
 
     if update_model:
         model.update_model()
