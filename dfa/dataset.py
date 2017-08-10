@@ -10,7 +10,7 @@ import pandas as pd
 from skimage import io
 import numpy as np
 
-from dfa import _utilities as _ut
+from dfa import utilities as _ut
 
 
 class Dataset:
@@ -81,7 +81,7 @@ class Dataset:
         :type n: string
 
         :param mapping: Function that maps an index to elements to return.
-        :type mapping: function
+        :type mapping: callable function
 
         :param batch_size: Size of the next batch. When None, the batch size is
         set to the size of the dataset (default behaviour).

@@ -100,7 +100,7 @@ class BinaryNode:
         output function value than his parent.
 
         :param func: Function of the values for choosing best node.
-        :type func: function
+        :type func: callable function
 
         :return: A generator to the nodes in best-first order.
         :rtype: generator
@@ -333,7 +333,7 @@ class RegressionTree:
 
         :param constraint_func: Function that check a constraint. Default is no
         constraint (the function returns always True).
-        :type constraint_func: function
+        :type constraint_func: callable function
 
         :return: The splitting nodes in the order of their traversal.
         :rtype: list of BinaryNode

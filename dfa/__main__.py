@@ -4,7 +4,7 @@ This can be used to actual run the analysis (partially of fully).
 """
 
 import numpy as np
-from dfa import _utilities as _ut
+from dfa import utilities as _ut
 
 
 def pipeline_command(args):
@@ -305,7 +305,7 @@ def simulate_command(args):
     from skimage import io
     from dfa import modeling as mod
     from dfa import simulation as sim
-    from dfa import _utilities as _ut
+    from dfa import utilities as _ut
 
     if args.model is None:
         args.model = mod.standard
@@ -352,7 +352,7 @@ def simulate_command(args):
 
         io.imsave(args.output, degraded_image.astype('int16'))
 
-        import _utilities as _ut
+        import utilities as _ut
 
         fibers_output = os.path.join(path, '{}_fibers'.format(name))
         os.mkdir(fibers_output)

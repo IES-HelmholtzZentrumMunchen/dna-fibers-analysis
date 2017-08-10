@@ -5,7 +5,7 @@ Tests of the detection module of the DNA fiber analysis package.
 import unittest
 from os import path as op
 from dfa import detection as det
-from dfa import _utilities as _ut
+from dfa import utilities as ut
 from skimage import io
 
 
@@ -58,26 +58,26 @@ class TestDetection(unittest.TestCase):
 
         self.fibers = {
             10: {
-                0.5: _ut.read_points_from_txt(data_path,
-                                              'coordinates_a0.5_b0.5_l10'),
-                1.0: _ut.read_points_from_txt(data_path,
-                                              'coordinates_a0.5_b1.0_l10'),
-                2.0: _ut.read_points_from_txt(data_path,
-                                              'coordinates_a0.5_b2.0_l10')},
+                0.5: ut.read_points_from_txt(data_path,
+                                             'coordinates_a0.5_b0.5_l10'),
+                1.0: ut.read_points_from_txt(data_path,
+                                             'coordinates_a0.5_b1.0_l10'),
+                2.0: ut.read_points_from_txt(data_path,
+                                             'coordinates_a0.5_b2.0_l10')},
             20: {
-                0.5: _ut.read_points_from_txt(data_path,
-                                              'coordinates_a0.5_b0.5_l20'),
-                1.0: _ut.read_points_from_txt(data_path,
-                                              'coordinates_a0.5_b1.0_l20'),
-                2.0: _ut.read_points_from_txt(data_path,
-                                              'coordinates_a0.5_b2.0_l20')},
+                0.5: ut.read_points_from_txt(data_path,
+                                             'coordinates_a0.5_b0.5_l20'),
+                1.0: ut.read_points_from_txt(data_path,
+                                             'coordinates_a0.5_b1.0_l20'),
+                2.0: ut.read_points_from_txt(data_path,
+                                             'coordinates_a0.5_b2.0_l20')},
             40: {
-                0.5: _ut.read_points_from_txt(data_path,
-                                              'coordinates_a0.5_b0.5_l40'),
-                1.0: _ut.read_points_from_txt(data_path,
-                                              'coordinates_a0.5_b1.0_l40'),
-                2.0: _ut.read_points_from_txt(data_path,
-                                              'coordinates_a0.5_b2.0_l40')}}
+                0.5: ut.read_points_from_txt(data_path,
+                                             'coordinates_a0.5_b0.5_l40'),
+                1.0: ut.read_points_from_txt(data_path,
+                                             'coordinates_a0.5_b1.0_l40'),
+                2.0: ut.read_points_from_txt(data_path,
+                                             'coordinates_a0.5_b2.0_l40')}}
 
     def tearDown(self):
         pass
@@ -96,9 +96,11 @@ class TestDetection(unittest.TestCase):
                     self.fiberness[beta], self.directions[beta],
                     length=length, size=3, mask=self.mask,
                     extent_mask=self.mask)
+                # noinspection PyTypeChecker
                 det.np.testing.assert_allclose(
                     reconstruction, self.reconstructions[length][beta])
 
+    # noinspection PyTypeChecker
     def test_estimate_medial_axis(self):
         for length in self.reconstructions.keys():
             for beta in self.fiberness.keys():

@@ -161,7 +161,7 @@ def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10,
     :param smoothing: Smoothing of the B-Spline fitting (in pixels).
     :type smoothing: strictly positive int
 
-    :param min_length: Approximative minimal length of fibers in pixels
+    :param min_length: Approximate minimal length of fibers in pixels
     (default is 30).
     :type min_length: strictly positive int
 
@@ -218,7 +218,7 @@ def detect_fibers(image, scales, alpha, beta, length, size, smoothing,
     :param smoothing: Smoothing of the B-Spline fitting (in pixels).
     :type smoothing: strictly positive int
 
-    :param min_length: Approximative minimal length of fibers in pixels
+    :param min_length: Approximate minimal length of fibers in pixels
     (default is 30).
     :type min_length: strictly positive int
 

@@ -185,6 +185,7 @@ def hessian_eigen_decomposition(hxx, hyy, hxy):
     return (l1, l2), (v1, v2)
 
 
+# noinspection SpellCheckingInspection
 def single_scale_vesselness(l1, l2, alpha=0.5, beta=1.0):
     """
     Compute the vesselness using the scale-space theory.

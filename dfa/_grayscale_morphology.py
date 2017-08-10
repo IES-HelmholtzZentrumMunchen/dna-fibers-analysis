@@ -19,10 +19,10 @@ def varying_filtering_2d(image, structuring_elements, function_map,
     :type structuring_elements: dict
 
     :param function_map: Function of the filter domain used when mapping.
-    :type function_map: function
+    :type function_map: callable function
 
     :param function_reduce: Function of the filter domain used when reducing.
-    :type function_reduce: function
+    :type function_reduce: callable function
 
     :param mask: The operations will be processed only inside the mask.
     :type mask: numpy.ndarray
@@ -143,10 +143,10 @@ def adjunct_varying_filtering_2d(image, structuring_elements, function_map,
     :type structuring_elements: dict
 
     :param function_map: Function of the filter domain used when mapping.
-    :type function_map: function
+    :type function_map: callable function
 
     :param function_reduce: Function of the filter domain used when reducing.
-    :type function_reduce: function
+    :type function_reduce: callable function
 
     :param initialization: Initialization element.
     :type initialization: float or int

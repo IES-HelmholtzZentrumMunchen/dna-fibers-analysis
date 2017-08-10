@@ -49,12 +49,13 @@ def read_points_from_txt(path, prefix):
     that have been red.
     :rtype: list of numpy.ndarray
     """
-    indices = [str(os.path.splitext(filename)[0].split('_')[-1]).split('-')[-1]
+    indices = [int(str(os.path.splitext(filename)[0]
+                       .split('_')[-1]).split('-')[-1])
                for filename in os.listdir(path)
                if filename.startswith(prefix)]
 
     return [np.loadtxt(os.path.join(path, '{}_fiber-{}.txt').format(
-        prefix, index + 1)).T[::-1] for index in indices]
+        prefix, index)).T[::-1] for index in indices]
 
 
 class ImageJRoiType:
@@ -83,6 +84,7 @@ class ImageJRoiSizes:
     DRAW_OFFSET = 256
 
 
+# noinspection PyTypeChecker
 def _read_points_from_imagej_roi(binaries):
     """
     Read points coordinates from binaries of ImageJ rois.
@@ -206,26 +208,28 @@ def read_points_from_imagej_zip(filename):
                 for n in zipfile.namelist()]
 
 
-# def _write_points_from_imagej_roi(binaries, coordinates):
-#     """
-#     Write points coordinates to binaries of ImageJ rois.
-#
-#     This code is based on the ijroi package (https://github.com/tdsmith/ijroi),
-#     which is based on the gist https://gist.github.com/luispedro/3437255, which
-#     is finally based on the official ImageJ sources (see http://rsbweb.nih.gov/-
-#     ij/developer/source/ij/io/RoiDecoder.java.html and http://rsbweb.nih.gov/-
-#     ij/developer/source/ij/io/RoiEncoder.java.html).
-#
-#     :param binaries: Binary data to which to read the points coordinates.
-#     :type binaries: _io.BufferReader
-#
-#     :param coordinates: Coordinates of the points to write to the binaries in
-#     the (I, J) or (Y, X) order.
-#     :type coordinates: numpy.ndarray
-#
-#     :return: Array containing the coordinates in the (I, J) and (Y, X) order.
-#     :rtype: numpy.ndarray
-#     """
+# noinspection PyUnusedLocal
+def _write_points_from_imagej_roi(binaries, coordinates):
+    """
+    Write points coordinates to binaries of ImageJ rois.
+
+    This code is based on the ijroi package (https://github.com/tdsmith/ijroi),
+    which is based on the gist https://gist.github.com/luispedro/3437255, which
+    is finally based on the official ImageJ sources (see http://rsbweb.nih.gov/-
+    ij/developer/source/ij/io/RoiDecoder.java.html and http://rsbweb.nih.gov/-
+    ij/developer/source/ij/io/RoiEncoder.java.html).
+
+    :param binaries: Binary data to which to read the points coordinates.
+    :type binaries: _io.BufferReader
+
+    :param coordinates: Coordinates of the points to write to the binaries in
+    the (I, J) or (Y, X) order.
+    :type coordinates: numpy.ndarray
+
+    :return: Array containing the coordinates in the (I, J) and (Y, X) order.
+    :rtype: numpy.ndarray
+    """
+    raise NotImplementedError
 #     def put8(word):
 #         binaries.write(word)
 #
@@ -286,6 +290,8 @@ def read_points_from_imagej_zip(filename):
 #         points[:, 0] += top
 #
 #     return points
+
+
 def check_valid_path(path):
     """ Check for existing path (directory or file). """
     if not os.path.isdir(path) and not os.path.isfile(path):

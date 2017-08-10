@@ -115,7 +115,7 @@ def fiber_inhomogeneity(num_of_points, number_of_channels, pattern, length,
     """
     t = np.arange(0, num_of_points)
     u = t / t.max()
-    length_cumsum = np.cumsum([0.] + length) / sum(length)
+    length_cumsum = np.divide(np.cumsum([0.] + length), sum(length))
     s = np.zeros((number_of_channels, num_of_points))
 
     # create global inhomogeneity
