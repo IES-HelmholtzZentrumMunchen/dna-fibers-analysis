@@ -74,7 +74,7 @@ def pipeline_command(args):
                 min_length=min_length,
                 extent_mask=None)
 
-            if args.save_detected_fibers:
+            if args.save_all or args.save_detected_fibers:
                 _ut.write_points_to_txt(
                     args.output,
                     os.path.basename(name),
@@ -88,22 +88,17 @@ def pipeline_command(args):
                 ex.extract_profiles_from_fiber(extracted_fiber)
                 for extracted_fiber in extracted_fibers]
 
-            if args.save_extracted_profiles:
-                for number, extracted_profile, in enumerate(extracted_profiles):
-                    np.savetxt(os.path.join(
-                        args.output, '{}_fiber-{}.csv'.format(
-                            name, number + 1)),
-                        extracted_profile,
-                        delimiter=',', header='X, Y1, Y2', comments='')
+            if args.save_all or args.save_extracted_profiles:
+                _ut.write_profiles(args.output, name, extracted_profiles)
 
-            if args.save_extracted_fibers:
+            if args.save_all or args.save_extracted_fibers:
                 figures = _ut.create_figures_from_fibers_images(
                     [name], [extracted_fibers], radius, group_fibers=False)
 
                 for filename, fig in figures:
                     fig.savefig(os.path.join(args.output, filename))
 
-            if args.save_grouped_fibers:
+            if args.save_all or args.save_grouped_fibers:
                 figures = _ut.create_figures_from_fibers_images(
                     [name], [extracted_fibers], radius, group_fibers=True)
 
@@ -125,7 +120,7 @@ def pipeline_command(args):
     detailed_analysis.to_csv(
         os.path.join(args.output, args.output_name + '.csv'))
 
-    if args.save_model:
+    if args.save_all or args.save_model:
         model.save(
             os.path.join(args.output, args.output_name + '_model.txt'))
 
@@ -207,13 +202,9 @@ def extraction_command(args):
         # export to csv the profiles
         for image_extracted_fiber, input_name \
                 in zip(extracted_fibers, input_names):
-            for number, extracted_fiber, in enumerate(image_extracted_fiber):
-                profiles = ex.extract_profiles_from_fiber(extracted_fiber)
-                np.savetxt(os.path.join(args.output,
-                                        '{}_fiber{}.csv'.format(input_name,
-                                                                number + 1)),
-                           profiles,
-                           delimiter=',', header='X, Y1, Y2', comments='')
+            profiles = [ex.extract_profiles_from_fiber(extracted_fiber)
+                        for extracted_fiber in extracted_fibers]
+            _ut.write_profiles(args.output, input_name, profiles)
 
         # export to png the grouped fibers or the single fibers + profiles
         if figures is not None:
@@ -392,6 +383,9 @@ if __name__ == '__main__':
     pipeline_inout.add_argument(
         '--masks', type=_ut.check_valid_or_empty_path, default='',
         help='Path to input masks of images (default is automatic masking).')
+    pipeline_inout.add_argument(
+        '--save-all', action='store_true',
+        help='Save all intermediate files (override any other flag).')
     pipeline_inout.add_argument(
         '--save-detected-fibers', action='store_true',
         help='Save intermediate files of detected fibers (default is not '

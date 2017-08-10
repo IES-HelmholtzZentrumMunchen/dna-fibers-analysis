@@ -499,3 +499,23 @@ def create_figures_from_fibers_images(names, extracted_fibers,
                                                          number + 1), fig))
 
     return figures
+
+
+def write_profiles(path, prefix, profiles):
+    """
+    Write the given set of profiles to the specified path with given prefix.
+
+    :param path: Path where to write.
+    :type path: str
+
+    :param prefix: Prefix of the output files.
+    :type prefix: str
+
+    :param profiles: Set of profiles to write.
+    :type profiles: list of numpy.ndarray
+    """
+    for number, profile in enumerate(profiles):
+        np.savetxt(os.path.join(
+            path, '{}_fiber-{}.csv'.format(prefix, number + 1)),
+            profile,
+            delimiter=',', header='X, Y1, Y2', comments='')
