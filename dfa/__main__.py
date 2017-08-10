@@ -113,7 +113,8 @@ def pipeline_command(args):
                     for num in range(len(extracted_profiles))]
 
             current_analysis = ana.analyzes(
-                extracted_profiles, model=model, keys=keys, keys_names=scheme,
+                extracted_profiles, model=model, update_model=False,
+                keys=keys, keys_names=scheme,
                 discrepancy=args.discrepancy, contrast=args.contrast)
 
             detailed_analysis = detailed_analysis.append(current_analysis)
@@ -124,6 +125,7 @@ def pipeline_command(args):
         os.path.join(args.output, args.output_name + '.csv'))
 
     if args.save_all or args.save_model:
+        model.update_model()
         model.save(
             os.path.join(args.output, args.output_name + '_model.txt'))
 
