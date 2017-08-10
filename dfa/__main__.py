@@ -84,10 +84,9 @@ def pipeline_command(args):
             extracted_fibers = ex.unfold_fibers(
                 image, fibers, radius=radius)
 
-            extracted_profiles = [np.vstack((range(extracted_fiber.shape[2]),
-                                             extracted_fiber[0].sum(axis=0),
-                                             extracted_fiber[1].sum(axis=0))).T
-                                  for extracted_fiber in extracted_fibers]
+            extracted_profiles = [
+                ex.extract_profiles_from_fiber(extracted_fiber)
+                for extracted_fiber in extracted_fibers]
 
             if args.save_extracted_profiles:
                 for number, extracted_profile, in enumerate(extracted_profiles):
@@ -209,12 +208,11 @@ def extraction_command(args):
         for image_extracted_fiber, input_name \
                 in zip(extracted_fibers, input_names):
             for number, extracted_fiber, in enumerate(image_extracted_fiber):
+                profiles = ex.extract_profiles_from_fiber(extracted_fiber)
                 np.savetxt(os.path.join(args.output,
                                         '{}_fiber{}.csv'.format(input_name,
                                                                 number + 1)),
-                           np.vstack((range(extracted_fiber.shape[2]),
-                                      extracted_fiber[0].sum(axis=0),
-                                      extracted_fiber[1].sum(axis=0))).T,
+                           profiles,
                            delimiter=',', header='X, Y1, Y2', comments='')
 
         # export to png the grouped fibers or the single fibers + profiles

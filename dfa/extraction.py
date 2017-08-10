@@ -295,3 +295,35 @@ def extract_fibers(images, fibers, radius=4):
         extracted_fibers.append(unfold_fibers(image, image_fibers, radius))
 
     return extracted_fibers
+
+
+def extract_profiles_from_fiber(fiber, func=np.mean):
+    """
+    Extract profiles from fiber.
+
+    The fiber is an image of the unfolded fiber path with a given height
+    (corresponding to the radius). The profiles are extracted by applying the
+    func function to each column of the fiber image (default is mean).
+
+    If the profiles have strange values (e.g. below zero, possibly due to
+    interpolation processes), these values are dropped.
+
+    :param fiber: Input fiber from which to extract profiles.
+    :type fiber: numpy.ndarray
+
+    :param func: Function used to reduce the columns of the fiber image
+    (default is mean).
+    :type func: callable function
+
+    :return: The profiles of the fiber as a column-oriented array (x, y1, y2).
+    :rtype: numpy.ndarray
+    """
+    profiles = np.vstack((range(fiber.shape[2]),
+                          func(fiber[0], axis=0),
+                          func(fiber[1], axis=0))).T
+
+    profiles = profiles[np.all(np.greater(profiles, 0), axis=1)]
+    profiles = profiles[np.all(np.bitwise_not(np.isnan(profiles)), axis=1)]
+    profiles = profiles[np.all(np.bitwise_not(np.isinf(profiles)), axis=1)]
+
+    return profiles
