@@ -12,6 +12,7 @@ def pipeline_command(args):
     import copy
     import progressbar
     import pandas as pd
+    from matplotlib import pyplot as plt
     from dfa import detection as det
     from dfa import extraction as ex
     from dfa import modeling as mod
@@ -97,6 +98,7 @@ def pipeline_command(args):
 
                 for filename, fig in figures:
                     fig.savefig(os.path.join(args.output, filename))
+                    plt.close(fig)
 
             if args.save_all or args.save_grouped_fibers:
                 figures = _ut.create_figures_from_fibers_images(
@@ -104,6 +106,7 @@ def pipeline_command(args):
 
                 for filename, fig in figures:
                     fig.savefig(os.path.join(args.output, filename))
+                    plt.close(fig)
 
             # analysis
             keys = [tuple(name.split('-')[-len(args.scheme):]) + (num + 1,)
