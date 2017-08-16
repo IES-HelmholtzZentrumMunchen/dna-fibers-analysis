@@ -14,41 +14,50 @@ from dfa import modeling
 def fiber(angle, length, shift=(0, 0), step=4, interp_step=1,
           perturbations_force=0.5, bending_elasticity=2,
           bending_force=2):
-    """
-    Simulate a fiber path object with local and global perturbations.
+    """Simulate a fiber path object with local and global perturbations.
 
-    :param angle: Orientation angle of the fiber to simulate (in degrees).
-    :type angle: float
+    Parameters
+    ----------
+    angle : float
+        Orientation angle of the fiber to simulate (in degrees).
 
-    :param length: Length of the fiber to simulate (in pixels.
-    :type length: float
+    length : float
+        Length of the fiber to simulate (in pixels.
 
-    :param shift: Translation vector of the fiber from image's center
-    (in pixels, default is [0, 0]).
-    :type shift: np.ndarray
+    shift : np.ndarray
+        Translation vector of the fiber from image's center (in pixels,
+        default is [0, 0]).
 
-    :param step: Step size of control points along path (in pixels,
-    default is 4).
-    :type step: float
+    step : float
+        Step size of control points along path (in pixels, default is 4).
 
-    :param interp_step: Step size of sampled points along path (in pixels,
-    default is 1).
-    :type interp_step: float
+    interp_step : float
+        Step size of sampled points along path (in pixels, default is 1).
 
-    :param perturbations_force: Force of the local perturbations along the
-    fiber path to simulate (range is ]0,+inf[, default is 0.5).
-    :type perturbations_force: float
+    perturbations_force : float
+        Force of the local perturbations along the fiber path to simulate
+        (range is ]0,+inf[, default is 0.5).
 
-    :param bending_elasticity: Elasticity of the global perturbation bending
-    the fiber path to be simulated (range is ]0,+inf[, default is 2).
-    :type bending_elasticity: float
+    bending_elasticity : float
+        Elasticity of the global perturbation bending the fiber path to be
+        simulated (range is ]0,+inf[, default is 2).
 
-    :param bending_force: Force of the global perturbation bending the fiber
-    path to be simulated (range is ]0+inf[, default is 0.5).
-    :type bending_force: float
+    bending_force : float
+        Force of the global perturbation bending the fiber path to be simulated
+        (range is ]0+inf[, default is 0.5).
 
-    :return: The coordinates of the points as an (2,N) array.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        The coordinates of the points as an (2,N) array.
+
+    See Also
+    --------
+    fiber_spline : Simulate fiber path with a spline.
+    fiber_disconnections : Simulate disconnections along fiber path.
+    fiber_inhomogeneity : Simulate signal inhomogeneity along fiber path.
+    fibers : Simulate a set of fibers with given parameters.
+    rfibers : Simulate a set of fibers with random parameters within ranges.
     """
     # Find limit points of the fiber
     radian_angle = np.pi * angle / 180.0
@@ -81,37 +90,45 @@ def fiber(angle, length, shift=(0, 0), step=4, interp_step=1,
 
 def fiber_inhomogeneity(num_of_points, number_of_channels, pattern, length,
                         local_force=0.05, global_force=0.25, global_rate=1.5):
-    """
-    Simulate signal inhomogeneity in fiber.
+    """Simulate signal inhomogeneity in fiber.
 
     The intensity factors are simulated using local and global perturbations of
     a even illumination (every point with intensity set to 1).
 
-    :param num_of_points: Number of points on the fiber.
-    :type num_of_points: strictly positive int
+    Parameters
+    ----------
+    num_of_points : strictly positive int
+        Number of points on the fiber.
 
-    :param number_of_channels: Number of channels of the output image.
-    :type number_of_channels: int
+    number_of_channels : int
+        Number of channels of the output image.
 
-    :param pattern: The input patterns of the fibers to simulate.
-    :type pattern: list of int
+    pattern : List[int]
+        The input patterns of the fibers to simulate.
 
-    :param length: The lengths of the input pattern segments to simulate.
-    :type length: list of float
+    length : List[float]
+        The lengths of the input pattern segments to simulate.
 
-    :param local_force: Force of local signal inhomogeneity (default is 0.05).
-    :type local_force: float
+    local_force : float
+        Force of local signal inhomogeneity (default is 0.05).
 
-    :param global_force: Force of the global signal inhomogeneity (default is
-    0.25).
-    :type global_force: float
+    global_force : float
+        Force of the global signal inhomogeneity (default is 0.25).
 
-    :param global_rate: Rate of modulation of the global signal inhomogeneity
-    (default is 1.5).
-    :type global_rate: float
+    global_rate : float
+        Rate of modulation of the global signal inhomogeneity (default is 1.5).
 
-    :return: Sequence of inhomogeneity factors.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        Sequence of inhomogeneity factors.
+
+    See Also
+    --------
+    fiber_spline : Simulate fiber path with a spline.
+    fiber_disconnections : Simulate disconnections along fiber path.
+    fibers : Simulate a set of fibers with given parameters.
+    rfibers : Simulate a set of fibers with random parameters within ranges.
     """
     t = np.arange(0, num_of_points)
     u = t / t.max()
@@ -141,25 +158,35 @@ def fiber_inhomogeneity(num_of_points, number_of_channels, pattern, length,
 
 
 def fiber_disconnections(fiber_points, disc_prob=0.2, return_prob=0.5):
-    """
-    Simulate disconnections in fiber.
+    """Simulate disconnections in fiber.
 
     The disconnections are modeled as a state of a Markov process. The points
     sampled on the fiber path define a Markov chain and those points can have
     two states: not disconnected or disconnected. The corresponding
     probabilities rule the random apparitions of the disconnections.
 
-    :param fiber_points: Points of the input fiber.
-    :type fiber_points: numpy.ndarray
+    Parameters
+    ----------
+    fiber_points : numpy.ndarray
+        Points of the input fiber.
 
-    :param disc_prob: Probability to have disconnections (default is 0.2).
-    :type disc_prob: float
+    disc_prob : float
+        Probability to have disconnections (default is 0.2).
 
-    :param return_prob: Probability to stop the disconnection (default is 0.5).
-    :type return_prob: float
+    return_prob : float
+        Probability to stop the disconnection (default is 0.5).
 
-    :return: The coordinates of the degraded points as an (2,N) array.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        The coordinates of the degraded points as an (2,N) array.
+
+    See Also
+    --------
+    fiber_spline : Simulate fiber path with a spline.
+    fiber_inhomogeneity : Simulate signal inhomogeneity along fiber path.
+    fibers : Simulate a set of fibers with given parameters.
+    rfibers : Simulate a set of fibers with random parameters within ranges.
     """
     state = 1  # initial state is no disconnected
     select = []  # points with not disconnected state will be selected
@@ -175,34 +202,39 @@ def fiber_disconnections(fiber_points, disc_prob=0.2, return_prob=0.5):
 
 def fibers(number_of_channels, patterns, lengths, geom_props, disc_props,
            signal_props):
-    """
-    Simulate fibers fluophores as points in image space.
+    """Simulate fibers fluophores as points in image space.
 
-    .. seealso:: dfa.simulation.fiber_spline,
-    dfa.simulation.fiber_disconnections, dfa.simulation.fiber_inhomogeneity
+    Parameters
+    ----------
+    number_of_channels : int
+        Number of channels of the output image.
 
-    :param number_of_channels: Number of channels of the output image.
-    :type number_of_channels: int
+    patterns : list of list of int
+        The input patterns of the fibers to simulate.
 
-    :param patterns: The input patterns of the fibers to simulate.
-    :type patterns: list of list of int
+    lengths : list of list of float
+        The lengths of the input pattern segments to simulate.
 
-    :param lengths: The lengths of the input pattern segments to simulate.
-    :type lengths: list of list of float
+    geom_props : list of dict
+        Geometrical properties (see dfa.simulation.fiber_spline).
 
-    :param geom_props: Geometrical properties (see dfa.simulation.fiber_spline).
-    :type geom_props: list of dict
+    disc_props : list of dict
+        Disconnections properties (see dfa.simulation.fiber_disconnections).
 
-    :param disc_props: Disconnections properties (see
-    dfa.simulation.fiber_disconnections).
-    :type disc_props: list of dict
+    signal_props : list of dict
+        Signal properties (see dfa.simulation.fiber_inhomogeneity).
 
-    :param signal_props: Signal properties (see
-    dfa.simulation.fiber_inhomogeneity).
-    :type signal_props: list of dict
+    Returns
+    -------
+    list of tuple
+        The points/signal of fibers paths simulated.
 
-    :return: The points/signal of fibers paths simulated.
-    :rtype: list of tuple
+    See Also
+    --------
+    fiber_spline : Simulate fiber path with a spline.
+    fiber_disconnections : Simulate disconnections along fiber path.
+    fiber_inhomogeneity : Simulate signal inhomogeneity along fiber path.
+    rfibers : Simulate a set of fibers with random parameters within ranges.
     """
     fiber_objects = []
 
@@ -220,15 +252,20 @@ def rfibers(number, angle_range, shift_range, perturbations_force_range,
             bending_elasticity_range, bending_force_range, disc_prob_range,
             return_prob_range, local_force_range, global_force_range,
             global_rate_range, model=modeling.standard):
-    """
-    Randomly simulate fibers objects with geometrical deterioration /
+    """Randomly simulate fibers objects with geometrical deterioration /
     signal inhomogeneity.
-
-    .. seealso:: dfa.simulate.fibers
 
     For information abount the ranges, refer to dfa.simulation.fiber_spline,
     dfa.simulation.fiber_disconnections and
     dfa.simulation.inhomogeneity.
+
+    See Also
+    --------
+    fiber_spline : Simulate fiber path with a spline.
+    fiber_disconnections : Simulate disconnections along fiber path.
+    fiber_inhomogeneity : Simulate signal inhomogeneity along fiber path.
+    fibers : Simulate a set of fibers with given parameters.
+    rfibers : Simulate a set of fibers with random parameters within ranges.
     """
     def _uniform_sample_within_range(sampling_range, sample_number=number):
         return np.abs(np.diff(sampling_range)) * \
@@ -279,28 +316,38 @@ def rfibers(number, angle_range, shift_range, perturbations_force_range,
 
 def image_by_diffraction(shape, fibers_points, fibers_signal, psf,
                          positions=None):
-    """
-    Create a diffraction limited image from points along fiber paths.
+    """Create a diffraction limited image from points along fiber paths.
 
-    :param shape: Shape of the output image.
-    :type shape: tuple of int
+    Parameters
+    ----------
+    shape : (int, int)
+        Shape of the output image.
 
-    :param fibers_points: Coordinates points in image space of the fiber paths.
-    :type fibers_points: list of numpy.ndarray
+    fibers_points : List[numpy.ndarray]
+        Coordinates points in image space of the fiber paths.
 
-    :param fibers_signal: Signal power of each points along fiber paths.
-    :type fibers_signal: list of numpy.ndarray
+    fibers_signal : List[numpy.ndarray]
+        Signal power of each points along fiber paths.
 
-    :param psf: 3D image of the PSF used for diffraction simulation.
-    :type psf: numpy.ndarray
+    psf : numpy.ndarray
+        3D image of the PSF used for diffraction simulation.
 
-    :param positions: Positions in the PSF z-stack used to simulate
-    out-of-focus.
-    When set to None (default), the positions are 0 (in-focus).
-    :type positions: list of int or None
+    positions : list of int or None
+        Positions in the PSF z-stack used to simulate out-of-focus. When set to
+        None (default), the positions are 0 (in-focus).
 
-    :return: Simulated diffraction-limited image.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        Simulated diffraction-limited image.
+
+    See Also
+    --------
+    shot_noise : Simulate photon noise.
+    image : Simulate image acquisition conditions of fibers with given SNR,
+    z-positions and fiber objects.
+    rimage : Simulate image acquisition conditions with given SNR and fiber
+    objects and random z-positions.
     """
     if positions is None:
         positions = [0] * len(fibers_points)
@@ -336,17 +383,28 @@ def image_by_diffraction(shape, fibers_points, fibers_signal, psf,
 
 
 def shot_noise(input_image, snr):
-    """
-    Simulate photon noise on input noise-free image.
+    """Simulate photon noise on input noise-free image.
 
-    :param input_image: Input noise-free image.
-    :type input_image: numpy.ndarray with 2 dimensions
+    Parameters
+    ----------
+    input_image : numpy.ndarray with 2 dimensions
+        Input noise-free image.
 
-    :param snr: Signal-to-noise ratio of the simulated image (in dB).
-    :type snr: float
+    snr : float
+        Signal-to-noise ratio of the simulated image (in dB).
 
-    :return: Image corrupted with photon-noise (Poisson distribution).
-    :rtype: numpy.ndarray with same shape as input_image
+    Returns
+    -------
+    numpy.ndarray with same shape as input_image
+        Image corrupted with photon-noise (Poisson distribution).
+
+    See Also
+    --------
+    image_by_diffraction : Simulate diffraction of microscopy lenses.
+    image : Simulate image acquisition conditions of fibers with given SNR,
+    z-positions and fiber objects.
+    rimage : Simulate image acquisition conditions with given SNR and fiber
+    objects and random z-positions.
     """
     # When poisson noise, we have parameter lambda = 10^(SNR_dB / 5)
     for i in range(input_image.shape[0]):
@@ -361,32 +419,40 @@ def shot_noise(input_image, snr):
 
 
 def image(fiber_objects, shape, zindices, psf, snr=20):
-    """
-    Simulate image acquisition conditions of fiber objects.
-
-    .. seealso:: dfa.simulation.diffraction, dfa.simulation.photon_noise
+    """Simulate image acquisition conditions of fiber objects.
 
     The fiber objects need to be first simulated using the appropriate
     functions. With each object is associated a z-index giving the relative
     position of the fiber object plane to the focal plane of the final image.
 
-    :param fiber_objects: Input simulated fiber objects.
-    :type fiber_objects: list of numpy.ndarray with 2 dimensions
+    Parameters
+    ----------
+    fiber_objects : list of numpy.ndarray with 2 dimensions
+        Input simulated fiber objects.
 
-    :param shape: Shape of the output image.
-    :type shape: tuple of int
+    shape : (int, int)
+        Shape of the output image.
 
-    :param zindices: Plane positions of fibers relative to the focal plane.
-    :type zindices: list of int (or iterable)
+    zindices : list of int (or iterable)
+        Plane positions of fibers relative to the focal plane.
 
-    :param psf: PSF used to simulate the microscope's diffraction of light.
-    :type psf: numpy.ndarray with 3 dimensions
+    psf : numpy.ndarray with 3 dimensions
+        PSF used to simulate the microscope's diffraction of light.
 
-    :param snr: Signal-to-noise ratio of the simulated image (in dB).
-    :type snr: float
+    snr : float
+        Signal-to-noise ratio of the simulated image (in dB).
 
-    :return: Final simulated image of fibers with acquisition artefacts.
-    :rtype: numpy.ndarray with 2 dimensions and shape outshape
+    Returns
+    -------
+    numpy.ndarray with 2 dimensions and shape outshape
+        Final simulated image of fibers with acquisition artefacts.
+
+    See Also
+    --------
+    image_by_diffraction : Simulate diffraction of microscopy lenses.
+    shot_noise : Simulate photon noise.
+    rimage : Simulate image acquisition conditions with given SNR and fiber
+    objects and random z-positions.
     """
     clean_image = image_by_diffraction(
         shape, *zip(*fiber_objects), psf, zindices)
@@ -399,26 +465,34 @@ def rimage(fiber_objects, shape, zindex_range, psf, snr=10):
     Simulate image acquisition conditions of fiber objects with random
     out-of-focus effects.
 
-    .. seealso:: dfa.simulation.image
+    Parameters
+    ----------
+    fiber_objects : list of numpy.ndarray with 2 dimensions
+        Input simulated fiber objects.
 
-    :param fiber_objects: Input simulated fiber objects.
-    :type fiber_objects: list of numpy.ndarray with 2 dimensions
+    shape : (int, int)
+        Shape of the output image.
 
-    :param shape: Shape of the output image.
-    :type shape: tuple of int
+    zindex_range : tuple of int
+        Plane positions range of fibers relative to the focal plane.
 
-    :param zindex_range: Plane positions range of fibers relative to the
-    focal plane.
-    :type zindex_range: tuple of int
+    psf : numpy.ndarray with 3 dimensions
+        PSF used to simulate the microscope's diffraction of light.
 
-    :param psf: PSF used to simulate the microscope's diffraction of light.
-    :type psf: numpy.ndarray with 3 dimensions
+    snr : float
+        Signal-to-noise ratio of the simulated image (in dB).
 
-    :param snr: Signal-to-noise ratio of the simulated image (in dB).
-    :type snr: float
+    Returns
+    -------
+    numpy.ndarray with 2 dimensions and shape outshape
+        Final simulated image of fibers with acquisition artefacts.
 
-    :return: Final simulated image of fibers with acquisition artefacts.
-    :rtype: numpy.ndarray with 2 dimensions and shape outshape
+    See Also
+    --------
+    image_by_diffraction : Simulate diffraction of microscopy lenses.
+    shot_noise : Simulate photon noise.
+    image : Simulate image acquisition conditions of fibers with given SNR,
+    z-positions and fiber objects.
     """
     if zindex_range is None:
         zindices = None

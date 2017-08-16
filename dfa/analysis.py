@@ -19,35 +19,37 @@ def _select_possible_patterns(x, y, model=modeling.standard,
                               min_length=4,
                               error_func=lambda v1, v2: np.power(v1-v2,
                                                                  2).sum()):
-    """
-    Select the matching models.
+    """Select the matching models.
 
     The models are chosen according to the modeling given. The output patterns
     are ordered in increasing error (given by the error function). Any pattern
     that does not have a binary alternative scheme will be dropped.
 
-    :param x: Independent variables.
-    :type x: numpy.ndarray
+    Parameters
+    ----------
+    x : numpy.ndarray
+        Independent variables.
 
-    :param y: Dependent variables.
-    :type y: numpy.ndarray
+    y : numpy.ndarray
+        Dependent variables.
 
-    :param model: Model defining the patterns to detect and filter (default is
-    the standard model defined in dfa.modeling.standard).
-    :type model: dfa.modeling.Model
+    model : dfa.modeling.Model
+        Model defining the patterns to detect and filter (default is the
+        standard model defined in dfa.modeling.standard).
 
-    :param min_length: Minimal length of a segment. Default is 4 pixels, which
-    corresponds to the thickness of a fiber when pixel size is equal to
-    0.1419761 microns.
-    :type min_length: strictly positive integer
+    min_length : strictly positive integer
+        Minimal length of a segment. Default is 4 pixels, which corresponds to
+        the thickness of a fiber when pixel size is equal to 0.1419761 microns.
 
-    :param error_func: function used to quantify the quality of the patterns
-    (default is the residuals-sum of squared errors).
-    :type: function
+    error_func : callable function
+        function used to quantify the quality of the patterns (default is the
+        residuals-sum of squared errors).
 
-    :return: For each possible pattern, the error, the splits and the channels
-    patterns.
-    :rtype: list of tuple
+    Returns
+    -------
+    list of tuple
+        For each possible pattern, the error, the splits and the channels
+        patterns.
     """
     def _alternate_constraint_func(node):
         if node is node.parent.left:
@@ -110,22 +112,25 @@ def _select_possible_patterns(x, y, model=modeling.standard,
 
 
 def _choose_pattern(selected_patterns, x, y, discrepancy, contrast):
-    """
-    Choose the best pattern with given criterion.
+    """Choose the best pattern with given criterion.
 
-    :param selected_patterns: Possible patterns.
-    :type selected_patterns: list of tuples
+    Parameters
+    ----------
+    selected_patterns : list of tuples
+        Possible patterns.
 
-    :param discrepancy: Factor of discrepancy regularization between amplitudes
-    of the same marker.
-    :type discrepancy: positive float
+    discrepancy : positive float
+        Factor of discrepancy regularization between amplitudes of the same
+        marker.
 
-    :param contrast: Factor of contrast regularization between amplitudes of
-    opposite markers.
-    :type contrast: positive float
+    contrast : positive float
+        Factor of contrast regularization between amplitudes of opposite
+        markers.
 
-    :return: Chosen pattern
-    :rtype: tuple
+    Returns
+    -------
+    (float, List[int], List[int])
+        Chosen pattern
     """
     # NOTE maybe add also a model complexity regularization (branches)?
     def _mean(l):
@@ -176,40 +181,48 @@ def _choose_pattern(selected_patterns, x, y, discrepancy, contrast):
 
 def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
             min_length=4, discrepancy=0, contrast=0):
-    """
-    Detect the segments in profile and analyze it.
+    """Detect the segments in profile and analyze it.
 
     By default, it takes the model with the minimal error.
 
-    :param profile: Input profile (containing the X values and the Y values of
-    the two channels as column vectors of a matrix).
-    :type profile: numpy.ndarray
+    Parameters
+    ----------
+    profile : numpy.ndarray
+        Input profile (containing the X values and the Y values of the two
+        channels as column vectors of a matrix).
 
-    :param model: Model defining the patterns to detect and filter (default is
-    the standard model defined in dfa.modeling.standard).
-    :type model: dfa.modeling.Model
+    model : dfa.modeling.Model
+        Model defining the patterns to detect and filter (default is the
+        standard model defined in dfa.modeling.standard).
 
-    :param channels_names: Names of the channels in the same order as they
-    appear in the profile.
-    :type channels_names: tuple of str of size 2
+    channels_names : tuple of str of size 2
+        Names of the channels in the same order as they appear in the profile.
 
-    :param min_length: Minimal length of a segment. Default is 4 pixels, which
-    corresponds to the thickness of a fiber when pixel size is equal to
-    0.1419761 microns.
-    :type min_length: strictly positive integer
+    min_length : strictly positive integer
+        Minimal length of a segment. Default is 4 pixels, which corresponds to
+        the thickness of a fiber when pixel size is equal to 0.1419761 microns.
 
-    :param discrepancy: Factor of discrepancy regularization between amplitudes
-    of the same marker.
-    :type discrepancy: positive float
+    discrepancy : positive float
+        Factor of discrepancy regularization between amplitudes of the
+        same marker.
 
-    :param contrast: Factor of contrast regularization between amplitudes of
-    opposite markers.
-    :type contrast: positive float
+    contrast : positive float
+        Factor of contrast regularization between amplitudes of opposite
+        markers.
 
-    :return: A reference to a pattern defined in model and the lengths.
-    :rtype: list of dict and list or None (if no pattern is found)
+    Returns
+    -------
+    list of dict and list or None (if no pattern is found)
+        A reference to a pattern defined in model and the lengths.
 
-    :raises ValueError: In case inputs are not valid.
+    Raises
+    ------
+    ValueError
+        In case inputs are not valid.
+
+    See Also
+    --------
+    analyzes : Analyze profiles from multiple fibers.
     """
     if type(profile) != np.ndarray:
         raise TypeError('Input profile must be of type numpy.ndarray!\n'
@@ -271,47 +284,56 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
 def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
              keys_names=None, channels_names=('CIdU', 'IdU'),
              discrepancy=0, contrast=0):
-    """
-    Detect the segments in each profile and analyze it.
+    """Detect the segments in each profile and analyze it.
 
     Internally, it loops over the profiles and use the analyze function.
 
-    :param profiles: Input profiles to analyze.
-    :type profiles: list
+    Parameters
+    ----------
+    profiles : List[numpy.ndarray]
+        Input profiles to analyze.
 
-    :param model: Model defining the patterns to detect and filter (default is
-    the standard model defined in dfa.modeling.standard).
-    :type model: dfa.modeling.Model
+    model : dfa.modeling.Model
+        Model defining the patterns to detect and filter (default is the
+        standard model defined in dfa.modeling.standard).
 
-    :param update_model: Flag to update the model or not (default is True). If
-    model is updated, it is then possible to extract frequencies of patterns and
-    mean and std lengths.
-    :type update_model: bool
+    update_model : bool
+        Flag to update the model or not (default is True). If model is updated,
+        it is then possible to extract frequencies of patterns and mean and
+        std lengths.
 
-    :param keys: A list of tuples to use as key index of rows for profiles'
-    results (default is None). Each key must have the same size as the keys
-    names.
-    :type keys: list of tuples
+    keys : None | List[(T, U, ...)]
+        A list of tuples to use as key index of rows for profiles' results
+        (default is None). Each key must have the same size as the keys names.
 
-    :param keys_names: A list of strings to use as columns headers for indexing
-    columns (default is None). The list must have the same size as each key.
-    :type keys_names: list of str
+    keys_names : List[str]
+        A list of strings to use as columns headers for indexing columns
+        (default is None). The list must have the same size as each key.
 
-    :param channels_names: Names of the channels in the same order as they
-    appear in the profile.
-    :type channels_names: tuple of str of size 2
+    channels_names : tuple of str of size 2
+        Names of the channels in the same order as they appear in the profile.
 
-    :param discrepancy: Factor of discrepancy regularization between amplitudes
-    of the same marker.
-    :type discrepancy: positive float
+    discrepancy : positive float
+        Factor of discrepancy regularization between amplitudes of the
+        same marker.
 
-    :param contrast: Factor of contrast regularization between amplitudes of
-    opposite markers.
-    :type contrast: positive float
+    contrast : positive float
+        Factor of contrast regularization between amplitudes of opposite
+        markers.
 
-    :return: A data structure containing the detailed measurements.
+    Returns
+    -------
+    pandas.DataFrame
+        A data structure containing the detailed measurements.
 
-    :raises ValueError: In case inputs are not valid.
+    Raises
+    ------
+    ValueError
+        In case inputs are not valid.
+
+    See Also
+    --------
+    analyze : Analyze profiles from a single fiber.
     """
     if type(profiles) != list:
         raise TypeError('Input profiles must be a list of profiles!\n'
@@ -378,26 +400,35 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
 
 def fork_speed(data, channel='CIdU', pattern_name='ongoing fork',
                kb_per_microns=2.5):
-    """
-    Calculate fork speeds from a detailed analysis.
+    """Calculate fork speeds from a detailed analysis.
 
-    :param data: Detailed analysis of DNA fibers.
-    :type data: pandas.DataFrame
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Detailed analysis of DNA fibers.
 
-    :param channel: Name of the channel to consider (default is 'CIdU').
-    :type channel: str
+    channel : str
+        Name of the channel to consider (default is 'CIdU').
 
-    :param pattern_name: Name of the pattern to consider (default is 'ongoing
-    fork').
-    :type pattern_name: str
+    pattern_name : str
+        Name of the pattern to consider (default is 'ongoing fork').
 
-    :param kb_per_microns: Number of kb per microns along the DNA fibers.
-    :type kb_per_microns: strictly positive float
+    kb_per_microns : strictly positive float
+        Number of kb per microns along the DNA fibers.
 
-    :return: The calculated fork speeds in kb.
-    :rtype: list of float
+    Returns
+    -------
+    list of float
+        The calculated fork speeds in kb.
 
-    :raises ValueError: In case inputs are not valid.
+    Raises
+    ------
+    ValueError
+        In case inputs are not valid.
+
+    See Also
+    --------
+    fork_rate : Compute the fork rate of the analyzed fibers.
     """
     if type(data) != pd.DataFrame:
         raise TypeError('The data type must be pandas.DataFrame!\n'
@@ -443,23 +474,32 @@ def fork_speed(data, channel='CIdU', pattern_name='ongoing fork',
 
 
 def fork_rate(data, channel='CIdU', pattern_name='1st label origin'):
-    """
-    Calculate fork rates from a detailed analysis.
+    """Calculate fork rates from a detailed analysis.
 
-    :param data: Detailed analysis of DNA fibers.
-    :type data: pandas.DataFrame
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Detailed analysis of DNA fibers.
 
-    :param channel: Name of the channel to consider (default is 'CIdU').
-    :type channel: str
+    channel : str
+        Name of the channel to consider (default is 'CIdU').
 
-    :param pattern_name: Name of the pattern to consider (default is 'ongoing
-    fork').
-    :type pattern_name: str
+    pattern_name : str
+        Name of the pattern to consider (default is 'ongoing fork').
 
-    :return: The calculated fork rates.
-    :rtype: list of float
+    Returns
+    -------
+    list of float
+        The calculated fork rates.
 
-    :raises ValueError: In case inputs are not valid.
+    Raises
+    ------
+    ValueError
+        In case inputs are not valid.
+
+    See Also
+    --------
+    fork_speed : Compute the fork speed of the analyzed fibers.
     """
     if type(data) != pd.DataFrame:
         raise TypeError('The data type must be pandas.DataFrame!\n'

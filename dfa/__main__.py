@@ -8,6 +8,13 @@ from dfa import utilities as _ut
 
 
 def pipeline_command(args):
+    """Run the full DFA pipeline.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Input namespace containing command line arguments.
+    """
     import os
     import copy
     import progressbar
@@ -131,6 +138,13 @@ def pipeline_command(args):
 
 
 def detection_command(args):
+    """Run the fiber detection process.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Input namespace containing command line arguments.
+    """
     from dfa import detection as det
 
     images, names, masks = _ut.read_inputs(args.input, args.mask, '.tif')
@@ -165,6 +179,13 @@ def detection_command(args):
 
 
 def extraction_command(args):
+    """Run the fiber extraction process.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Input namespace containing command line arguments.
+    """
     import os
     from matplotlib import pyplot as plt
     from skimage import io
@@ -218,6 +239,13 @@ def extraction_command(args):
 
 
 def analysis_command(args):
+    """Run the profiles analysis process.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Input namespace containing command line arguments.
+    """
     import os
     import copy
     from dfa import modeling as mod
@@ -301,6 +329,13 @@ def analysis_command(args):
 
 
 def simulate_command(args):
+    """Run the fibers image simulation process.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Input namespace containing command line arguments.
+    """
     import os
     from skimage import io
     from dfa import modeling as mod

@@ -19,8 +19,7 @@ class Dataset:
     """
     def __init__(self, archive, storing_path='/tmp', force_decompress=False,
                  shuffle=True):
-        """
-        Constructor.
+        """Constructor.
 
         The dataset archive is first decompressed in the storing path. If the
         decompressed path already exists (for instance when the archive has
@@ -28,17 +27,19 @@ class Dataset:
         is not decompressed again, until the force_decompress flag is set to
         True.
 
-        :param archive: Path to dataset archive.
-        :type archive: str
+        Parameters
+        ----------
+        archive : str
+            Path to dataset archive.
 
-        :param storing_path: Path used to store the decompressed dataset.
-        :type storing_path: str
+        storing_path : str
+            Path used to store the decompressed dataset.
 
-        :param force_decompress: Use this flag to force the decompression.
-        :type force_decompress: bool
+        force_decompress : bool
+            Use this flag to force the decompression.
 
-        :param shuffle: If True, the dataset is shuffled, it is not otherwise.
-        :type shuffle: bool
+        shuffle : bool
+            If True, the dataset is shuffled, it is not otherwise.
         """
         self.archive = archive
         self.storing_path = storing_path
@@ -71,24 +72,27 @@ class Dataset:
             zipfiles.extractall(path=self.storing_path)
 
     def next_batch(self, index, n, mapping, batch_size=None):
-        """
-        Get the next batch of the given size as a generator.
+        """Get the next batch of the given size as a generator.
 
-        :param index: Name of the index used for selecting batches.
-        :type index: string
+        Parameters
+        ----------
+        index : str
+            Name of the index used for selecting batches.
 
-        :param n: Name of the current offset of reading
-        :type n: string
+        n : str
+            Name of the current offset of reading
 
-        :param mapping: Function that maps an index to elements to return.
-        :type mapping: callable function
+        mapping : callable function
+            Function that maps an index to elements to return.
 
-        :param batch_size: Size of the next batch. When None, the batch size is
-        set to the size of the dataset (default behaviour).
-        :type batch_size: strictly positive int or None
+        batch_size : strictly positive int or None
+            Size of the next batch. When None, the batch size is set to the
+            size of the dataset (default behaviour).
 
-        :return: The elements of the next batch as a generator.
-        :rtype: generator
+        Returns
+        -------
+        generator
+            The elements of the next batch as a generator.
         """
         if getattr(self, n) < getattr(self, index).size:
             if batch_size is None:
@@ -104,16 +108,19 @@ class Dataset:
             return None
 
     def next_image_batch(self, batch_size=None):
-        """
-        Get the next image batch of the given size as a generator.
+        """Get the next image batch of the given size as a generator.
 
-        :param batch_size: Size of the next batch. When None, the batch size is
-        set to the size of the dataset (default behaviour).
-        :type batch_size: strictly positive int or None
+        Parameters
+        ----------
+        batch_size : strictly positive int or None
+            Size of the next batch. When None, the batch size is set to the
+            size of the dataset (default behaviour).
 
-        :return: Tuples of the next batch as a generator. The tuples contain
-        the index, the image and the manually selected fibers.
-        :rtype: generator
+        Returns
+        -------
+        :return: generator
+            Tuples of the next batch as a generator. The tuples contain the
+            index, the image and the manually selected fibers.
         """
         return self.next_batch(
             batch_size=batch_size, index='image_index', n='_n_image',
@@ -126,16 +133,19 @@ class Dataset:
                                  '{}-{}.zip'.format(*index)))))
 
     def next_profile_batch(self, batch_size=None):
-        """
-        Get the next profile batch of the given size as a generator.
+        """Get the next profile batch of the given size as a generator.
 
-        :param batch_size: Size of the next batch. When None, the batch size is
-        set to the size of the dataset (default behaviour).
-        :type batch_size: strictly positive int or None
+        Parameters
+        ----------
+        batch_size : strictly positive int or None
+            Size of the next batch. When None, the batch size is set to the
+            size of the dataset (default behaviour).
 
-        :return: Tuples of the next batch as a generator. The tuples contain
-        the index, the profiles and the data view to the ground truth.
-        :rtype: generator
+        Returns
+        -------
+        generator
+            Tuples of the next batch as a generator. The tuples contain the
+            index, the profiles and the data view to the ground truth.
         """
         return self.next_batch(
             batch_size=batch_size, index='profile_index', n='_n_profile',

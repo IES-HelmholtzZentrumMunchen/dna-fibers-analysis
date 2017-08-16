@@ -118,5 +118,6 @@ class TestDetection(unittest.TestCase):
                                                 smoothing=10, min_length=30,
                                                 fiberness_threshold=0.5,
                                                 extent_mask=self.mask)
+                # noinspection PyTypeChecker
                 det.np.testing.assert_allclose(coordinates,
                                                self.fibers[length][beta])

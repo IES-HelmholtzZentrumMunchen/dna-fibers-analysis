@@ -5,6 +5,7 @@ import argparse
 import os
 import numpy as np
 from skimage import io
+from matplotlib import pyplot as plt
 
 
 def static_vars(**kwargs):
@@ -16,18 +17,18 @@ def static_vars(**kwargs):
 
 
 def write_points_to_txt(path, prefix, coordinates):
-    """
-    Write points coordinates to text file.
+    """Write points coordinates to text file.
 
-    :param path: Path for output files of fibers.
-    :type path: str
+    Parameters
+    ----------
+    path : str
+        Path for output files of fibers.
 
-    :param prefix: Prefix of the filenames.
-    :type prefix: str
+    prefix : str
+        Prefix of the filenames.
 
-    :param coordinates: Coordinates of the medial axis lines of corresponding
-    fibers.
-    :type coordinates: list of numpy.ndarray
+    coordinates : list of numpy.ndarray
+        Coordinates of the medial axis lines of corresponding fibers.
     """
     for index, points in enumerate(coordinates):
         np.savetxt(
@@ -36,18 +37,21 @@ def write_points_to_txt(path, prefix, coordinates):
 
 
 def read_points_from_txt(path, prefix):
-    """
-    Read points coordinates from text file.
+    """Read points coordinates from text file.
 
-    :param path: Path to the folder containing the fibers files.
-    :type path: str
+    Parameters
+    ----------
+    path : str
+        Path to the folder containing the fibers files.
 
-    :param prefix: Prefix of the fibers filenames.
-    :type prefix: str
+    prefix : str
+        Prefix of the fibers filenames.
 
-    :return: Coordinates of the median-axis lines corresponding to fibers and
-    that have been red.
-    :rtype: list of numpy.ndarray
+    Returns
+    -------
+    list of numpy.ndarray
+        Coordinates of the median-axis lines corresponding to fibers and that
+        have been red.
     """
     indices = [int(str(os.path.splitext(filename)[0]
                        .split('_')[-1]).split('-')[-1])
@@ -86,8 +90,7 @@ class ImageJRoiSizes:
 
 # noinspection PyTypeChecker
 def _read_points_from_imagej_roi(binaries):
-    """
-    Read points coordinates from binaries of ImageJ rois.
+    """Read points coordinates from binaries of ImageJ rois.
 
     This code is based on the ijroi package (https://github.com/tdsmith/ijroi),
     which is based on the gist https://gist.github.com/luispedro/3437255, which
@@ -95,11 +98,15 @@ def _read_points_from_imagej_roi(binaries):
     ij/developer/source/ij/io/RoiDecoder.java.html and http://rsbweb.nih.gov/-
     ij/developer/source/ij/io/RoiEncoder.java.html).
 
-    :param binaries: Binary data from which to read the points coordinates.
-    :type binaries: _io.BufferReader
+    Parameters
+    ----------
+    binaries : BufferReader
+        Binary data from which to read the points coordinates.
 
-    :return: Array containing the coordinates in the (I, J) and (Y, X) order.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        Array containing the coordinates in the (I, J) and (Y, X) order.
     """
     def get8():
         word = binaries.read(1)
@@ -179,28 +186,34 @@ def _read_points_from_imagej_roi(binaries):
 
 
 def read_points_from_imagej_roi(filename):
-    """
-    Read points coordinates from roi file containing one ImageJ roi.
+    """Read points coordinates from roi file containing one ImageJ roi.
 
-    :param filename: Path of file to read. It must be a roi file.
-    :type filename: str
+    Parameters
+    ----------
+    filename : str
+        Path of file to read. It must be a roi file.
 
-    :return: Arrays containing the coordinates in the (I, J) and (Y, X) order.
-    :rtype: list of numpy.ndarray
+    Returns
+    -------
+    list of numpy.ndarray
+        Arrays containing the coordinates in the (I, J) and (Y, X) order.
     """
     with open(filename, 'rb') as file:
         return _read_points_from_imagej_roi(file)
 
 
 def read_points_from_imagej_zip(filename):
-    """
-    Read points coordinates from zip file containing ImageJ rois.
+    """Read points coordinates from zip file containing ImageJ rois.
 
-    :param filename: Path of file to read. It must be a zip file.
-    :type filename: str
+    Parameters
+    ----------
+    filename : str
+        Path of file to read. It must be a zip file.
 
-    :return: Arrays containing the coordinates in the (I, J) and (Y, X) order.
-    :rtype: list of numpy.ndarray
+    Returns
+    -------
+    list of numpy.ndarray
+        Arrays containing the coordinates in the (I, J) and (Y, X) order.
     """
     import zipfile
     with zipfile.ZipFile(filename) as zipfile:
@@ -210,8 +223,7 @@ def read_points_from_imagej_zip(filename):
 
 # noinspection PyUnusedLocal
 def _write_points_from_imagej_roi(binaries, coordinates):
-    """
-    Write points coordinates to binaries of ImageJ rois.
+    """Write points coordinates to binaries of ImageJ rois.
 
     This code is based on the ijroi package (https://github.com/tdsmith/ijroi),
     which is based on the gist https://gist.github.com/luispedro/3437255, which
@@ -219,15 +231,19 @@ def _write_points_from_imagej_roi(binaries, coordinates):
     ij/developer/source/ij/io/RoiDecoder.java.html and http://rsbweb.nih.gov/-
     ij/developer/source/ij/io/RoiEncoder.java.html).
 
-    :param binaries: Binary data to which to read the points coordinates.
-    :type binaries: _io.BufferReader
+    Parameters
+    ----------
+    binaries : BufferReader
+        Binary data to which to read the points coordinates.
 
-    :param coordinates: Coordinates of the points to write to the binaries in
-    the (I, J) or (Y, X) order.
-    :type coordinates: numpy.ndarray
+    coordinates : numpy.ndarray
+        Coordinates of the points to write to the binaries in the (I, J) or
+        (Y, X) order.
 
-    :return: Array containing the coordinates in the (I, J) and (Y, X) order.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        Array containing the coordinates in the (I, J) and (Y, X) order.
     """
     raise NotImplementedError
 #     def put8(word):
@@ -391,15 +407,16 @@ def check_scales(variable):
 
 
 def norm_min_max(data, norm_data=None):
-    """
-    Do a min-max normalization.
+    """Do a min-max normalization.
 
-    :param data: Input data array.
-    :type data: numpy.ndarray
+    Parameters
+    ----------
+    data : numpy.ndarray
+        Input data array.
 
-    :param norm_data: Data used to normalize. When set to None, the input data
-    is used (default).
-    :type norm_data: numpy.ndarray
+    norm_data : numpy.ndarray
+        Data used to normalize. When set to None, the input data is
+        used (default).
     """
     return (data - norm_data.min()) / (norm_data.max() - norm_data.min())
 
@@ -436,8 +453,6 @@ def read_inputs(input_path, mask_path, ext):
 
 def create_figures_from_fibers_images(names, extracted_fibers,
                                       radius, group_fibers=False):
-    from matplotlib import pyplot as plt
-
     figures = []
 
     if group_fibers:
@@ -508,17 +523,18 @@ def create_figures_from_fibers_images(names, extracted_fibers,
 
 
 def write_profiles(path, prefix, profiles):
-    """
-    Write the given set of profiles to the specified path with given prefix.
+    """Write the given set of profiles to the specified path with given prefix.
 
-    :param path: Path where to write.
-    :type path: str
+    Parameters
+    ----------
+    path : str
+        Path where to write.
 
-    :param prefix: Prefix of the output files.
-    :type prefix: str
+    prefix : str
+        Prefix of the output files.
 
-    :param profiles: Set of profiles to write.
-    :type profiles: list of numpy.ndarray
+    profiles : list of numpy.ndarray
+        Set of profiles to write.
     """
     for number, profile in enumerate(profiles):
         np.savetxt(os.path.join(

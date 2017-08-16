@@ -8,25 +8,37 @@ import numpy as np
 
 
 class BinaryNode:
-    """
-    Defines a binary tree with a single class.
+    """Defines a binary tree with a single class.
 
     This class defines a general node. A leaf is a node without any children.
+
+    Attributes
+    ----------
+    parent : BinaryNode
+        Parent of the node.
+
+    left : BinaryNode
+        Left subtree.
+
+    right : BinaryNode
+        Right subtree.
+
+    values : any
+        Values attached to the node.
     """
     def __init__(self, values=None, left=None, right=None):
-        """
-        Constructor of Binary nodes.
+        """Constructor of Binary nodes.
 
-        :param values: Values associated with the current node.
-        :type values: any
+        Parameters
+        ----------
+        values : None | List[T]
+            Values associated with the current node.
 
-        :param left: Left child (subtree, node or None if the current node is
-        a leaf).
-        :type left: BinaryNode
+        left : BinaryNode
+            Left child (subtree, node or None if the current node is a leaf).
 
-        :param right: Right child (subtree, node or None if the current node is
-        a leaf).
-        :type right: BinaryNode
+        right : BinaryNode
+            Right child (subtree, node or None if the current node is a leaf).
         """
         self.parent = None
         self.left = left
@@ -44,11 +56,12 @@ class BinaryNode:
             self.values = tuple([values])
 
     def leaves(self):
-        """
-        Get the leaves of the tree as a list.
+        """Get the leaves of the tree as a list.
 
-        :return: Leaves of the current tree.
-        :rtype: list of BinaryNodes
+        Returns
+        -------
+        list of BinaryNodes
+            Leaves of the current tree.
         """
         def _recursive_leaves_search(tree):
             if tree.left is None or tree.right is None:
@@ -60,11 +73,12 @@ class BinaryNode:
         return _recursive_leaves_search(self)
 
     def depth_first(self):
-        """
-        Traverse the tree with depth-first strategy.
+        """Traverse the tree with depth-first strategy.
 
-        :return: A generator to the nodes in depth-first order.
-        :rtype: generator
+        Returns
+        -------
+        generator
+            A generator to the nodes in depth-first order.
         """
         def _recursive_depth_first(node):
             if node is not None:
@@ -75,11 +89,12 @@ class BinaryNode:
         return _recursive_depth_first(self)
 
     def breadth_first(self):
-        """
-        Traverse the tree with breadth-first strategy.
+        """Traverse the tree with breadth-first strategy.
 
-        :return: A generator to the nodes in breadth-first order.
-        :rtype: generator
+        Returns
+        -------
+        generator
+            A generator to the nodes in breadth-first order.
         """
         nodes_to_visit = [self]
 
@@ -91,19 +106,22 @@ class BinaryNode:
                 nodes_to_visit += [node.left, node.right]
 
     def best_first(self, func):
-        """
-        Traverse the tree with best-first strategy.
+        """Traverse the tree with best-first strategy.
 
         The nodes are ordered using the best-first strategy but keeping the
         hierarchy of the tree. For instance, a node cannot be visited if its
         parent is hast not been already visited, even if it has a greater
         output function value than his parent.
 
-        :param func: Function of the values for choosing best node.
-        :type func: callable function
+        Parameters
+        ----------
+        func : callable function
+            Function of the values for choosing best node.
 
-        :return: A generator to the nodes in best-first order.
-        :rtype: generator
+        Returns
+        -------
+        generator
+            A generator to the nodes in best-first order.
         """
         nodes_to_visit = [(self, func(self))]
 
@@ -120,15 +138,15 @@ class BinaryNode:
                 nodes_to_visit.append((node.right, func(node.right)))
 
     def display(self, offset_factor=2, values_to_display=None):
-        """
-        Display the tree in a terminal.
+        """Display the tree in a terminal.
 
-        :param offset_factor: Width tabulation factor.
-        :type offset_factor: strictly positive int
+        Parameters
+        ----------
+        offset_factor : strictly positive int
+            Width tabulation factor.
 
-        :param values_to_display: Slicing object used to select values to
-        display.
-        :type values_to_display: slice
+        values_to_display : slice
+            Slicing object used to select values to display.
         """
         if values_to_display is None:
             values_to_display = slice(len(self.values))
@@ -144,18 +162,19 @@ class BinaryNode:
         _recursive_display(self, 0, offset_factor)
 
     def print(self, filename, values_to_print=None, out='dot'):
-        """
-        Write binary tree to a DOT file.
+        """Write binary tree to a DOT file.
 
-        :param filename: Output filename to write to.
-        :type filename: path (str)
+        Parameters
+        ----------
+        filename : path (str)
+            Output filename to write to.
 
-        :param values_to_print: Slicing object used to select values to print.
-        :type values_to_print: slice
+        values_to_print : slice
+            Slicing object used to select values to print.
 
-        :param out: Tell the final destination of the print to choose the
-        separator between the node id and the values.
-        :type out: str
+        out : str
+            Tell the final destination of the print to choose the separator
+            between the node id and the values.
         """
         if values_to_print is None:
             values_to_print = slice(len(self.values))
@@ -193,24 +212,34 @@ class BinaryNode:
 
 
 class RegressionTree:
-    """
-    Defines a regression tree for 1D dependent variables.
+    """Defines a regression tree for 1D dependent variables.
 
     Building a general tree being NP-hard problem, we use instead a heuristic
     by constructing a binary tree (CART algorithm).
 
     Each node of the binary tree represents a particular split.
+
+    Attributes
+    ----------
+    max_depth : strictly positive int
+            Maximum depth of the binary tree (default is 3).
+
+    min_samples : strictly positive int
+        Minimum number of samples per leaves (default is 2).
+
+    _tree : BinaryNode
+        Tree to be estimated by regression.
     """
     def __init__(self, max_depth=3, min_samples=2):
-        """
-        Constructor of regression tree.
+        """Constructor of regression tree.
 
-        :param max_depth: Maximum depth of the binary tree (default is 3).
-        :type max_depth: strictly positive int
+        Parameters
+        ----------
+        max_depth : strictly positive int
+            Maximum depth of the binary tree (default is 3).
 
-        :param min_samples: Minimum number of samples per leaves (default
-        is 2).
-        :type min_samples: strictly positive int
+        min_samples : strictly positive int
+            Minimum number of samples per leaves (default is 2).
         """
         self.max_depth = max_depth
         self.min_samples = min_samples
@@ -218,35 +247,36 @@ class RegressionTree:
         self._tree = None
 
     def fit(self, x, y, error_func=lambda y: np.power(y-y.mean(), 2).mean()):
-        """
-        Compute the binary regression tree.
+        """Compute the binary regression tree.
 
         The computation is performed using a recursive scheme. The split
         iteration is performed using a fast algorithm with linear complexity
         in the number of points.
 
-        :param x: Input independent variables.
-        :type x: numpy.ndarray (1D)
+        Parameters
+        ----------
+        x : numpy.ndarray (1D)
+            Input independent variables.
 
-        :param y: Input dependent variables.
-        :type y: numpy.ndarray (1D)
+        y : numpy.ndarray (1D)
+            Input dependent variables.
 
-        :param error_func: Error function to use (default is SSE).
-        :type error_func: lambda function
+        error_func : lambda function
+            Error function to use (default is SSE).
 
-        :return: The regression tree object.
+        Returns
+        -------
+        RegressionTree
+            The regression tree object.
         """
         min_samples_for_split = self.min_samples * (self.min_samples - 1)
 
         def _fast_optimal_binary_split(y):
-            """
-            Split into binary partition using fast algorithm (linear
-            complexity in
-            the number of points).
+            """Split into binary partition using fast algorithm (linear
+            complexity in the number of points).
 
             The error is the opposite of the weighted sum of square values.
             """
-
             def _calculate_error():
                 return - (s1 ** 2 / n1 + s2 ** 2 / n2)
 
@@ -320,27 +350,29 @@ class RegressionTree:
 
     def _partitioning_nodes(self, max_partitions=None,
                             constraint_func=lambda _: True):
-        """
-        Find the possible partitioning nodes with specified maximal segments.
+        """Find the possible partitioning nodes with specified maximal segments.
 
         Find partitions of the independent variables from the fitted tree with
         a best-first approach. The function try to minimize the normalized
         residuals per split and per branch.
 
-        :param max_partitions: The maximum number of partitions to find
-        (default is None).
-        :type max_partitions: int greater than 0 or None
+        Parameters
+        ----------
+        max_partitions : int greater than 0 or None
+            The maximum number of partitions to find (default is None).
 
-        :param constraint_func: Function that check a constraint. Default is no
-        constraint (the function returns always True).
-        :type constraint_func: callable function
+        constraint_func : callable function
+            Function that check a constraint. Default is no constraint (the
+            function returns always True).
 
-        :return: The splitting nodes in the order of their traversal.
-        :rtype: list of BinaryNode
+        Returns
+        -------
+        list of BinaryNode
+            The splitting nodes in the order of their traversal.
         """
         def _error_function(node):
-            """
-            This is an heuristic function to help finding the best next node.
+            """This is an heuristic function to help finding the best next node.
+
             It sums the error of the current split and normalize it by the
             error coming from the corresponding branch. The lower is this ratio,
             the better is the "importance" of the current split node.
@@ -370,25 +402,24 @@ class RegressionTree:
         return nodes
 
     def predict(self, x, max_partitions=None, constraint_func=lambda _: True):
-        """
-        Predict dependent values with the previously computed binary tree.
+        """Predict dependent values with the previously computed binary tree.
 
-        :param x: Input independent variables.
-        :type x: numpy.ndarray (1D)
+        Parameters
+        ----------
+        x : numpy.ndarray (1D)
+            Input independent variables.
 
-        :return: Estimated dependent variables.
-        :rtype: numpy.ndarray (1D)
+        max_partitions : int greater than 0 or None
+            The maximum number of partitions to find (default is None).
 
-        :param max_partitions: The maximum number of partitions to find
-        (default is None).
-        :type max_partitions: int greater than 0 or None
+        constraint_func : function
+            Function that check a constraint. Default is no constraint (the
+            function returns always True).
 
-        :param constraint_func: Function that check a constraint. Default is no
-        constraint (the function returns always True).
-        :type constraint_func: function
-
-        :return: The predicted dependent values.
-        :rtype: numpy.ndarray
+        Returns
+        -------
+        numpy.ndarray
+            The predicted dependent values.
         """
         y = np.zeros(x.shape)
 

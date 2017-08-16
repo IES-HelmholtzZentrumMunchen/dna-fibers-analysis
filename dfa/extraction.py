@@ -158,8 +158,7 @@ def fibers_spatial_distances(f1, f2):
 
 
 def _compute_normals(fiber):
-    """
-    Compute normals along a fiber path.
+    """Compute normals along a fiber path.
 
     Computing the tangent needs 5 points; therefore 2 points at the
     beginning and 2 points at the end will not be used for the unfolding.
@@ -168,11 +167,15 @@ def _compute_normals(fiber):
     the beginning and 2 pixels at the end. So we omit a correction for
     that issue.
 
-    :param fiber: Fiber coordinates.
-    :type fiber: numpy.ndarray
+    Parameters
+    ----------
+    fiber : numpy.ndarray
+        Fiber coordinates.
 
-    :return: The coordinates along fiber path with their corresponding normals.
-    :rtype: tuple of numpy.ndarray
+    Returns
+    -------
+    tuple of numpy.ndarray
+        The coordinates along fiber path with their corresponding normals.
     """
     points = []
     normals = []
@@ -227,24 +230,30 @@ def _compute_normals(fiber):
 
 
 def unfold_fibers(image, fibers, radius=4):
-    """
-    Unfold the fibers in image.
+    """Unfold the fibers in image.
 
-    Sampled points of normals along the multiple fiber axis are interpolated
+    Sampled points of normals along the multiple fibers axis are interpolated
     and returned as an image.
 
-    :param image: Input image.
-    :type image: numpy.ndarray
+    Parameters
+    ----------
+    image : numpy.ndarray
+        Input image.
 
-    :param fibers: Input fibers.
-    :type fibers: list of numpy.ndarray
+    fibers : list of numpy.ndarray
+        Input fibers.
 
-    :param radius: Radius of the band along fiber axis to extract (default
-    is 4).
-    :type radius: strictly positive int
+    radius : strictly positive int
+        Radius of the band along fiber axis to extract (default is 4).
 
-    :return: The unfolded fiber as an image.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    list of numpy.ndarray
+        The unfolded fibers as images.
+
+    See Also
+    --------
+        extract_fibers : extract fibers in multiple images.
     """
     f = [RectBivariateSpline(range(channel.shape[0]),
                              range(channel.shape[1]),
@@ -271,23 +280,27 @@ def unfold_fibers(image, fibers, radius=4):
 
 
 def extract_fibers(images, fibers, radius=4):
-    """
-    Extract the fibers in images.
+    """Extract the fibers in images.
 
-    ..see also: unfold_fibers
+    Parameters
+    ----------
+    images : list of numpy.ndarray
+        Input images.
 
-    :param images: Input images.
-    :type images: list of numpy.ndarray
+    fibers : list of list of numpy.ndarray
+        Input fibers.
 
-    :param fibers: Input fibers.
-    :type fibers: list of list of numpy.ndarray
+    radius : strictly positive int
+        Radius of the band along fiber axis to extract (default is 4).
 
-    :param radius: Radius of the band along fiber axis to extract (default
-    is 4).
-    :type radius: strictly positive int
+    Returns
+    -------
+    list of list of numpy.ndarray
+        The extracted fibers for each image.
 
-    :return: The extracted fibers for each image.
-    :rtype: list of list of numpy.ndarray
+    See Also
+    --------
+        unfold_fibers : extract fibers in a single image.
     """
     extracted_fibers = []
 
@@ -298,8 +311,7 @@ def extract_fibers(images, fibers, radius=4):
 
 
 def extract_profiles_from_fiber(fiber, func=np.mean):
-    """
-    Extract profiles from fiber.
+    """Extract profiles from fiber.
 
     The fiber is an image of the unfolded fiber path with a given height
     (corresponding to the radius). The profiles are extracted by applying the
@@ -308,15 +320,19 @@ def extract_profiles_from_fiber(fiber, func=np.mean):
     If the profiles have strange values (e.g. below zero, possibly due to
     interpolation processes), these values are dropped.
 
-    :param fiber: Input fiber from which to extract profiles.
-    :type fiber: numpy.ndarray
+    Parameters
+    ----------
+    fiber : numpy.ndarray
+        Input fiber from which to extract profiles.
 
-    :param func: Function used to reduce the columns of the fiber image
-    (default is mean).
-    :type func: callable function
+    func : callable function
+        Function used to reduce the columns of the fiber image (default is
+        mean).
 
-    :return: The profiles of the fiber as a column-oriented array (x, y1, y2).
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        The profiles of the fiber as a column-oriented array (x, y1, y2).
     """
     profiles = np.vstack((range(fiber.shape[2]),
                           func(fiber[0], axis=0),

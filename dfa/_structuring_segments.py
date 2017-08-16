@@ -10,21 +10,24 @@ import warnings
 
 
 def bresenham_segment(p1, p2, k):
-    """
-    Compute a discrete segment between discrete points p1 and p2 using
+    """Compute a discrete segment between discrete points p1 and p2 using
     Bresenham's algorithm.
 
-    :param p1: First point of the segment.
-    :type p1: list of int
+    Parameters
+    ----------
+    p1 : List[int]
+        First point of the segment.
 
-    :param p2: Second point of the segment.
-    :type p2: list of int
+    p2 : List[int]
+        Second point of the segment.
 
-    :param k: Half-size of the image domain (full size is 2*k+1).
-    :type k: tuple of int
+    k : (int,int)
+        Half-size of the image domain (full size is 2*k+1).
 
-    :return: A binary image containing the discrete segment.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        A binary image containing the discrete segment.
     """
     def _trace(image, k, p):
         image[p[1] + k[1], p[0] + k[0]] = 1
@@ -128,17 +131,20 @@ def bresenham_segment(p1, p2, k):
 
 
 def _lineq(p1, p2):
-    """
-    Return the equation of a line in 2D as a lambda function.
+    """Return the equation of a line in 2D as a lambda function.
 
-    :param p1: First point of the line.
-    :type p1: list of int
+    Parameters
+    ----------
+    p1 : List[int]
+        First point of the line.
 
-    :param p2: Second point of the line.
-    :type p2: list of int
+    p2 : List[int]
+        Second point of the line.
 
-    :return: Equation of the line as a lambda function.
-    :rtype: lambda function
+    Returns
+    -------
+    lambda function
+        Equation of the line as a lambda function.
     """
     a = p1[0] - p2[0]
     b = p2[1] - p1[1]
@@ -147,27 +153,35 @@ def _lineq(p1, p2):
 
 
 def flat_structuring_segment(direction, thickness, length, k):
-    """
-    Trace an oriented segment with the given properties using Bresenham's
+    """Trace an oriented segment with the given properties using Bresenham's
     algorithm.
 
     The output is a flat grayscale structuring segment, so the discrete segment
     is denoted by 0 and the background is denoted by -inf.
 
-    :param direction: Orientation vector.
-    :type direction: tuple of float
+    Parameters
+    ----------
+    direction : tuple of float
+        Orientation vector.
 
-    :param thickness: Thickness of the segment.
-    :type thickness: strictly positive float
+    thickness : strictly positive float
+        Thickness of the segment.
 
-    :param length: Length of the segment.
-    :type length: strictly positive float
+    length : strictly positive float
+        Length of the segment.
 
-    :param k: Half-size of the image domain (full size is 2*k+1).
-    :type k: int
+    k : int
+        Half-size of the image domain (full size is 2*k+1).
 
-    :return: The structuring segment with given properties.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        The structuring segment with given properties.
+
+    See Also
+    --------
+    bandlimited_structuring_segment : Generate a grayscale structuring segment.
+    structuring_segments : Generate structuring segments from a vector field.
     """
     v_norm = np.sqrt(np.power(direction, 2).sum())
 
@@ -217,31 +231,39 @@ def flat_structuring_segment(direction, thickness, length, k):
 
 
 def bandlimited_structuring_segment(direction, thickness, length, k, scaling):
-    """
-    Build a discrete and band-limited segment with Gaussian
+    """Build a discrete and band-limited segment with Gaussian
     functions from given orientation vector, length and thickness.
 
     Since it produces a non-flat grayscale structuring element, one needs
     to provide a scaling factor. The output image will have intensity
     values in range from -scaling (background) to 0 (segment).
 
-    :param direction: Unitary orientation vector (it will be normalized).
-    :type direction: tuple of floats
+    Parameters
+    ----------
+    direction : tuple of floats
+        Unitary orientation vector (it will be normalized).
 
-    :param thickness: Thickness of the segment.
-    :type thickness: float or integer
+    thickness : float or integer
+        Thickness of the segment.
 
-    :param length: Length of the segment.
-    :type length: float or integer
+    length : float or integer
+        Length of the segment.
 
-    :param k: Half-size of the image domain (full size is 2*k+1).
-    :type k: int
+    k : int
+        Half-size of the image domain (full size is 2*k+1).
 
-    :param scaling: Scaling factor of the segment (cf. description).
-    :type scaling: float or integer
+    scaling : float or integer
+        Scaling factor of the segment (cf. description).
 
-    :return: Segment with given orientation, thickness and length.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        Segment with given orientation, thickness and length.
+
+    See Also
+    --------
+    flat_structuring_segment : Generate a flat grayscale structuring segment.
+    structuring_segments : Generate structuring segments from a vector field.
     """
     va = np.divide(direction, np.sqrt(np.power(direction, 2).sum()))
     vb = [-va[1], va[0]]  # Vector normal to va
@@ -260,32 +282,38 @@ def bandlimited_structuring_segment(direction, thickness, length, k, scaling):
 
 
 def _angles2vectors(angles):
-    """
-    Helper function to convert angles in degrees to unit vectors.
+    """Helper function to convert angles in degrees to unit vectors.
 
     The angles corresponds to the angles between the returned vectors and (1,0).
 
-    :param angles: Angles in degrees.
-    :type angles: iterable of float or int
+    Parameters
+    ----------
+    angles : iterable of float or int
+        Angles in degrees.
 
-    :return: The corresponding unit vectors.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        The corresponding unit vectors.
     """
     return np.column_stack((np.cos(np.multiply(np.pi, angles) / 180),
                             np.sin(np.multiply(np.pi, angles) / 180)))
 
 
 def _vectors2angles(vectors):
-    """
-    Helper function to convert vectors in angles in degrees.
+    """Helper function to convert vectors in angles in degrees.
 
     The angles are the angles between the input vectors and (1,0).
 
-    :param vectors: Vector field of size (2, i, j).
-    :type vectors: numpy.ndarray
+    Parameters
+    ----------
+    vectors : numpy.ndarray
+        Vector field of size (2, i, j).
 
-    :return: The corresponding angles with field's shape preserved.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        The corresponding angles with field's shape preserved.
     """
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', RuntimeWarning)
@@ -294,34 +322,37 @@ def _vectors2angles(vectors):
 
 
 def _segments_family(angles, thickness, length, k, scaling=100, flat=True):
-    """
-    Compute a family of structuring segments from angles.
+    """Compute a family of structuring segments from angles.
 
     By default, it compute flat grayscale structuring elements.
 
-    :param angles: Angles for which to compute the segments.
-    :type angles: iterable of float or int
+    Parameters
+    ----------
+    angles : iterable of float or int
+        Angles for which to compute the segments.
 
-    :param thickness: Thickness of the segments.
-    :type thickness: strictly positive float
+    thickness : strictly positive float
+        Thickness of the segments.
 
-    :param length: Length of the segments.
-    :type length: strictly positive float
+    length : strictly positive float
+        Length of the segments.
 
-    :param k: Half-size of the image domain (full size is 2*k+1).
-    :type k: int
+    k : int
+        Half-size of the image domain (full size is 2*k+1).
 
-    :param scaling: Scaling factor of the segment (for non-flat grayscale
-    structuring elements only, default is 100).
-    :type scaling: float or integer
+    scaling : float or integer
+        Scaling factor of the segment (for non-flat grayscale
+        structuring elements only, default is 100).
 
-    :param flat: The method used to generate (default is True, which uses
-    Bresenham's algorithm). When False, it uses a bandlimited segment and needs
-    a scaling factor.
-    :type flat: bool
+    flat : bool
+        The method used to generate (default is True, which uses Bresenham's
+        algorithm). When False, it uses a bandlimited segment and needs a
+        scaling factor.
 
-    :return: Family of segments.
-    :rtype: dict
+    Returns
+    -------
+    dict
+        Family of segments.
     """
     vectors = _angles2vectors(angles)
     family = dict()
@@ -343,32 +374,40 @@ def _segments_family(angles, thickness, length, k, scaling=100, flat=True):
 
 
 def structuring_segments(directions, thickness, length, scaling=100, flat=True):
-    """
-    Compute the structuring segments corresponding to the input vector field.
+    """Compute the structuring segments corresponding to the input vector field.
 
     By default, flat grayscale structuring elements are used.
 
-    :param directions: Vector field of size (2, i, j).
-    :type directions: numpy.ndarray
+    Parameters
+    ----------
+    directions : numpy.ndarray
+        Vector field of size (2, i, j).
 
-    :param thickness: Thickness of the segments.
-    :type thickness: strictly positive float
+    thickness : strictly positive float
+        Thickness of the segments.
 
-    :param length: Length of the segments.
-    :type length: strictly positive float
+    length : strictly positive float
+        Length of the segments.
 
-    :param scaling: Scaling factor of the segment (for non-flat grayscale
-    structuring elements only, default is 100).
-    :type scaling: float or integer
+    scaling : float or integer
+        Scaling factor of the segment (for non-flat grayscale structuring
+        elements only, default is 100).
 
-    :param flat: The method used to generate (default is True, which uses
-    Bresenham's algorithm). When False, it uses a bandlimited segment and needs
-    a scaling factor.
-    :type flat: bool
+    flat : bool
+        The method used to generate (default is True, which uses Bresenham's
+        algorithm). When False, it uses a bandlimited segment and needs a
+        scaling factor.
 
-    :return: Map of structuring segments from image space to structuring
-    elements space.
-    :rtype: dict
+    Returns
+    -------
+    dict
+        Map of structuring segments from image space to structuring elements
+        space.
+
+    See Also
+    --------
+    flat_structuring_segment : Generate a flat grayscale structuring segment.
+    bandlimited_structuring_segment : Generate a grayscale structuring segment.
     """
     k = length // 2 + 1
     family = _segments_family(range(180), thickness, length, k, scaling, flat)

@@ -8,14 +8,17 @@ from skimage.morphology import skeletonize
 
 
 def skeleton_connectivity(skeleton):
-    """
-    Compute the connectivity map of the skeleton (8-neighbouring).
+    """Compute the connectivity map of the skeleton (8-neighbouring).
 
-    :param skeleton: Input skeleton.
-    :type skeleton: numpy.ndarray
+    Parameters
+    ----------
+    skeleton : numpy.ndarray
+        Input skeleton.
 
-    :return: Connectivity map.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        Connectivity map.
     """
     connectivity = np.zeros(skeleton.shape)
     i, j = np.nonzero(skeleton > 0)
@@ -28,29 +31,35 @@ def skeleton_connectivity(skeleton):
 
 
 def prune_min(skeleton):
-    """
-    Prune the skeleton by keeping only the longest branch.
+    """Prune the skeleton by keeping only the longest branch.
 
     The branches are successively removed by the shortest first.
 
-    :param skeleton: Input skeleton.
-    :type skeleton: numpy.ndarray
+    Parameters
+    ----------
+    skeleton : numpy.ndarray
+        Input skeleton.
 
-    :return: Pruned skeleton.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        Pruned skeleton.
     """
     def _prune_step(skeleton, labeled):
-        """
-        One pruning step (removing the shortest branch).
+        """One pruning step (removing the shortest branch).
 
-        :param skeleton: Input skeleton.
-        :type skeleton: numpy.ndarray
+        Parameters
+        ----------
+        skeleton : numpy.ndarray
+            Input skeleton.
 
-        :param labeled: Connectivity map.
-        :type labeled: numpy.ndarray
+        labeled : numpy.ndarray
+            Connectivity map.
 
-        :return: Pruned skeleton.
-        :rtype: numpy.ndarray
+        Returns
+        -------
+        numpy.ndarray
+            Pruned skeleton.
         """
         l_min = 1
         size_min = (labeled == l_min).sum()

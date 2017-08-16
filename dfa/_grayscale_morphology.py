@@ -7,28 +7,29 @@ import numpy as np
 
 def varying_filtering_2d(image, structuring_elements, function_map,
                          function_reduce, mask):
-    """
-    Do spatial filtering in 2D with (possibly) varying structuring elements.
+    """Compute a grayscale variant morphological filtering.
 
-    Since it is vectorized, it is very fast
+    Parameters
+    ----------
+    image : numpy.ndarray
+        Image to filter.
 
-    :param image: Image to filter.
-    :type image: numpy.ndarray
+    structuring_elements : dict
+        Structuring elements possibly varying.
 
-    :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: dict
+    function_map : callable function
+        Function of the filter domain used when mapping.
 
-    :param function_map: Function of the filter domain used when mapping.
-    :type function_map: callable function
+    function_reduce : callable function
+        Function of the filter domain used when reducing.
 
-    :param function_reduce: Function of the filter domain used when reducing.
-    :type function_reduce: callable function
+    mask : numpy.ndarray
+        The operations will be processed only inside the mask.
 
-    :param mask: The operations will be processed only inside the mask.
-    :type mask: numpy.ndarray
-
-    :return: The filtered image.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        The filtered image.
     """
     filtered = np.zeros(image.shape)
 
@@ -48,80 +49,112 @@ def varying_filtering_2d(image, structuring_elements, function_map,
 
 
 def varying_dilation(image, structuring_elements, mask):
-    """
-    Compute a grayscale dilation with a (possibly) varying structuring element.
+    """Compute a grayscale variant dilation.
 
-    :param image: Image to filter.
-    :type image: numpy.ndarray
+    Parameters
+    ----------
+    image : numpy.ndarray
+        Image to filter.
 
-    :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: dict
+    structuring_elements : dict
+        Structuring elements possibly varying.
 
-    :param mask: The operations will be processed only inside the mask.
-    :type mask: numpy.ndarray
+    mask : numpy.ndarray
+        The operations will be processed only inside the mask.
 
-    :return: The dilated image.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        The dilated image.
+
+    See Also
+    --------
+    varying_filtering_2d : Base morphological filtering method
     """
     return varying_filtering_2d(image, structuring_elements,
                                 np.add, np.max, mask)
 
 
 def varying_erosion(image, structuring_elements, mask):
-    """
-    Compute a grayscale erosion with a (possibly) varying structuring  element.
+    """Compute a grayscale variant erosion.
 
-    :param image: Image to filter.
-    :type image: numpy.ndarray
+    Parameters
+    ----------
+    image : numpy.ndarray
+        Image to filter.
 
-    :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: dict
+    structuring_elements : dict
+        Structuring elements possibly varying.
 
-    :param mask: The operations will be processed only inside the mask.
-    :type mask: numpy.ndarray
+    mask : numpy.ndarray
+        The operations will be processed only inside the mask.
 
-    :return: The eroded image.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        The eroded image.
+
+    See Also
+    --------
+    varying_filtering_2d : Base morphological filtering method
     """
     return varying_filtering_2d(image, structuring_elements,
                                 np.subtract, np.min, mask)
 
 
 def varying_opening(image, structuring_elements, mask):
-    """
-    Compute a grayscale opening with a (possibly) varying structuring  element.
+    """Compute a grayscale variant opening.
 
-    :param image: Image to filter.
-    :type image: numpy.ndarray
+    Parameters
+    ----------
+    image : numpy.ndarray
+        Image to filter.
 
-    :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: dict
+    structuring_elements : dict
+        Structuring elements possibly varying.
 
-    :param mask: The operations will be processed only inside the mask.
-    :type mask: numpy.ndarray
+    mask : numpy.ndarray
+        The operations will be processed only inside the mask.
 
-    :return: The opened image.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        The opened image.
+
+    See Also
+    --------
+    varying_filtering_2d : Base grayscale variant filtering method.
+    varying_dilation : Grayscale variant dilation method.
+    varying_erosion : Grayscale variant erosion method.
     """
     return varying_dilation(varying_erosion(image, structuring_elements, mask),
                             structuring_elements, mask)
 
 
 def varying_closing(image, structuring_elements, mask):
-    """
-    Compute a grayscale closing with a (possibly) varying structuring  element.
+    """Compute a grayscale varying closing.
 
-    :param image: Image to filter.
-    :type image: numpy.ndarray
+    Parameters
+    ----------
+    image : numpy.ndarray
+        Image to filter.
 
-    :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: dict
+    structuring_elements : dict
+        Structuring elements possibly varying.
 
-    :param mask: The operations will be processed only inside the mask.
-    :type mask: numpy.ndarray
+    mask : numpy.ndarray
+        The operations will be processed only inside the mask.
 
-    :return: The closed image.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        The closed image.
+
+    See Also
+    --------
+    varying_filtering_2d : Base grayscale variant filtering method.
+    varying_dilation : Grayscale variant dilation method.
+    varying_erosion : Grayscale variant erosion method.
     """
     return varying_erosion(varying_dilation(image, structuring_elements, mask),
                            structuring_elements, mask)
@@ -129,33 +162,35 @@ def varying_closing(image, structuring_elements, mask):
 
 def adjunct_varying_filtering_2d(image, structuring_elements, function_map,
                                  function_reduce, initialization, mask):
-    """
-    Compute the grayscale adjunct filtering with a (possibly) varying
-    structuring element.
+    """Compute a grayscale variant morphological filtering with adjunct operator.
 
     This is particularly important when using varying structuring elements, as
-    the standard operators do not take into account the varying elements.
+    the structuring are not, by definition, necessarily symmetric.
 
-    :param image: Image to filter.
-    :type image: numpy.ndarray
+    Parameters
+    ----------
+    image : numpy.ndarray
+        Image to filter.
 
-    :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: dict
+    structuring_elements : dict
+        Structuring elements possibly varying.
 
-    :param function_map: Function of the filter domain used when mapping.
-    :type function_map: callable function
+    function_map : callable function
+        Function of the filter domain used when mapping.
 
-    :param function_reduce: Function of the filter domain used when reducing.
-    :type function_reduce: callable function
+    function_reduce : callable function
+        Function of the filter domain used when reducing.
 
-    :param initialization: Initialization element.
-    :type initialization: float or int
+    initialization : float or int
+        Initialization element.
 
-    :param mask: The operations will be processed only inside the mask.
-    :type mask: numpy.ndarray
+    mask : numpy.ndarray
+        The operations will be processed only inside the mask.
 
-    :return: The filtered image with the adjunct operator.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        The filtered image with the adjunct operator.
     """
     filtered = np.zeros(image.shape)
     filtered[:] = initialization
@@ -178,48 +213,56 @@ def adjunct_varying_filtering_2d(image, structuring_elements, function_map,
 
 
 def adjunct_varying_dilation(image, structuring_elements, mask):
-    """
-    Compute the grayscale adjunct dilation to the erosion with a (possibly)
-    varying structuring element.
+    """Compute a grayscale variant dilation with adjunct operator.
 
-    This is particularly important when using varying structuring elements, as
-    the standard operators do not take into account the varying elements.
+    Parameters
+    ----------
+    image : numpy.ndarray
+        Image to filter.
 
-    :param image: Image to filter.
-    :type image: numpy.ndarray
+    structuring_elements : dict
+        Structuring elements possibly varying.
 
-    :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: dict
+    mask : numpy.ndarray
+        The operations will be processed only inside the mask.
 
-    :param mask: The operations will be processed only inside the mask.
-    :type mask: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        The dilated image with the adjunct of the erosion.
 
-    :return: The dilated image with the adjunct of the erosion.
-    :rtype: numpy.ndarray
+    See Also
+    --------
+    adjunct_varying_filtering_2d : Base grayscale variant filtering method with
+        adjunct operator.
     """
     return adjunct_varying_filtering_2d(image, structuring_elements,
                                         np.add, np.maximum, -np.inf, mask)
 
 
 def adjunct_varying_erosion(image, structuring_elements, mask):
-    """
-    Compute the grayscale adjunct erosion to the dilation with a (possibly)
-    varying structuring element.
+    """Compute a grayscale variant erosion with adjunct operator.
 
-    This is particularly important when using varying structuring elements, as
-    the standard operators do not take into account the varying elements.
+    Parameters
+    ----------
+    image: numpy.ndarray
+        Image to filter.
 
-    :param image: Image to filter.
-    :type image: numpy.ndarray
+    structuring_elements : dict
+        Structuring elements possibly varying.
 
-    :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: dict
+    mask : numpy.ndarray
+        The operations will be processed only inside the mask.
 
-    :param mask: The operations will be processed only inside the mask.
-    :type mask: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        The eroded image with the adjunct of the dilation.
 
-    :return: The eroded image with the adjunct of the dilation.
-    :rtype: numpy.ndarray
+    See Also
+    --------
+    adjunct_varying_filtering_2d : Base grayscale variant filtering method with
+        adjunct operator.
     """
     return adjunct_varying_filtering_2d(image, structuring_elements,
                                         np.subtract, np.minimum, np.inf, mask)
@@ -227,34 +270,41 @@ def adjunct_varying_erosion(image, structuring_elements, mask):
 
 def adjunct_varying_opening(image, structuring_elements, mask=None,
                             extent_mask=None, adjunct_dilation=True):
-    """
-    Compute a grayscale opening with a (possibly) varying structuring  element
-    using adjunct operator.
+    """Compute a grayscale variant opening with adjunct operator.
 
-    Use of adjunct operator is particularly important when using varying
-    structuring elements, as the standard operators do not take into account
-    the varying elements.
+    Parameters
+    ----------
+    image : numpy.ndarray
+        Image to filter.
 
-    :param image: Image to filter.
-    :type image: numpy.ndarray
+    structuring_elements : dict
+        Structuring elements possibly varying.
 
-    :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: dict
+    mask : numpy.ndarray
+        Mask of where could be object of interest (default is the
+        whole image when set to None).
 
-    :param mask: Mask of where could be object of interest (default is the
-    whole image when set to None).
-    :type mask: numpy.ndarray
+    extent_mask : numpy.ndarray
+        Mask of where the structuring elements could reach
+        (default is the whole image when set to None). It should contain
+        the mask.
 
-    :param extent_mask: Mask of where the structuring elements could reach
-    (default is the whole image when set to None). It should contain the mask.
-    :type extent_mask: numpy.ndarray
+    adjunct_dilation : bool
+        Use adjunct of erosion as dilation (True by default).
 
-    :param adjunct_dilation: Use adjunct of erosion as dilation (True by
-    default).
-    :type adjunct_dilation: bool
+    Returns
+    -------
+    numpy.ndarray
+        The opened image.
 
-    :return: The opened image.
-    :rtype: numpy.ndarray
+    See Also
+    --------
+    adjunct_varying_filtering_2d : Base grayscale variant filtering method with
+        adjunct operator.
+    adjunct_varying_dilation : Grayscale variant dilation method with adjunct
+        operator.
+    adjunct_varying_erosion : Grayscale variant erosion method with adjunct
+        operator.
     """
     if mask is None:
         mask = np.ones(image.shape).astype(bool)
@@ -274,30 +324,41 @@ def adjunct_varying_opening(image, structuring_elements, mask=None,
 
 def adjunct_varying_closing(image, structuring_elements, mask=None,
                             extent_mask=None, adjunct_dilation=True):
-    """
-    Compute a grayscale closing with a (possibly) varying structuring  element
-    using adjunct operator..
+    """Compute a grayscale variant closing with adjunct operator.
 
-    :param image: Image to filter.
-    :type image: numpy.ndarray
+    Parameters
+    ----------
+    image : numpy.ndarray
+        Image to filter.
 
-    :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: dict
+    structuring_elements : dict
+        Structuring elements possibly varying.
 
-    :param mask: Mask of where could be object of interest (default is the
-    whole image when set to None).
-    :type mask: numpy.ndarray
+    mask : numpy.ndarray
+        Mask of where could be object of interest (default is the
+        whole image when set to None).
 
-    :param extent_mask: Mask of where the structuring elements could reach
-    (default is the whole image when set to None). It should contain the mask.
-    :type extent_mask: numpy.ndarray
+    extent_mask : numpy.ndarray
+        Mask of where the structuring elements could reach
+        (default is the whole image when set to None). It should contain
+        the mask.
 
-    :param adjunct_dilation: Use adjunct of erosion as dilation (True by
-    default).
-    :type adjunct_dilation: bool
+    adjunct_dilation : bool
+        Use adjunct of erosion as dilation (True by default).
 
-    :return: The closed image.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        The closed image.
+
+    See Also
+    --------
+    adjunct_varying_filtering_2d : Base grayscale variant filtering method with
+        adjunct operator.
+    adjunct_varying_dilation : Grayscale variant dilation method with adjunct
+        operator.
+    adjunct_varying_erosion : Grayscale variant erosion method with adjunct
+        operator.
     """
     if mask is None:
         mask = np.ones(image.shape).astype(bool)
@@ -317,30 +378,42 @@ def adjunct_varying_closing(image, structuring_elements, mask=None,
 
 def morphological_regularization(image, directions, structuring_elements,
                                  mask=None):
-    """
-    Regularize the directions field using guided morphological dilation.
+    """Regularize a vector field using guided morphological dilation.
 
-    It computes grayscale adjunct filtering of directions field, guided with an
-    image and with a (possibly) varying structuring element.
+    It computes grayscale adjunct filtering of the vector field, guided with an
+    image and with a varying structuring element.
 
-    This is particularly important when using varying structuring elements, as
-    the standard operators do not take into account the varying elements.
+    Parameters
+    ----------
+    image : numpy.ndarray
+        Image used as guide.
 
-    :param image: Image used as guide.
-    :type image: numpy.ndarray
+    directions : numpy.ndarray
+        The directions to regularize.
 
-    :param directions: The directions to regularize.
-    :type directions: numpy.ndarray
+    structuring_elements : dict
+        Structuring elements possibly varying.
 
-    :param structuring_elements: Structuring elements possibly varying.
-    :type structuring_elements: dict
+    mask : numpy.ndarray
+        Mask to limit where the directions field must be expanded (default is
+        the whole image when set to None).
 
-    :param mask: Mask to limit where the directions field must be expanded
-    (default is the whole image when set to None).
-    :type mask: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        The filtered image with the adjunct operator.
 
-    :return: The filtered image with the adjunct operator.
-    :rtype: numpy.ndarray
+    See Also
+    --------
+    varying_filtering_2d : Base grayscale variant filtering method.
+    varying_dilation : Grayscale variant dilation method.
+    varying_erosion : Grayscale variant erosion method.
+    adjunct_varying_filtering_2d : Base grayscale variant filtering method with
+        adjunct operator.
+    adjunct_varying_dilation : Grayscale variant dilation method with adjunct
+        operator.
+    adjunct_varying_erosion : Grayscale variant erosion method with adjunct
+        operator.
     """
     guide = np.zeros(image.shape)
     guide[:] = -np.inf

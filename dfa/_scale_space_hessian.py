@@ -6,33 +6,49 @@ from scipy.signal import convolve2d
 
 
 def discrete_centered_space(k):
-    """
-    Compute a centered discrete sequence (1D) from its half-size.
+    """Compute a centered discrete sequence (1D) from its half-size.
 
-    :param k: Half size of the sequence. The final size of the sequence will be
-    equal to 2*k+1 elements.
-    :type k: strictly positive int
+    Parameters
+    ----------
+    k : strictly positive int
+        Half size of the sequence. The final size of the sequence will be equal
+        to 2*k+1 elements.
 
-    :return: A centered discrete sequence.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        A centered discrete sequence.
     """
     return np.linspace(-k, k, 2*k+1).reshape(2*k+1, 1)
 
 
 def gaussian_kernel(sigma, k):
-    """
+    """Compute a discrete gaussian kernel.
+
     Compute a discrete sequence of size 2*k+1 corresponding to a centered
     gaussian kernel of width sigma.
 
-    :param sigma: Width of the gaussian kernel.
-    :type sigma: strictly positive float
+    Parameters
+    ----------
+    sigma : strictly positive float
+        Width of the gaussian kernel.
 
-    :param k: Half size of the sequence. The final size of the sequence will be
-    equal to 2*k+1 elements.
-    :type k: strictly positive int
+    k : strictly positive int
+        Half size of the sequence. The final size of the sequence will be equal
+        to 2*k+1 elements.
 
-    :return: A discrete sequence of a gaussian kernel.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        A discrete sequence of a gaussian kernel.
+
+    See Also
+    --------
+    discrete_centered_space : linear centered discrete kernel.
+    gaussian_first_derivative_kernel : discrete kernel of first order Gaussian
+        derivative.
+    gaussian_second_derivative_kernel : discrete kernel of second order Gaussian
+        derivative.
     """
     x = discrete_centered_space(k)
     v = 1/(sigma * np.sqrt(2 * np.pi)) * \
@@ -42,20 +58,31 @@ def gaussian_kernel(sigma, k):
 
 
 def gaussian_first_derivative_kernel(sigma, k):
-    """
+    """Compute a discrete kernel of the first Gaussian derivative.
+
     Compute a discrete sequence of size 2*k+1 corresponding to the first order
     derivative of a centered gaussian kernel of width sigma.
 
-    :param sigma: Width of the gaussian kernel.
-    :type sigma: strictly positive float
+    Parameters
+    ----------
+    sigma : strictly positive float
+        Width of the gaussian kernel.
 
-    :param k: Half size of the sequence. The final size of the sequence will be
-    equal to 2*k+1 elements.
-    :type k: strictly positive int
+    k : strictly positive int
+        Half size of the sequence. The final size of the sequence will be equal
+        to 2*k+1 elements.
 
-    :return: A discrete sequence of the first order derivative of a
-    gaussian kernel.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        A discrete sequence of the first order derivative of a gaussian kernel.
+
+    See Also
+    --------
+    discrete_centered_space : linear centered discrete kernel.
+    gaussian_kernel : discrete Gaussian kernel.
+    gaussian_second_derivative_kernel : discrete kernel of second order Gaussian
+        derivative.
     """
     x = discrete_centered_space(k)
     v = -x/(sigma ** 3 * np.sqrt(2 * np.pi)) * \
@@ -65,20 +92,32 @@ def gaussian_first_derivative_kernel(sigma, k):
 
 
 def gaussian_second_derivative_kernel(sigma, k):
-    """
+    """Compute a discrete kernel of the second Gaussian derivative.
+
     Compute a discrete sequence of size 2*k+1 corresponding to the second order
     derivative of a centered gaussian kernel of width sigma.
 
-    :param sigma: Width of the gaussian kernel.
-    :type sigma: strictly positive float
+    Parameters
+    ----------
+    sigma : strictly positive float
+        Width of the gaussian kernel.
 
-    :param k: Half size of the sequence. The final size of the sequence will be
-    equal to 2*k+1 elements.
-    :type k: strictly positive int
+    k : strictly positive int
+        Half size of the sequence. The final size of the sequence will be equal
+        to 2*k+1 elements.
 
-    :return: A discrete sequence of the second order derivative of a
-    gaussian kernel.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        A discrete sequence of the second order derivative of a gaussian kernel.
+
+    See Also
+    --------
+    discrete_centered_space : linear centered discrete kernel.
+    gaussian_first_derivative_kernel : discrete kernel of first order Gaussian
+        derivative.
+    gaussian_second_derivative_kernel : discrete kernel of second order Gaussian
+        derivative.
     """
     x = discrete_centered_space(k)
     v = -(sigma ** 2 - np.power(x, 2)) / (sigma ** 5 * np.sqrt(2 * np.pi)) * \
@@ -88,21 +127,28 @@ def gaussian_second_derivative_kernel(sigma, k):
 
 
 def single_scale_hessian(image, size, gamma=1):
-    """
-    Compute the Hessian matrix for an image using the scale-space theory.
+    """Compute the Hessian matrix for an image using the scale-space theory.
 
-    :param image: Input image.
-    :type image: np.ndarray
+    Parameters
+    ----------
+    image : numpy.ndarray
+        Input image.
 
-    :param size: Size of the current scale-space.
-    :type size: strictly positive float
+    size : strictly positive float
+        Size of the current scale-space.
 
-    :param gamma: Gamma-normalization of the derivatives (see scale-space
-    theory). If no scale is preferred, it should be set to 1 (default).
-    :type gamma: positive float
+    gamma : positive float
+        Gamma-normalization of the derivatives (see scale-space theory). If no
+        scale is preferred, it should be set to 1 (default).
 
-    :return: The Hessian matrix elements for input image (hxx, hyy, hxy).
-    :rtype: tuple of numpy.ndarray
+    Returns
+    -------
+    tuple of numpy.ndarray
+        The Hessian matrix elements for input image (hxx, hyy, hxy).
+
+    See Also
+    --------
+    hessian_eigen_decomposition : Eigen-decomposition of Hessian matrix.
     """
     k = round(6*size//2)
 
@@ -125,20 +171,30 @@ def single_scale_hessian(image, size, gamma=1):
 
 
 def hessian_eigen_decomposition(hxx, hyy, hxy):
-    """
-    Compute the eigen values/vectors for Hessian matrix.
+    """Compute the eigen values/vectors for Hessian matrix.
 
-    :param hxx: Hessian coefficient for second order derivative in X.
-    :type hxx: numpy.ndarray
+    Parameters
+    ----------
+    hxx : numpy.ndarray
+        Hessian coefficient for second order derivative in X.
 
-    :param hyy: Hessian coefficient for second order derivative in Y.
-    :type hyy: numpy.ndarray
+    hyy : numpy.ndarray
+        Hessian coefficient for second order derivative in Y.
 
-    :param hxy: Hessian coefficient for first order derivative in X and Y.
-    :type hxy: numpy.ndarray
+    hxy : numpy.ndarray
+        Hessian coefficient for first order derivative in X and Y.
 
-    :return: The eigen values and the eigen vectors ((l1, l2), (v1, v2)).
-    :rtype: tuple of tuples of numpy.ndarray
+    Returns
+    -------
+    tuple of tuples of numpy.ndarray
+        The eigen values and the eigen vectors ((l1, l2), (v1, v2)).
+
+    See Also
+    --------
+    single_scale_hessian : estimation of Hessian matrix
+    single_scale_vesselness : single-scale Frangi filter
+    structurness_parameter_auto : automatic estimation of the intensity drop
+        for the Frangi filter (single_scale_vesselness).
     """
     trace = hxx + hyy
     determinant = hxx * hyy - hxy * hxy
@@ -187,32 +243,45 @@ def hessian_eigen_decomposition(hxx, hyy, hxy):
 
 # noinspection SpellCheckingInspection
 def single_scale_vesselness(l1, l2, alpha=0.5, beta=1.0):
-    """
-    Compute the vesselness using the scale-space theory.
+    """Compute the vesselness using the scale-space theory.
 
-    This vesselness is based on the Frangi filter (Frangi et al. Multi-scale
-    vessel enhancement filtering (1998). In: Medical ImageComputing and
-    Computer-Assisted Intervention, vol. 1496, pp. 130-137).
+    This vesselness is based on the Frangi filter [1]_.
 
-    :param l1: First eigen-value of the Hessian matrix of an input image
-    for a given scale.
-    :type l1: numpy.ndarray
+    Parameters
+    ----------
+    l1 : numpy.ndarray
+        First eigen-value of the Hessian matrix of an input image for a
+        given scale.
 
-    :param l2: First eigen-value of the Hessian matrix of an input image
-    for a given scale.
-    :type l2: numpy.ndarray
+    l2 : numpy.ndarray
+        First eigen-value of the Hessian matrix of an input image for a
+        given scale.
 
-    :param alpha: Soft threshold of the tubular shape weighting term. Default is
-    the recommended value (i.e. 0.5).
-    :type alpha: float between 0 and 1
+    alpha : float between 0 and 1
+        Soft threshold of the tubular shape weighting term. Default is the
+        recommended value (i.e. 0.5).
 
-    :param beta: Soft threshold of the intensity response (intensity dynamic-
-    dependent) as a percentage of an automatically estimated parameter. Default
-    is 1.0, i.e. the parameter as it is automatically estimated.
-    :type beta: positive float
+    beta : positive float
+        Soft threshold of the intensity response (intensity dynamic-dependent)
+        as a percentage of an automatically estimated parameter. Default is 1.0,
+        i.e. the parameter as it is automatically estimated.
 
-    :return: The vesselness map.
-    :rtype: numpy.ndarray
+    Returns
+    -------
+    numpy.ndarray
+        The vesselness map.
+
+    See Also
+    --------
+    hessian_eigen_decomposition : Eigen-decomposition of Hessian matrix.
+    structurness_parameter_auto : automatic estimation of the intensity drop
+        for the Frangi filter.
+
+    Notes
+    -----
+    .. [1] Frangi et al. (1998) Multi-scale vessel enhancement filtering. In:
+       *Medical Image Computing and Computer-Assisted Intervention*, vol. 1496,
+       pp. 130-137.
     """
     l2_is_negative = l2 < 0
 
@@ -234,28 +303,40 @@ def single_scale_vesselness(l1, l2, alpha=0.5, beta=1.0):
 
 
 def structurness_parameter_auto(structurness, res=128):
-    """
-    Automatically estimate the structurness drop parameter from the
+    """Automatically estimate the structurness drop parameter from the
     structurness image.
 
     The parameter is estimated using an histogram-based method: the optimal
     point value is calculated geometrically, by the triangle thresholding
-    method (see Zack GW, Rogers WE, Latt SA (1977), "Automatic measurement of
-    sister chromatid exchange frequency", J. Histochem. Cytochem.
-    25 (7): 741–53, PMID 70454). The estimated point is the point that has the
+    method [2]_. The estimated point is the point that has the
     largest distance to the line drawn between the mode and the maximal value.
 
     Note that the zero values are not taken into account when computing
     the histogram.
 
-    :param structurness: Structurness image measured from Hessian tensors.
-    :type structurness: numpy.ndarray
+    Parameters
+    ----------
+    structurness : numpy.ndarray
+        Structurness image measured from Hessian tensors.
 
-    :param res: Resolution used for computing the histogram (number of bins).
-    :type res: int
+    res : int
+        Resolution used for computing the histogram (number of bins).
 
-    :return: The estimated drop parameter.
-    :rtype: float
+    Returns
+    -------
+    float
+        The estimated drop parameter.
+
+    See Also
+    --------
+    hessian_eigen_decomposition : Eigen-decomposition of Hessian matrix.
+    single_scale_vesselness : single-scale Frangi filter
+
+    Notes
+    -----
+    .. [2] Zack GW, Rogers WE, Latt SA (1977) Automatic measurement of sister
+       chromatid exchange frequency. In: *J. Histochem. Cytochem.*, vol. 25,
+       num. 7, pp. 741–53.
     """
     hy, hx = np.histogram(structurness[structurness > 0], res)
     hx = hx[:-1] + np.diff(hx)
