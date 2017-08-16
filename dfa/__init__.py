@@ -1,7 +1,9 @@
 """
 DNA fibers analysis package.
 """
-__all__ = ['modeling', 'detection', 'extraction', 'analysis', 'simulation']
+__all__ = [
+    'modeling', 'detection', 'extraction', 'analysis', 'simulation',
+    'comparison']
 
 # gold number (continuous fraction approximation, current iteration is 5)
 # def dfa_version(n):
