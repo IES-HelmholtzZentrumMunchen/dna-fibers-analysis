@@ -10,7 +10,7 @@ def coarse_fibers_spatial_distance(f1, f2):
     """
     Coarse spatial distance between two fibers.
 
-    The coarse distance is computed as the euclidian distance between the
+    The coarse distance is computed as the euclidean distance between the
     centers of mass of the considered fibers.
 
     Parameters
@@ -125,10 +125,10 @@ def match_fibers_pairs(l1, l2, max_spatial_distance=50,
 
 def fibers_spatial_distances(f1, f2):
     """
-    Pointwise spatial distance between two fibers.
+    Point-wise spatial distance between two fibers.
 
     The distance returned are the mean of minimal distances between fibers
-    in a pointwise manner and the modified Hausdorff distance.
+    in a point-wise manner and the modified Hausdorff distance.
 
     To make distances symmetric, the maximal values of both ways are taken as
     the final results.
@@ -143,7 +143,7 @@ def fibers_spatial_distances(f1, f2):
 
     Returns
     -------
-    :return: (float, float)
+    (float, float)
         The spatial distances between fibers (in spatial units) (mean and
         Hausdorff).
     """
@@ -170,3 +170,104 @@ def fibers_spatial_distances(f1, f2):
             max(np.median(closest_distances_f1),
                 np.median(closest_distances_f2)),
             max(np.max(closest_distances_f1), np.max(closest_distances_f2)))
+
+
+def match_index_pairs(d1, d2):
+    """
+    Match pairs of index from two given data frames.
+
+    Internally, pandas methods are used to match unique index in both data
+    frames. Here this method is used as a convenience method to match fibers
+    in both data frames.
+
+    The percentage of match is computed as the ratio of the number of identical
+    index in both data frames over the maximal number of fibers in one data
+    frame.
+
+    Parameters
+    ----------
+    d1 : pandas.core.frame.DataFrame
+        First data frame.
+
+    d2 : pandas.core.frame.DataFrame
+        Second data frame.
+
+    Returns
+    -------
+    (float, pandas.core.frame.DataFrame, pandas.core.frame.DataFrame)
+        Percentage of match and views of input data frames where index are
+        pair-wisely matching (in the same order as input arguments).
+    """
+    index1 = d1.index.unique()
+    index2 = d2.index.unique()
+    index = index1.intersection(index2)
+
+    return (index.size / max(index1.size, index2.size),
+            d1.ix[index], d2.ix[index])
+
+
+def match_column(d1, d2, column='pattern'):
+    """
+    Match column values from two given indexed data frames.
+
+    Internally, pandas methods are used to match columns. The index are
+    considered as columns to match in the process. It is used as convenience
+    method to check if matching fibers have also matching patterns.
+
+    Parameters
+    ----------
+    d1 : pandas.core.frame.DataFrame
+        First data frame.
+
+    d2 : pandas.core.frame.DataFrame
+        Second data frame.
+
+    column : str
+        Label of the column that will be matched (default is 'pattern').
+
+    Returns
+    -------
+    (float, pandas.core.frame.DataFrame, pandas.core.frame.DataFrame)
+        Percentage of match and views of input data frames where columns (and
+        index) are pair-wisely matching (in the same order as input arguments).
+    """
+    single_column1 = d1.reset_index()[
+        np.bitwise_not(
+            d1.reset_index().duplicated(d1.index.names + [column]))] \
+        .set_index(d1.index.names)[column]
+
+    single_column2 = d2.reset_index()[
+        np.bitwise_not(
+            d2.reset_index().duplicated(d2.index.names + [column]))] \
+        .set_index(d2.index.names)[column]
+
+    select = np.equal(single_column1, single_column2)
+
+    return np.sum(select) / single_column1.size, d1[select], d2[select]
+
+
+def difference_in_column(d1, d2, column='length'):
+    """
+    Compute the differences between given data frames in given column values.
+
+    This is convenience method that can be used to compute the errors in lengths
+    between two data frames.
+
+    Parameters
+    ----------
+    d1 : pandas.core.frame.DataFrame
+        First data frame.
+
+    d2 : pandas.core.frame.DataFrame
+        Second data frame.
+
+    column : str
+        Label of the column from which difference is computed (default is
+        'length').
+
+    Returns
+    -------
+    pandas.core.series.Series
+        Difference between the two given data frames (d1-d2).
+    """
+    return d1[column] - d2[column]
