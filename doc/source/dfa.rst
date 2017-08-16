@@ -18,6 +18,7 @@ Submodules
    dfa._structuring_segments
    dfa._tree
    dfa.analysis
+   dfa.compare
    dfa.dataset
    dfa.detection
    dfa.extraction
