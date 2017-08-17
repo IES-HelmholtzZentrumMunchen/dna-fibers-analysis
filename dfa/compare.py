@@ -143,9 +143,9 @@ def fibers_spatial_distances(f1, f2):
 
     Returns
     -------
-    (float, float)
-        The spatial distances between fibers (in spatial units) (mean and
-        Hausdorff).
+    (float, float, float)
+        The spatial distances between fibers (in spatial units) (mean, median
+        and Hausdorff).
     """
     def _closest_distances(f1, f2):
         closest_distances = []
