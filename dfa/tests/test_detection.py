@@ -58,26 +58,26 @@ class TestDetection(unittest.TestCase):
 
         self.fibers = {
             10: {
-                0.5: ut.read_points_from_txt(data_path,
-                                             'coordinates_a0.5_b0.5_l10'),
-                1.0: ut.read_points_from_txt(data_path,
-                                             'coordinates_a0.5_b1.0_l10'),
-                2.0: ut.read_points_from_txt(data_path,
-                                             'coordinates_a0.5_b2.0_l10')},
+                0.5: list(list(zip(*ut.read_fibers_from_txt(
+                    data_path, 'coordinates_a0.5_b0.5_l10')))[0]),
+                1.0: list(list(zip(*ut.read_fibers_from_txt(
+                    data_path, 'coordinates_a0.5_b1.0_l10')))[0]),
+                2.0: list(list(zip(*ut.read_fibers_from_txt(
+                    data_path, 'coordinates_a0.5_b2.0_l10')))[0])},
             20: {
-                0.5: ut.read_points_from_txt(data_path,
-                                             'coordinates_a0.5_b0.5_l20'),
-                1.0: ut.read_points_from_txt(data_path,
-                                             'coordinates_a0.5_b1.0_l20'),
-                2.0: ut.read_points_from_txt(data_path,
-                                             'coordinates_a0.5_b2.0_l20')},
+                0.5: list(list(zip(*ut.read_fibers_from_txt(
+                    data_path, 'coordinates_a0.5_b0.5_l20')))[0]),
+                1.0: list(list(zip(*ut.read_fibers_from_txt(
+                    data_path, 'coordinates_a0.5_b1.0_l20')))[0]),
+                2.0: list(list(zip(*ut.read_fibers_from_txt(
+                    data_path, 'coordinates_a0.5_b2.0_l20')))[0])},
             40: {
-                0.5: ut.read_points_from_txt(data_path,
-                                             'coordinates_a0.5_b0.5_l40'),
-                1.0: ut.read_points_from_txt(data_path,
-                                             'coordinates_a0.5_b1.0_l40'),
-                2.0: ut.read_points_from_txt(data_path,
-                                             'coordinates_a0.5_b2.0_l40')}}
+                0.5: list(list(zip(*ut.read_fibers_from_txt(
+                    data_path, 'coordinates_a0.5_b0.5_l40')))[0]),
+                1.0: list(list(zip(*ut.read_fibers_from_txt(
+                    data_path, 'coordinates_a0.5_b1.0_l40')))[0]),
+                2.0: list(list(zip(*ut.read_fibers_from_txt(
+                    data_path, 'coordinates_a0.5_b2.0_l40')))[0])}}
 
     def tearDown(self):
         pass
