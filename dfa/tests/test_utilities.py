@@ -53,20 +53,64 @@ class TestUtilities(unittest.TestCase):
             np.testing.assert_allclose(fiber, expected_fiber)
 
     def test_write_fibers(self):
-        ut.write_fibers(self.points, self.directory, self.image_name,
-                        indices=self.index, zipped=True)
+        os.mkdir(self.tmp_directory)
+
+        try:
+            # test with output directory
+            ut.write_fibers(self.points, self.tmp_directory, self.image_name,
+                            indices=self.index, zipped=False)
+            fibers, image_names, indices = tuple(
+                zip(*ut.read_fibers(self.tmp_directory)))
+
+            for image_name in image_names:
+                self.assertEqual(image_name, self.image_name)
+
+            self.assertListEqual(list(indices), self.index)
+
+            for fiber, expected_fiber in zip(fibers, self.points):
+                np.testing.assert_allclose(fiber, expected_fiber)
+
+            # test with output zip file
+            ut.write_fibers(self.points, self.tmp_directory, self.image_name,
+                            indices=self.index, zipped=True)
+            fibers, image_names, indices = tuple(
+                zip(*ut.read_fibers(
+                    op.join(self.tmp_directory,
+                            '.'.join([self.image_name, 'zip'])))))
+
+            for image_name in image_names:
+                self.assertEqual(image_name, self.image_name)
+
+            self.assertListEqual(list(indices), self.index)
+
+            for fiber, expected_fiber in zip(fibers, self.points):
+                np.testing.assert_allclose(fiber, expected_fiber)
+        finally:
+            shutil.rmtree(self.tmp_directory)
 
     def test_read_fibers(self):
+        # test with input directory
         red_fibers = ut.read_fibers(self.directory)
         red_fibers = [(fiber, image_name, index)
                       for fiber, image_name, index in red_fibers
                       if image_name == self.image_name]
-        self.assertGreater(len(red_fibers), 0)
+        self.assertEqual(len(red_fibers), 2)
 
         for (fiber, image_name, index), expected_fiber, expected_index \
                 in zip(red_fibers, self.points, self.index):
             self.assertEqual(index, expected_index)
             np.testing.assert_allclose(fiber, expected_fiber)
 
+        # test with input zip file
         red_fibers = ut.read_fibers(
             op.join(self.directory, '.'.join([self.image_name, 'zip'])))
+        self.assertEqual(len(red_fibers), 2)
+
+        for (fiber, image_name, index), expected_fiber, expected_index \
+                in zip(red_fibers, self.points, self.index):
+            self.assertEqual(index, expected_index)
+            np.testing.assert_allclose(fiber, expected_fiber)
+
+        self.assertFalse(
+            op.exists(op.join(self.directory,
+                              '_'.join(['tmp', self.image_name]))))

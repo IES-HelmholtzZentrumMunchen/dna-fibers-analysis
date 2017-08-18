@@ -210,9 +210,20 @@ def read_fibers(path):
                             filename.find(fiber_indicator) > -1:
                 fibers.append(read_fiber(os.path.join(path, filename)))
     else:
-        with zipfile.ZipFile(path, mode='r') as archive:
-            print(archive.namelist())
-            # TODO read from a zip file
+        tmp_path, zipfilename = os.path.split(os.path.abspath(path))
+        tmp_path = os.path.join(tmp_path,
+                                '_'.join(['tmp',
+                                          os.path.splitext(zipfilename)[0]]))
+        os.mkdir(tmp_path)
+
+        try:
+            with zipfile.ZipFile(path, mode='r',
+                                 compression=zipfile.ZIP_DEFLATED) as archive:
+                for filename in archive.namelist():
+                    archive.extract(filename, path=tmp_path)
+                    fibers.append(read_fiber(os.path.join(tmp_path, filename)))
+        finally:
+            shutil.rmtree(tmp_path)
 
     return fibers
 
