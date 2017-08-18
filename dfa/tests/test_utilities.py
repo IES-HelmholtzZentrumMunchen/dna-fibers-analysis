@@ -51,3 +51,22 @@ class TestUtilities(unittest.TestCase):
             self.assertEqual(image_name, self.image_name)
             self.assertEqual(index, expected_index)
             np.testing.assert_allclose(fiber, expected_fiber)
+
+    def test_write_fibers(self):
+        ut.write_fibers(self.points, self.directory, self.image_name,
+                        indices=self.index, zipped=True)
+
+    def test_read_fibers(self):
+        red_fibers = ut.read_fibers(self.directory)
+        red_fibers = [(fiber, image_name, index)
+                      for fiber, image_name, index in red_fibers
+                      if image_name == self.image_name]
+        self.assertGreater(len(red_fibers), 0)
+
+        for (fiber, image_name, index), expected_fiber, expected_index \
+                in zip(red_fibers, self.points, self.index):
+            self.assertEqual(index, expected_index)
+            np.testing.assert_allclose(fiber, expected_fiber)
+
+        red_fibers = ut.read_fibers(
+            op.join(self.directory, '.'.join([self.image_name, 'zip'])))
