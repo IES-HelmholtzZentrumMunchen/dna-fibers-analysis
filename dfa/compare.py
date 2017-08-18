@@ -4,6 +4,7 @@ Compare module of the DNA fibers analysis package.
 Use this module to compare and quantify the quality of the pipeline.
 """
 import numpy as np
+from scipy.interpolate import splprep, splev
 
 
 def coarse_fibers_spatial_distance(f1, f2):
@@ -170,6 +171,32 @@ def fibers_spatial_distances(f1, f2):
             max(np.median(closest_distances_f1),
                 np.median(closest_distances_f2)),
             max(np.max(closest_distances_f1), np.max(closest_distances_f2)))
+
+
+def resample_fiber(fiber, rate=2.0):
+    """
+    Resample a fiber with given rate.
+
+    This method is useful for point-wise comparison of fibers.
+
+    Parameters
+    ----------
+    fiber : numpy.ndarray
+        Input fiber points coordinates to resample.
+
+    rate : 0 < float
+        Resampling rate.
+
+    Returns
+    -------
+    numpy.ndarray
+        Resampled fiber points coordinates.
+    """
+    length = np.sqrt(np.power(np.diff(fiber, axis=1), 2).sum(axis=0)).sum()
+    # noinspection PyTupleAssignmentBalance
+    coeffs, _ = splprep(fiber, u=np.linspace(0, 1, fiber.shape[1]), s=0, k=1)
+    return np.vstack(
+        splev(np.linspace(0, 1, np.round(length / rate).astype(int)), coeffs))
 
 
 def match_index_pairs(d1, d2):
