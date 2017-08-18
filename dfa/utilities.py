@@ -6,6 +6,8 @@ import os
 import numpy as np
 from skimage import io
 from matplotlib import pyplot as plt
+# import zipfile
+from debtcollector import removals
 
 
 def static_vars(**kwargs):
@@ -16,6 +18,7 @@ def static_vars(**kwargs):
     return decorate
 
 
+@removals.remove
 def write_points_to_txt(path, prefix, coordinates):
     """Write points coordinates to text file.
 
@@ -36,6 +39,7 @@ def write_points_to_txt(path, prefix, coordinates):
             points[::-1].T)
 
 
+@removals.remove
 def read_points_from_txt(path, prefix):
     """Read points coordinates from text file.
 
@@ -60,6 +64,117 @@ def read_points_from_txt(path, prefix):
 
     return [np.loadtxt(os.path.join(path, '{}_fiber-{}.txt').format(
         prefix, index)).T[::-1] for index in indices]
+
+
+def write_fiber(fiber, path, image_name, index):
+    """
+    Write a single fiber to a text file.
+
+    The parameters are used to format the output filename format. It is defined
+    as the following:
+        <path>/<image_name>_fiber-<index>.txt
+
+    Parameters
+    ----------
+    fiber : numpy.ndarray
+        Points coordinates of the median-axis of the fiber to write. The fiber
+        shape must be (2, N) in the order y-x (or i-j).
+
+    path : str
+        Path to the directory in which the output file will be written.
+
+    image_name : str
+        Name of the image from which the fiber comes from.
+
+    index : 0 < int
+        Number of the fiber in that particular image.
+    """
+    np.savetxt(
+        os.path.join(path, '{}_fiber-{}.txt'.format(image_name, index)),
+        fiber[::-1].T)
+
+
+# TODO write a folder or a zip of fibers
+def write_fibers(fibers, path, image_name, indices=None):
+    """
+    Write multiple fibers into text files.
+
+    The files will be either grouped in a directory or in a zip file, depending
+    on the path given. For the output filenames format, please refer to
+    write_fiber.
+
+    Parameters
+    ----------
+    fibers : List[numpy.ndarray]
+        List of points coordinates of the median-axis of the fibers to write.
+        The fibers shapes must be (2, N) in the order y-x (or i-j).
+
+    path : str
+        Path to the directory in which the output file will be written.
+
+    image_name : str
+        Name of the image from which the fiber comes from.
+
+    indices : None | List[int]
+        List of index matching the fibers, or auto-generated index list if
+        None is passed (default).
+    """
+    raise NotImplementedError
+    # def _write_fibers(indices, fibers, path, image_name):
+    #     for index, fiber in zip(indices, fibers):
+    #         write_fiber(fiber, path, image_name, index)
+    #
+    # if indices is None:
+    #     indices = range(1, len(fibers) + 1)
+    #
+    # if os.path.isfile(path):
+    #     base_path, filename = os.path.split(path)
+    #     tmp_path = os.path.join(base_path, 'tmp')
+    #     os.mkdir(tmp_path)
+    #
+    #     try:
+    #         _write_fibers(indices, fibers, tmp_path, image_name)
+    #
+    #         with zipfile.ZipFile(
+    #                 path, mode='w',
+    #                 compression=zipfile.ZIP_DEFLATED) as outfile:
+    #             for filename in os.listdir(tmp_path):
+    #                 outfile.write(filename)
+    #     finally:
+    #         os.remove(tmp_path)
+    #
+    # else:
+    #     _write_fibers(indices, fibers, path, image_name)
+
+
+def read_fiber(path):
+    """
+    Read a single fiber from text file.
+
+    For the fiber filenames format, please refer to write_fiber.
+
+    Parameters
+    ----------
+    path : str
+        Path to the directory in which the output file will be written.
+
+    Returns
+    -------
+    (numpy.ndarray, str, 0 < int)
+        Points coordinates of the median-axis of the fiber, name of the image
+        from which the fiber comes from (extracted from filename) and number of
+        the fiber in that particular image (also extracted from filename).
+    """
+    _, filename = os.path.split(os.path.splitext(path)[0])
+    image_name, index = tuple(filename.split('_fiber-'))
+    fiber = np.loadtxt(path).T[::-1]
+
+    return fiber, image_name, int(index)
+
+
+# TODO read a folder or a zip of fibers
+def read_fibers(path):
+    raise NotImplementedError
 
 
 class ImageJRoiType:
