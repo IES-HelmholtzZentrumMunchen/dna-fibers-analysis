@@ -33,9 +33,9 @@ class TestUtilities(unittest.TestCase):
         try:
             for expected_index, expected_fiber, filename \
                     in zip(self.index, self.points, self.filenames):
-                ut.write_fiber_from_txt(expected_fiber, self.tmp_directory,
-                                        self.image_name, expected_index)
-                fiber, image_name, index = ut.read_fiber_from_txt(
+                ut.write_fiber(expected_fiber, self.tmp_directory,
+                               self.image_name, expected_index)
+                fiber, image_name, index = ut.read_fiber(
                     op.join(self.tmp_directory, filename))
                 self.assertEqual(image_name, self.image_name)
                 self.assertEqual(index, expected_index)
@@ -43,10 +43,10 @@ class TestUtilities(unittest.TestCase):
         finally:
             shutil.rmtree(self.tmp_directory)
 
-    def test_read_fiber_from_txt(self):
+    def test_read_fiber(self):
         for filename, expected_index, expected_fiber \
                 in zip(self.filenames, self.index, self.points):
-            fiber, image_name, index = ut.read_fiber_from_txt(
+            fiber, image_name, index = ut.read_fiber(
                 op.join(self.directory, filename))
             self.assertEqual(image_name, self.image_name)
             self.assertEqual(index, expected_index)
@@ -57,10 +57,11 @@ class TestUtilities(unittest.TestCase):
 
         try:
             # test with output directory
-            ut.write_fibers_from_txt(self.points, self.tmp_directory, self.image_name,
-                                     indices=self.index, zipped=False)
+            ut.write_fibers(self.points, self.tmp_directory,
+                            self.image_name, indices=self.index,
+                            zipped=False)
             fibers, image_names, indices = tuple(
-                zip(*ut.read_fibers_from_txt(self.tmp_directory)))
+                zip(*ut.read_fibers(self.tmp_directory)))
 
             for image_name in image_names:
                 self.assertEqual(image_name, self.image_name)
@@ -71,10 +72,11 @@ class TestUtilities(unittest.TestCase):
                 np.testing.assert_allclose(fiber, expected_fiber)
 
             # test with output zip file
-            ut.write_fibers_from_txt(self.points, self.tmp_directory, self.image_name,
-                                     indices=self.index, zipped=True)
+            ut.write_fibers(self.points, self.tmp_directory,
+                            self.image_name, indices=self.index,
+                            zipped=True)
             fibers, image_names, indices = tuple(
-                zip(*ut.read_fibers_from_txt(
+                zip(*ut.read_fibers(
                     op.join(self.tmp_directory,
                             '.'.join([self.image_name, 'zip'])))))
 
@@ -88,9 +90,9 @@ class TestUtilities(unittest.TestCase):
         finally:
             shutil.rmtree(self.tmp_directory)
 
-    def test_read_fibers_from_txt(self):
+    def test_read_fibers(self):
         # test with input directory
-        red_fibers = ut.read_fibers_from_txt(self.directory)
+        red_fibers = ut.read_fibers(self.directory)
         red_fibers = [(fiber, image_name, index)
                       for fiber, image_name, index in red_fibers
                       if image_name == self.image_name]
@@ -102,7 +104,7 @@ class TestUtilities(unittest.TestCase):
             np.testing.assert_allclose(fiber, expected_fiber)
 
         # test with input zip file
-        red_fibers = ut.read_fibers_from_txt(
+        red_fibers = ut.read_fibers(
             op.join(self.directory, '.'.join([self.image_name, 'zip'])))
         self.assertEqual(len(red_fibers), 2)
 

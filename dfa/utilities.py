@@ -69,7 +69,7 @@ def read_points_from_txt(path, prefix):
 fiber_indicator = '_fiber-'
 
 
-def write_fiber_from_txt(fiber, path, image_name, index):
+def write_fiber(fiber, path, image_name, index):
     """
     Write a single fiber to a text file.
 
@@ -98,7 +98,7 @@ def write_fiber_from_txt(fiber, path, image_name, index):
         fiber[::-1].T)
 
 
-def write_fibers_from_txt(fibers, path, image_name, indices=None, zipped=False):
+def write_fibers(fibers, path, image_name, indices=None, zipped=False):
     """
     Write multiple fibers into text files.
 
@@ -129,7 +129,7 @@ def write_fibers_from_txt(fibers, path, image_name, indices=None, zipped=False):
     """
     def _write_fibers(indices, fibers, path, image_name):
         for index, fiber in zip(indices, fibers):
-            write_fiber_from_txt(fiber, path, image_name, index)
+            write_fiber(fiber, path, image_name, index)
 
     if indices is None:
         indices = range(1, len(fibers) + 1)
@@ -158,11 +158,41 @@ def write_fibers_from_txt(fibers, path, image_name, indices=None, zipped=False):
         _write_fibers(indices, fibers, path, image_name)
 
 
-def read_fiber_from_txt(path):
+def read_fiber(path):
+    """
+    Read a single fiber from file.
+
+    The file can be a txt file or a ImageJ roi file. For the fiber filenames
+    format, please refer to write_fiber_to_txt.
+
+    Parameters
+    ----------
+    path : str
+        Path to the fiber file to be red.
+
+    Returns
+    -------
+    (numpy.ndarray, str, 0 < int)
+        Points coordinates of the median-axis of the fiber, name of the image
+        from which the fiber comes from (extracted from filename) and number of
+        the fiber in that particular image (also extracted from filename).
+    """
+    ext = os.path.splitext(path)[-1]
+
+    if ext == '.txt':
+        return _read_fiber_from_txt(path)
+    elif ext == '.roi':
+        return _read_fiber_from_imagej_roi(path)
+    else:
+        raise NotImplementedError('There is no reader for {} files implemented '
+                                  'yet!'.format(ext))
+
+
+def _read_fiber_from_txt(path):
     """
     Read a single fiber from text file.
 
-    For the fiber filenames format, please refer to write_fiber_from_txt.
+    For the fiber filenames format, please refer to write_fiber_to_txt.
 
     Parameters
     ----------
@@ -183,11 +213,11 @@ def read_fiber_from_txt(path):
     return fiber, image_name, int(index)
 
 
-def read_fibers_from_txt(path, image_name=None):
+def read_fibers(path, image_name=None):
     """
-    Read multiple fibers from path or zip file.
+    Read multiple fibers from path or zip file using specified method.
 
-    For the fiber filenames format, please refer to write_fiber_from_txt.
+    For the fiber filenames format, please refer to write_fiber_to_txt.
 
     Parameters
     ----------
@@ -214,7 +244,7 @@ def read_fibers_from_txt(path, image_name=None):
                     filename.find(fiber_indicator) > -1:
                 if image_name is None or \
                         filename.split(fiber_indicator)[0] == image_name:
-                    fibers.append(read_fiber_from_txt(os.path.join(path, filename)))
+                    fibers.append(read_fiber(os.path.join(path, filename)))
     else:
         tmp_path, zipfilename = os.path.split(os.path.abspath(path))
 
@@ -231,8 +261,8 @@ def read_fibers_from_txt(path, image_name=None):
                         compression=zipfile.ZIP_DEFLATED) as archive:
                     for filename in archive.namelist():
                         archive.extract(filename, path=tmp_path)
-                        fibers.append(
-                            read_fiber_from_txt(os.path.join(tmp_path, filename)))
+                        fibers.append(read_fiber(
+                            os.path.join(tmp_path, filename)))
             finally:
                 shutil.rmtree(tmp_path)
 
@@ -362,23 +392,32 @@ def _read_points_from_imagej_roi(binaries):
     return points
 
 
-def read_points_from_imagej_roi(filename):
-    """Read points coordinates from roi file containing one ImageJ roi.
+def _read_fiber_from_imagej_roi(path):
+    """
+    Read a single fiber from ImageJ ROI file.
+
+    For the fiber filenames format, please refer to write_fiber_to_txt.
 
     Parameters
     ----------
-    filename : str
-        Path of file to read. It must be a roi file.
+    path : str
+        Path to the fiber file to be red.
 
     Returns
     -------
-    list of numpy.ndarray
-        Arrays containing the coordinates in the (I, J) and (Y, X) order.
+    (numpy.ndarray, str, 0 < int)
+        Points coordinates of the median-axis of the fiber, name of the image
+        from which the fiber comes from (extracted from filename) and number of
+        the fiber in that particular image (also extracted from filename).
     """
-    with open(filename, 'rb') as file:
-        return _read_points_from_imagej_roi(file)
+    _, filename = os.path.split(os.path.splitext(path)[0])
+    image_name, index = tuple(filename.split(fiber_indicator))
+
+    with open(path, 'rb') as file:
+        return _read_points_from_imagej_roi(file), image_name, int(index)
 
 
+@removals.remove
 def read_points_from_imagej_zip(filename):
     """Read points coordinates from zip file containing ImageJ rois.
 
@@ -398,7 +437,7 @@ def read_points_from_imagej_zip(filename):
 
 
 # noinspection PyUnusedLocal
-def _write_points_from_imagej_roi(binaries, coordinates):
+def _write_points_to_imagej_roi(binaries, coordinates):
     """Write points coordinates to binaries of ImageJ rois.
 
     This code is based on the ijroi package (https://github.com/tdsmith/ijroi),
