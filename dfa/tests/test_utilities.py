@@ -92,11 +92,8 @@ class TestUtilities(unittest.TestCase):
 
     def test_read_fibers(self):
         # test with input directory
-        red_fibers = ut.read_fibers(self.directory)
-        red_fibers = [(fiber, image_name, index)
-                      for fiber, image_name, index in red_fibers
-                      if image_name == self.image_name]
-        self.assertEqual(len(red_fibers), 2)
+        red_fibers = ut.read_fibers(self.directory, image_name=self.image_name)
+        self.assertEqual(len(red_fibers), 4)
 
         for (fiber, image_name, index), expected_fiber, expected_index \
                 in zip(red_fibers, self.points, self.index):
