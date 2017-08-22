@@ -179,13 +179,10 @@ def read_fiber(path):
     """
     ext = os.path.splitext(path)[-1]
 
-    if ext == '.txt':
-        return _read_fiber_from_txt(path)
-    elif ext == '.roi':
-        return _read_fiber_from_imagej_roi(path)
-    else:
-        raise NotImplementedError('There is no reader for {} files implemented '
-                                  'yet!'.format(ext))
+    if ext not in available_readers.keys():
+        raise NotImplementedError('There is not reader for {} files '
+                                  'implemented yet!'.format(ext))
+    return available_readers[ext](path)
 
 
 def _read_fiber_from_txt(path):
@@ -423,6 +420,11 @@ def _read_fiber_from_imagej_roi(path):
 
     with open(path, 'rb') as file:
         return _read_points_from_imagej_roi(file).T, image_name, int(index)
+
+
+available_readers = {
+    '.txt': _read_fiber_from_txt,
+    '.roi': _read_fiber_from_imagej_roi}
 
 
 @removals.remove
