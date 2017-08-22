@@ -587,6 +587,15 @@ def check_valid_file(path):
     return path
 
 
+def check_valid_output_file(path):
+    """ Check for existing path where file will be saved. """
+    if not os.path.exists(os.path.dirname(path)):
+        raise argparse.ArgumentTypeError('The path of the requested output file'
+                                         ' is not valid!')
+
+    return path
+
+
 def check_float_0_1(variable):
     """ Check for floats in ]0, 1]. """
     try:
