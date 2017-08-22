@@ -175,7 +175,7 @@ def fibers_spatial_distances(f1, f2):
 
 def resample_fiber(fiber, rate=2.0):
     """
-    Resample a fiber with given rate.
+    Resample a fiber at given rate.
 
     This method is useful for point-wise comparison of fibers.
 
@@ -197,6 +197,26 @@ def resample_fiber(fiber, rate=2.0):
     coeffs, _ = splprep(fiber, u=np.linspace(0, 1, fiber.shape[1]), s=0, k=1)
     return np.vstack(
         splev(np.linspace(0, 1, np.round(length / rate).astype(int)), coeffs))
+
+
+def resample_fibers(fibers, rate=2.0):
+    """
+    Resample fibers at given rate.
+
+    Parameters
+    ----------
+    fibers : List[numpy.ndarray]
+        Input fibers points coordinates to resample.
+
+    rate : 0 < float
+        Resampling rate.
+
+    Returns
+    -------
+    List[numpy.ndarray]
+        Resampled fibers points coordinates.
+    """
+    return [resample_fiber(fiber, rate) for fiber in fibers]
 
 
 def match_index_pairs(d1, d2):
