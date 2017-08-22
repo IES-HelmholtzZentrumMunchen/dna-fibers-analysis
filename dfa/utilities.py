@@ -236,16 +236,20 @@ def read_fibers(path, image_name=None):
         from filename) and number of the fiber in that particular image (also
         extracted from filename).
     """
+    def _filename_is_fiber_to_read():
+        return filename.find(fiber_indicator) > -1 and (
+            image_name is None or
+            filename.split(fiber_indicator)[0] == image_name)
+
     fibers = []
 
     if os.path.isdir(path):
         for filename in os.listdir(path):
-            if filename.endswith('.txt') and \
-                    filename.find(fiber_indicator) > -1:
-                if image_name is None or \
-                        filename.split(fiber_indicator)[0] == image_name:
-                    fibers.append(read_fiber(os.path.join(path, filename)))
-    else:
+            if _filename_is_fiber_to_read():
+                fibers.append(read_fiber(os.path.join(path, filename)))
+    elif os.path.splitext(path)[-1] == '.txt':
+        fibers.append(read_fiber(path))
+    elif os.path.splitext(path)[-1] == '.zip':
         tmp_path, zipfilename = os.path.split(os.path.abspath(path))
 
         if image_name is None or \
@@ -260,11 +264,15 @@ def read_fibers(path, image_name=None):
                         path, mode='r',
                         compression=zipfile.ZIP_DEFLATED) as archive:
                     for filename in archive.namelist():
-                        archive.extract(filename, path=tmp_path)
-                        fibers.append(read_fiber(
-                            os.path.join(tmp_path, filename)))
+                        if _filename_is_fiber_to_read():
+                            archive.extract(filename, path=tmp_path)
+                            fibers.append(read_fiber(
+                                os.path.join(tmp_path, filename)))
             finally:
                 shutil.rmtree(tmp_path)
+    else:
+        raise NotImplementedError('Path must be either a directory, a .txt '
+                                  'file or a zip file!')
 
     return fibers
 
