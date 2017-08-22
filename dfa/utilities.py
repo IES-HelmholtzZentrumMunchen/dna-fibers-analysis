@@ -436,7 +436,8 @@ def _read_fiber_from_imagej_roi(path):
     image_name, index = tuple(filename.split(fiber_indicator))
 
     with open(path, 'rb') as file:
-        return [(_read_points_from_imagej_roi(file).T, image_name, int(index))]
+        return [(_read_points_from_imagej_roi(file).T[::-1],
+                 image_name, int(index))]
 
 
 available_readers = {
