@@ -396,7 +396,7 @@ def simulate_command(args):
 
 def compare_fibers_command(args):
     """
-    Run the results comparison process.
+    Run the detection results comparison process.
 
     Parameters
     ----------
@@ -461,6 +461,41 @@ def compare_fibers_command(args):
         output.to_csv(args.output)
     else:
         print(output)
+
+
+def comparison_analyses_command(args):
+    """
+    Run the analysis results comparison process.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Input namespace containing command line arguments.
+    """
+    import pandas as pd
+    from dfa import compare as cmp
+
+    expected_analysis = pd.read_csv(args.expected, index_col=args.scheme)
+    actual_analysis = pd.read_csv(args.actual, index_col=args.scheme)
+
+    # FIXME different fiber indexing in expected and actual is not handled.
+    pct_match_fibers, match_fibers_expected, match_fibers_actual = \
+        cmp.match_index_pairs(expected_analysis, actual_analysis)
+
+    pct_match_patterns, match_patterns_expected, match_patterns_actual = \
+        cmp.match_column(match_fibers_expected, match_fibers_actual,
+                         column='pattern')
+
+    length_difference = cmp.difference_in_column(
+        match_patterns_expected, match_patterns_actual, column='length')
+
+    if args.output is not None:
+        length_difference.to_csv(args.output)
+    else:
+        print('percentage of fiber match: {}'.format(pct_match_fibers * 100))
+        print('percentage of pattern match: {}'.format(
+            pct_match_patterns * 100))
+        print(length_difference)
 
 
 if __name__ == '__main__':
@@ -778,16 +813,42 @@ if __name__ == '__main__':
 
     comparison_fibers.add_argument(
         'expected', type=ut.check_valid_path,
-        help='Expected input to be compared; either a single file (one fiber) '
-             'or a directory (multiple fibers).')
+        help='Expected input to be compared; either a single file (one fiber),'
+             'a zip file (multiple fibers) or a directory (multiple fibers).')
     comparison_fibers.add_argument(
         'actual', type=ut.check_valid_path,
-        help='Actual input to be compared; either a single file (one fiber) '
-             'or a directory (multiple fibers).')
+        help='Actual input to be compared; either a single file (one fiber),'
+             'a zip file (multiple fibers) or a directory (multiple fibers).')
     comparison_fibers.add_argument(
         '--output', type=ut.check_valid_output_file, default=None,
         help='Path of output file in which the comparison results will be '
              'writen.')
+
+    # comparison-analysis sub-command
+    comparison_analyses = comparison_subparsers.add_parser(
+        'analyses',
+        help='compare analysis',
+        description='Compare expected and actual results of the second part of '
+                    'the pipeline, the analysis.')
+    comparison_analyses.set_defaults(func=comparison_analyses_command)
+
+    comparison_analyses.add_argument(
+        'expected', type=ut.check_valid_path,
+        help='Expected input to be compared; either a single file (one fiber),'
+             'a zip file (multiple fibers) or a directory (multiple fibers).')
+    comparison_analyses.add_argument(
+        'actual', type=ut.check_valid_path,
+        help='Actual input to be compared; either a single file (one fiber),'
+             'a zip file (multiple fibers) or a directory (multiple fibers).')
+    comparison_analyses.add_argument(
+        '--output', type=ut.check_valid_output_file, default=None,
+        help='Path of output file in which the comparison results will be '
+             'writen.')
+    comparison_analyses.add_argument(
+        '--scheme', type=str, nargs='+',
+        default=['experiment', 'image', 'fiber'],
+        help='Names of the keys used as indexing of the results (default is '
+             'experiment, image, fiber; there should be at least one name).')
 
     # parsing
     args = parser.parse_args()

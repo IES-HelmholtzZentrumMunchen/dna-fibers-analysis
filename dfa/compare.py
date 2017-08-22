@@ -317,4 +317,7 @@ def difference_in_column(d1, d2, column='length'):
     pandas.core.series.Series
         Difference between the two given data frames (d1-d2).
     """
-    return d1[column] - d2[column]
+    differences = d1[column] - d2[column]
+    differences.name = 'differences of ' + column
+
+    return differences
