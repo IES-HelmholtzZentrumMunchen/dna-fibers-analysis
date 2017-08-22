@@ -74,7 +74,8 @@ def write_fiber(fiber, path, image_name, index):
     Write a single fiber to a text file.
 
     The parameters are used to format the output filename format. It is defined
-    as the following:
+    as the following: ::
+
         <path>/<image_name>_fiber-<index>.txt
 
     Parameters
