@@ -35,22 +35,13 @@ class TestUtilities(unittest.TestCase):
                     in zip(self.index, self.points, self.filenames):
                 ut.write_fiber(expected_fiber, self.tmp_directory,
                                self.image_name, expected_index)
-                fiber, image_name, index = ut.read_fiber(
-                    op.join(self.tmp_directory, filename))
+                fiber, image_name, index = ut._read_fibers(
+                    op.join(self.tmp_directory, filename))[0]
                 self.assertEqual(image_name, self.image_name)
                 self.assertEqual(index, expected_index)
                 np.testing.assert_allclose(fiber, expected_fiber)
         finally:
             shutil.rmtree(self.tmp_directory)
-
-    def test_read_fiber(self):
-        for filename, expected_index, expected_fiber \
-                in zip(self.filenames, self.index, self.points):
-            fiber, image_name, index = ut.read_fiber(
-                op.join(self.directory, filename))
-            self.assertEqual(image_name, self.image_name)
-            self.assertEqual(index, expected_index)
-            np.testing.assert_allclose(fiber, expected_fiber)
 
     def test_write_fibers(self):
         os.mkdir(self.tmp_directory)
@@ -89,6 +80,15 @@ class TestUtilities(unittest.TestCase):
                 np.testing.assert_allclose(fiber, expected_fiber)
         finally:
             shutil.rmtree(self.tmp_directory)
+
+    def test__read_fibers(self):
+        for filename, expected_index, expected_fiber \
+                in zip(self.filenames, self.index, self.points):
+            fiber, image_name, index = ut._read_fibers(
+                op.join(self.directory, filename))[0]
+            self.assertEqual(image_name, self.image_name)
+            self.assertEqual(index, expected_index)
+            np.testing.assert_allclose(fiber, expected_fiber)
 
     def test_read_fibers(self):
         # test with input directory

@@ -158,12 +158,12 @@ def write_fibers(fibers, path, image_name, indices=None, zipped=False):
         _write_fibers(indices, fibers, path, image_name)
 
 
-def read_fiber(path):
+def _read_fibers(path):
     """
-    Read a single fiber from file.
+    Read fiber(s) from file(s).
 
-    The file can be a txt file or a ImageJ roi file. For the fiber filenames
-    format, please refer to write_fiber_to_txt.
+    The file can be a txt file, a ImageJ roi file or a zip file. For the fiber
+    filenames format, please refer to write_fiber_to_txt.
 
     Parameters
     ----------
@@ -172,7 +172,7 @@ def read_fiber(path):
 
     Returns
     -------
-    (numpy.ndarray, str, 0 < int)
+    List[(numpy.ndarray, str, 0 < int)]
         Points coordinates of the median-axis of the fiber, name of the image
         from which the fiber comes from (extracted from filename) and number of
         the fiber in that particular image (also extracted from filename).
@@ -198,7 +198,7 @@ def _read_fiber_from_txt(path):
 
     Returns
     -------
-    (numpy.ndarray, str, 0 < int)
+    List[(numpy.ndarray, str, 0 < int)]
         Points coordinates of the median-axis of the fiber, name of the image
         from which the fiber comes from (extracted from filename) and number of
         the fiber in that particular image (also extracted from filename).
@@ -207,7 +207,47 @@ def _read_fiber_from_txt(path):
     image_name, index = tuple(filename.split(fiber_indicator))
     fiber = np.loadtxt(path).T[::-1]
 
-    return fiber, image_name, int(index)
+    return [(fiber, image_name, int(index))]
+
+
+def _read_fibers_from_zip(path):
+    """
+    Read fiber(s) from a zip file.
+
+    Each file in the zip file will be red according to its extension.
+
+    Parameters
+    ----------
+    path : str
+        Path to the fiber file to be red.
+
+    Returns
+    -------
+    List[(numpy.ndarray, str, 0 < int)]
+        Points coordinates of the median-axis of the fiber, name of the image
+        from which the fiber comes from (extracted from filename) and number of
+        the fiber in that particular image (also extracted from filename).
+    """
+    fibers = []
+
+    tmp_path, zipfilename = os.path.split(os.path.abspath(path))
+    basename, ext = tuple(os.path.splitext(zipfilename))
+
+    if ext == '.zip':
+        tmp_path = os.path.join(tmp_path, '_'.join(['tmp', basename]))
+        os.mkdir(tmp_path)
+
+        try:
+            with zipfile.ZipFile(
+                    path, mode='r',
+                    compression=zipfile.ZIP_DEFLATED) as archive:
+                for filename in archive.namelist():
+                    archive.extract(filename, path=tmp_path)
+                    fibers += _read_fibers(os.path.join(tmp_path, filename))
+        finally:
+            shutil.rmtree(tmp_path)
+
+    return fibers
 
 
 def read_fibers(path, image_name=None):
@@ -233,45 +273,22 @@ def read_fibers(path, image_name=None):
         from filename) and number of the fiber in that particular image (also
         extracted from filename).
     """
-    def _filename_is_fiber_to_read():
-        return filename.find(fiber_indicator) > -1 and (
-            image_name is None or
-            filename.split(fiber_indicator)[0] == image_name)
-
     fibers = []
 
     if os.path.isdir(path):
         for filename in os.listdir(path):
-            if _filename_is_fiber_to_read():
-                fibers.append(read_fiber(os.path.join(path, filename)))
-    elif os.path.splitext(path)[-1] == '.txt':
-        fibers.append(read_fiber(path))
-    elif os.path.splitext(path)[-1] == '.zip':
-        tmp_path, zipfilename = os.path.split(os.path.abspath(path))
-
-        if image_name is None or \
-                zipfilename.split(fiber_indicator)[0] == image_name:
-            tmp_path = os.path.join(
-                tmp_path,
-                '_'.join(['tmp', os.path.splitext(zipfilename)[0]]))
-            os.mkdir(tmp_path)
-
-            try:
-                with zipfile.ZipFile(
-                        path, mode='r',
-                        compression=zipfile.ZIP_DEFLATED) as archive:
-                    for filename in archive.namelist():
-                        if _filename_is_fiber_to_read():
-                            archive.extract(filename, path=tmp_path)
-                            fibers.append(read_fiber(
-                                os.path.join(tmp_path, filename)))
-            finally:
-                shutil.rmtree(tmp_path)
+            if filename.find(fiber_indicator) != -1 or \
+                            os.path.splitext(filename)[-1] == '.zip':
+                fibers += _read_fibers(os.path.join(path, filename))
     else:
-        raise NotImplementedError('Path must be either a directory, a .txt '
-                                  'file or a zip file!')
+        fibers += _read_fibers(path)
 
-    return fibers
+    if image_name is not None:
+        filtered_fibers = [fiber for fiber in fibers if fiber[1] == image_name]
+    else:
+        filtered_fibers = fibers
+
+    return filtered_fibers
 
 
 class ImageJRoiType:
@@ -410,7 +427,7 @@ def _read_fiber_from_imagej_roi(path):
 
     Returns
     -------
-    (numpy.ndarray, str, 0 < int)
+    List[(numpy.ndarray, str, 0 < int)]
         Points coordinates of the median-axis of the fiber, name of the image
         from which the fiber comes from (extracted from filename) and number of
         the fiber in that particular image (also extracted from filename).
@@ -419,12 +436,13 @@ def _read_fiber_from_imagej_roi(path):
     image_name, index = tuple(filename.split(fiber_indicator))
 
     with open(path, 'rb') as file:
-        return _read_points_from_imagej_roi(file).T, image_name, int(index)
+        return [(_read_points_from_imagej_roi(file).T, image_name, int(index))]
 
 
 available_readers = {
     '.txt': _read_fiber_from_txt,
-    '.roi': _read_fiber_from_imagej_roi}
+    '.roi': _read_fiber_from_imagej_roi,
+    '.zip': _read_fibers_from_zip}
 
 
 @removals.remove
