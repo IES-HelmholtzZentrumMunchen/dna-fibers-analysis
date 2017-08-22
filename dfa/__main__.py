@@ -4,7 +4,7 @@ This can be used to actual run the analysis (partially of fully).
 """
 
 import numpy as np
-from dfa import utilities as _ut
+from dfa import utilities as ut
 
 
 def pipeline_command(args):
@@ -35,7 +35,7 @@ def pipeline_command(args):
     scheme = args.scheme + ['fiber']
 
     # read inputs
-    images, names, masks = _ut.read_inputs(args.input, args.masks, '.tif')
+    images, names, masks = ut.read_inputs(args.input, args.masks, '.tif')
 
     # initialize output
     if args.model is None:
@@ -83,7 +83,7 @@ def pipeline_command(args):
                 extent_mask=None)
 
             if args.save_all or args.save_detected_fibers:
-                _ut.write_points_to_txt(
+                ut.write_points_to_txt(
                     args.output,
                     os.path.basename(name),
                     fibers)
@@ -97,10 +97,10 @@ def pipeline_command(args):
                 for extracted_fiber in extracted_fibers]
 
             if args.save_all or args.save_extracted_profiles:
-                _ut.write_profiles(args.output, name, extracted_profiles)
+                ut.write_profiles(args.output, name, extracted_profiles)
 
             if args.save_all or args.save_extracted_fibers:
-                figures = _ut.create_figures_from_fibers_images(
+                figures = ut.create_figures_from_fibers_images(
                     [name], [extracted_fibers], radius, group_fibers=False)
 
                 for filename, fig in figures:
@@ -108,7 +108,7 @@ def pipeline_command(args):
                     plt.close(fig)
 
             if args.save_all or args.save_grouped_fibers:
-                figures = _ut.create_figures_from_fibers_images(
+                figures = ut.create_figures_from_fibers_images(
                     [name], [extracted_fibers], radius, group_fibers=True)
 
                 for filename, fig in figures:
@@ -147,7 +147,7 @@ def detection_command(args):
     """
     from dfa import detection as det
 
-    images, names, masks = _ut.read_inputs(args.input, args.mask, '.tif')
+    images, names, masks = ut.read_inputs(args.input, args.mask, '.tif')
 
     for image, name, mask in zip(images, names, masks):
         if len(image.shape) == 2:
@@ -174,7 +174,7 @@ def detection_command(args):
                 plt.plot(*c, '-r')
             plt.show()
         else:
-            _ut.write_points_to_txt(
+            ut.write_points_to_txt(
                 args.output, name, coordinates)
 
 
@@ -211,7 +211,7 @@ def extraction_command(args):
             input_images.append(
                 io.imread(os.path.join(image_path, filename)))
             input_fibers.append(
-                _ut.read_points_from_txt(args.fibers, basename))
+                ut.read_points_from_txt(args.fibers, basename))
             input_names.append(basename)
 
     # process
@@ -219,7 +219,7 @@ def extraction_command(args):
         input_images, input_fibers, radius=args.radius)
 
     # output
-    figures = _ut.create_figures_from_fibers_images(
+    figures = ut.create_figures_from_fibers_images(
         input_names, extracted_fibers, args.radius, args.group_fibers)
 
     if args.output is None:
@@ -230,7 +230,7 @@ def extraction_command(args):
                 in zip(extracted_fibers, input_names):
             profiles = [ex.extract_profiles_from_fiber(extracted_fiber)
                         for extracted_fiber in extracted_fibers]
-            _ut.write_profiles(args.output, input_name, profiles)
+            ut.write_profiles(args.output, input_name, profiles)
 
         # export to png the grouped fibers or the single fibers + profiles
         if figures is not None:
@@ -387,13 +387,80 @@ def simulate_command(args):
 
         io.imsave(args.output, degraded_image.astype('int16'))
 
-        import utilities as _ut
-
         fibers_output = os.path.join(path, '{}_fibers'.format(name))
         os.mkdir(fibers_output)
-        _ut.write_points_to_txt(
+        ut.write_points_to_txt(
             fibers_output, name,
             [fiber_object for fiber_object, _ in fibers_objects])
+
+
+def compare_fibers_command(args):
+    """
+    Run the results comparison process.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Input namespace containing command line arguments.
+    """
+    import pandas as pd
+    from dfa import compare as cmp
+
+    def _indices_with_name(names, name):
+        return np.indices(names.shape).flatten()[names == name]
+
+    # create and initialize the output data frame
+    labels = ['mean dist.', 'median dist.', 'Hausdorff dist.']
+    index = pd.MultiIndex(levels=[[], [], []],
+                          labels=[[], [], []],
+                          names=['image', 'expected fiber', 'actual fiber'])
+    output = pd.DataFrame(columns=labels, index=index)
+
+    # read the fibers in batch
+    expected_fibers = np.array(ut.read_fibers(args.expected)).T
+    actual_fibers = np.array(ut.read_fibers(args.actual)).T
+
+    # to be comparable, we resample the fiber path to a sample every two pixels
+    expected_fibers[0] = cmp.resample_fibers(expected_fibers[0], rate=2)
+    actual_fibers[0] = cmp.resample_fibers(actual_fibers[0], rate=2)
+
+    # only fibers with matching image name will be compared;
+    # the unique images names are visited sequentially
+    unique_image_names = np.unique(
+        np.concatenate((expected_fibers[1], actual_fibers[1])))
+
+    for image_name in unique_image_names:
+        expected_with_name = _indices_with_name(expected_fibers[1], image_name)
+        actual_with_name = _indices_with_name(actual_fibers[1], image_name)
+
+        matched_fibers = cmp.match_fibers_pairs(
+            expected_fibers[0][expected_with_name],
+            actual_fibers[0][actual_with_name])
+
+        # each pair of matching fibers are is compared and distances
+        # are appended to the output data frame
+        for expected_fiber_index, actual_fiber_index in matched_fibers:
+            mean_dist, median_dist, hausdorff_dist = \
+                cmp.fibers_spatial_distances(
+                    expected_fibers[0][expected_with_name][
+                        expected_fiber_index],
+                    actual_fibers[0][actual_with_name][actual_fiber_index])
+
+            output = output.append(
+                pd.Series(
+                    {labels[0]: mean_dist,
+                     labels[1]: median_dist,
+                     labels[2]: hausdorff_dist},
+                    name=(image_name,
+                          expected_fibers[2][expected_with_name][
+                              expected_fiber_index],
+                          actual_fibers[2][actual_with_name][
+                              actual_fiber_index])))
+
+    if args.output is not None:
+        output.to_csv(args.output)
+    else:
+        print(output)
 
 
 if __name__ == '__main__':
@@ -415,13 +482,13 @@ if __name__ == '__main__':
 
     pipeline_inout = parser_pipeline.add_argument_group('Input/Output')
     pipeline_inout.add_argument(
-        'input', type=_ut.check_valid_path,
+        'input', type=ut.check_valid_path,
         help='Path to input image(s). It can be either folder or file.')
     pipeline_inout.add_argument(
-        'output', type=_ut.check_valid_directory,
+        'output', type=ut.check_valid_directory,
         help='Path to output directory, where all the outputs will be saved.')
     pipeline_inout.add_argument(
-        '--masks', type=_ut.check_valid_or_empty_path, default='',
+        '--masks', type=ut.check_valid_or_empty_path, default='',
         help='Path to input masks of images (default is automatic masking).')
     pipeline_inout.add_argument(
         '--save-all', action='store_true',
@@ -453,7 +520,7 @@ if __name__ == '__main__':
     pipeline_detection = parser_pipeline.add_argument_group('Detection')
     pipeline_detection.add_argument(
         '--intensity-sensitivity',
-        type=_ut.check_positive_float, default=0.7,
+        type=ut.check_positive_float, default=0.7,
         help='Sensitivity of detection to intensity in percentage (default is '
              '0.5, valid range is ]0, +inf[).')
     pipeline_detection.add_argument(
@@ -461,13 +528,13 @@ if __name__ == '__main__':
         help='Size in pixels of fiber''s average width (default is 3).')
     pipeline_detection.add_argument(
         '--reconstruction-extent',
-        type=_ut.check_positive_int, default=20,
+        type=ut.check_positive_int, default=20,
         help='Reconstruction extent in pixels (default is 20, range is '
              ']0, +inf[).')
 
     pipeline_analysis = parser_pipeline.add_argument_group('Analysis')
     pipeline_analysis.add_argument(
-        '--model', type=_ut.check_valid_path, default=None,
+        '--model', type=ut.check_valid_path, default=None,
         help='Path to the model to use (default will use the standard model '
              'defined in the dfa.modeling module).')
     pipeline_analysis.add_argument(
@@ -494,25 +561,25 @@ if __name__ == '__main__':
 
     detection_images = parser_detection.add_argument_group('Images')
     detection_images.add_argument(
-        'input', type=_ut.check_valid_path, help='Path to input image.')
+        'input', type=ut.check_valid_path, help='Path to input image.')
 
     detection_detection = parser_detection.add_argument_group('Detection')
     detection_detection.add_argument(
         '--fiber-sensitivity',
-        type=_ut.check_float_0_1, default=0.5,
+        type=ut.check_float_0_1, default=0.5,
         help='Sensitivity of detection to geometry in percentage (default is '
              '0.5, valid range is ]0, 1]).')
     detection_detection.add_argument(
         '--intensity-sensitivity',
-        type=_ut.check_positive_float, default=0.7,
+        type=ut.check_positive_float, default=0.7,
         help='Sensitivity of detection to intensity in percentage (default is '
              '0.5, valid range is ]0, +inf[).')
     detection_detection.add_argument(
-        '--scales', type=_ut.check_scales, nargs=3, default=[2, 4, 3],
+        '--scales', type=ut.check_scales, nargs=3, default=[2, 4, 3],
         help='Scales to use in pixels (minimum, maximum, number of scales). '
              'Default is 2 4 3.')
     detection_detection.add_argument(
-        '--mask', type=_ut.check_valid_or_empty_path, default='',
+        '--mask', type=ut.check_valid_or_empty_path, default='',
         help='Mask where to search for fibers (default is automatic masking).')
 
     detection_reconstruction = \
@@ -523,21 +590,21 @@ if __name__ == '__main__':
              'default use flat structuring elements).')
     detection_reconstruction.add_argument(
         '--reconstruction-extent',
-        type=_ut.check_positive_int, default=20,
+        type=ut.check_positive_int, default=20,
         help='Reconstruction extent in pixels (default is 20, range is '
              ']0, +inf[).')
 
     detection_medial = parser_detection.add_argument_group('Medial axis')
     detection_medial.add_argument(
-        '--smoothing', type=_ut.check_positive_int, default=20,
+        '--smoothing', type=ut.check_positive_int, default=20,
         help='Smoothing of the output fibers (default is 20, range is is '
              ']0, +inf[).')
     detection_medial.add_argument(
-        '--fibers-minimal-length', type=_ut.check_positive_int, default=30,
+        '--fibers-minimal-length', type=ut.check_positive_int, default=30,
         help='Minimal length of a fiber in pixels default is 30, range is '
              ']0, +inf[).')
     detection_medial.add_argument(
-        '--output', type=_ut.check_valid_path, default=None,
+        '--output', type=ut.check_valid_path, default=None,
         help='Output path for saving detected fibers (default is None).')
 
     # extraction command
@@ -549,20 +616,20 @@ if __name__ == '__main__':
     parser_extraction.set_defaults(func=extraction_command)
 
     parser_extraction.add_argument(
-        'input', type=_ut.check_valid_path,
+        'input', type=ut.check_valid_path,
         help='Path to single image file or path to folder with multiple '
              'images.')
     parser_extraction.add_argument(
-        'fibers', type=_ut.check_valid_directory,
+        'fibers', type=ut.check_valid_directory,
         help='Path to directory containing fiber files.')
     parser_extraction.add_argument(
-        '--radius', type=_ut.check_positive_int, default=5,
+        '--radius', type=ut.check_positive_int, default=5,
         help='Radius of the fibers to extract from images (default is 5).')
     parser_extraction.add_argument(
         '--group-fibers', action='store_true',
         help='Group the extracted fibers by image.')
     parser_extraction.add_argument(
-        '--output', type=_ut.check_valid_path, default=None,
+        '--output', type=ut.check_valid_path, default=None,
         help='Output path for saving profiles and extracted fibers (default '
              'is None).')
 
@@ -632,7 +699,7 @@ if __name__ == '__main__':
     parser_simulation.set_defaults(func=simulate_command)
 
     parser_simulation.add_argument(
-        '--output', type=_ut.check_valid_path, default=None,
+        '--output', type=ut.check_valid_path, default=None,
         help='Output path for saving simulation (default: None).')
 
     fibers_group = parser_simulation.add_argument_group('Fibers')
@@ -691,6 +758,36 @@ if __name__ == '__main__':
         help='Z-index of fiber objects (default: [-1, 1]).')
     image_group.add_argument(
         '--snr', type=float, default=7, help='SNR in decibels (default: 7).')
+
+    # comparison command
+    parser_comparison = subparsers.add_parser(
+        'compare',
+        help='compare fibers and analysis results',
+        description='Useful to compare expected and actual results of both '
+                    'detection and analysis steps.')
+    comparison_subparsers = parser_comparison.add_subparsers(
+        title='available sub-commands', dest='sub-command')
+    comparison_subparsers.required = True
+
+    # comparison-fibers sub-command
+    comparison_fibers = comparison_subparsers.add_parser(
+        'fibers',
+        help='compare fibers',
+        description='Compare expected and actual results of detection.')
+    comparison_fibers.set_defaults(func=compare_fibers_command)
+
+    comparison_fibers.add_argument(
+        'expected', type=ut.check_valid_path,
+        help='Expected input to be compared; either a single file (one fiber) '
+             'or a directory (multiple fibers).')
+    comparison_fibers.add_argument(
+        'actual', type=ut.check_valid_path,
+        help='Actual input to be compared; either a single file (one fiber) '
+             'or a directory (multiple fibers).')
+    comparison_fibers.add_argument(
+        '--output', type=ut.check_valid_output_file, default=None,
+        help='Path of output file in which the comparison results will be '
+             'writen.')
 
     # parsing
     args = parser.parse_args()
