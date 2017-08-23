@@ -5,10 +5,14 @@ import argparse
 import os
 import shutil
 import numpy as np
+from scipy.interpolate import splprep, splev
 from skimage import io
 from matplotlib import pyplot as plt
 import zipfile
+
 from debtcollector import removals
+import warnings
+warnings.simplefilter('always')
 
 
 def static_vars(**kwargs):
@@ -714,12 +718,15 @@ def read_inputs(input_path, mask_path, ext):
 
 
 def create_figures_from_fibers_images(names, extracted_fibers,
-                                      radius, group_fibers=False):
+                                      radius, group_fibers=False, indices=None):
+    if indices is None:
+        indices = range(1, len(extracted_fibers) + 1)
+
     figures = []
 
     if group_fibers:
-        for image_extracted_fiber, name \
-                in zip(extracted_fibers, names):
+        for image_extracted_fiber, name, fiber_indices \
+                in zip(extracted_fibers, names, indices):
             height = 2 * radius + 1
             space = 5
             offset = 15
@@ -745,18 +752,20 @@ def create_figures_from_fibers_images(names, extracted_fibers,
             fig, ax = plt.subplots(1, 1)
             ax.imshow(group_image, aspect='equal')
 
-            for number in range(len(image_extracted_fiber)):
+            # for number in range(len(image_extracted_fiber)):
+            for number, index in enumerate(fiber_indices):
                 ax.text(0, number * (height + space) + height / 2 + 2,
-                        '#{}'.format(number + 1), color='white')
+                        '#{}'.format(index), color='white')
 
             ax.set_title(name)
             ax.axis('off')
 
             figures.append(('{}_fibers.png'.format(name), fig))
     else:
-        for image_extracted_fiber, name \
-                in zip(extracted_fibers, names):
-            for number, extracted_fiber in enumerate(image_extracted_fiber):
+        for image_extracted_fiber, name, fiber_indices \
+                in zip(extracted_fibers, names, indices):
+            for number, extracted_fiber in zip(fiber_indices,
+                                               image_extracted_fiber):
                 display_image = np.zeros(extracted_fiber.shape[1:] + (3,),
                                          dtype='uint8')
                 display_image[:, :, 0] = 255 * \
@@ -784,7 +793,7 @@ def create_figures_from_fibers_images(names, extracted_fibers,
     return figures
 
 
-def write_profiles(path, prefix, profiles):
+def write_profiles(path, prefix, profiles, indices=None):
     """Write the given set of profiles to the specified path with given prefix.
 
     Parameters
@@ -795,11 +804,64 @@ def write_profiles(path, prefix, profiles):
     prefix : str
         Prefix of the output files.
 
-    profiles : list of numpy.ndarray
+    profiles : List[numpy.ndarray]
         Set of profiles to write.
+
+    indices : None | List[int]
+        List of index matching the fibers, or auto-generated index list if
+        None is passed (default).
     """
-    for number, profile in enumerate(profiles):
+    if indices is None:
+        indices = range(1, len(profiles) + 1)
+
+    for index, profile in zip(indices, profiles):
         np.savetxt(os.path.join(
-            path, '{}_fiber-{}.csv'.format(prefix, number + 1)),
+            path, '{}_fiber-{}.csv'.format(prefix, index)),
             profile,
             delimiter=',', header='X, Y1, Y2', comments='')
+
+
+def resample_fiber(fiber, rate=2.0):
+    """
+    Resample a fiber at given rate.
+
+    This method is useful for point-wise comparison of fibers.
+
+    Parameters
+    ----------
+    fiber : numpy.ndarray
+        Input fiber points coordinates to resample.
+
+    rate : 0 < float
+        Resampling rate.
+
+    Returns
+    -------
+    numpy.ndarray
+        Resampled fiber points coordinates.
+    """
+    length = np.sqrt(np.power(np.diff(fiber, axis=1), 2).sum(axis=0)).sum()
+    # noinspection PyTupleAssignmentBalance
+    coeffs, _ = splprep(fiber, u=np.linspace(0, 1, fiber.shape[1]), s=0, k=1)
+    return np.vstack(
+        splev(np.linspace(0, 1, np.round(length / rate).astype(int)), coeffs))
+
+
+def resample_fibers(fibers, rate=2.0):
+    """
+    Resample fibers at given rate.
+
+    Parameters
+    ----------
+    fibers : List[numpy.ndarray]
+        Input fibers points coordinates to resample.
+
+    rate : 0 < float
+        Resampling rate.
+
+    Returns
+    -------
+    List[numpy.ndarray]
+        Resampled fibers points coordinates.
+    """
+    return [resample_fiber(fiber, rate) for fiber in fibers]

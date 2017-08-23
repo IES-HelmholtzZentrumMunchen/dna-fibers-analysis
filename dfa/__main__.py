@@ -4,6 +4,7 @@ This can be used to actual run the analysis (partially of fully).
 """
 
 import numpy as np
+
 from dfa import utilities as ut
 
 
@@ -24,6 +25,14 @@ def pipeline_command(args):
     from dfa import extraction as ex
     from dfa import modeling as mod
     from dfa import analysis as ana
+
+    def _create_if_not_existing(output, name):
+        save_path = os.path.join(output, name)
+
+        if not os.path.exists(save_path):
+            os.mkdir(save_path)
+
+        return save_path
 
     # non-user parameters
     alpha = 0.5
@@ -84,7 +93,7 @@ def pipeline_command(args):
 
             if args.save_all or args.save_detected_fibers:
                 ut.write_points_to_txt(
-                    args.output,
+                    _create_if_not_existing(args.output, 'fibers'),
                     os.path.basename(name),
                     fibers)
 
@@ -97,14 +106,18 @@ def pipeline_command(args):
                 for extracted_fiber in extracted_fibers]
 
             if args.save_all or args.save_extracted_profiles:
-                ut.write_profiles(args.output, name, extracted_profiles)
+                ut.write_profiles(_create_if_not_existing(args.output,
+                                                          'profiles'),
+                                  name, extracted_profiles)
 
             if args.save_all or args.save_extracted_fibers:
                 figures = ut.create_figures_from_fibers_images(
                     [name], [extracted_fibers], radius, group_fibers=False)
 
                 for filename, fig in figures:
-                    fig.savefig(os.path.join(args.output, filename))
+                    fig.savefig(os.path.join(
+                        _create_if_not_existing(args.output, 'profiles'),
+                        filename))
                     plt.close(fig)
 
             if args.save_all or args.save_grouped_fibers:
@@ -112,7 +125,9 @@ def pipeline_command(args):
                     [name], [extracted_fibers], radius, group_fibers=True)
 
                 for filename, fig in figures:
-                    fig.savefig(os.path.join(args.output, filename))
+                    fig.savefig(os.path.join(
+                        _create_if_not_existing(args.output, 'profiles'),
+                        filename))
                     plt.close(fig)
 
             # analysis
@@ -129,12 +144,14 @@ def pipeline_command(args):
             bar.update(num + 1)
 
     detailed_analysis.to_csv(
-        os.path.join(args.output, args.output_name + '.csv'))
+        os.path.join(_create_if_not_existing(args.output, 'analysis'),
+                     args.output_name + '.csv'))
 
     if args.save_all or args.save_model:
         model.update_model()
         model.save(
-            os.path.join(args.output, args.output_name + '_model.txt'))
+            os.path.join(_create_if_not_existing(args.output, 'analysis'),
+                         args.output_name + '_model.txt'))
 
 
 def detection_command(args):
@@ -202,6 +219,7 @@ def extraction_command(args):
     # read all together
     input_images = []
     input_fibers = []
+    input_fibers_indices = []
     input_names = []
 
     for filename in image_files:
@@ -210,8 +228,10 @@ def extraction_command(args):
         if ext == '.tif':
             input_images.append(
                 io.imread(os.path.join(image_path, filename)))
-            input_fibers.append(
-                ut.read_points_from_txt(args.fibers, basename))
+            current_fibers = list(zip(*ut.read_fibers(args.fibers,
+                                                      image_name=basename)))
+            input_fibers.append(ut.resample_fibers(list(current_fibers[0])))
+            input_fibers_indices.append(list(current_fibers[2]))
             input_names.append(basename)
 
     # process
@@ -220,17 +240,19 @@ def extraction_command(args):
 
     # output
     figures = ut.create_figures_from_fibers_images(
-        input_names, extracted_fibers, args.radius, args.group_fibers)
+        input_names, extracted_fibers, args.radius, args.group_fibers,
+        input_fibers_indices)
 
     if args.output is None:
         plt.show()
     else:
         # export to csv the profiles
-        for image_extracted_fiber, input_name \
-                in zip(extracted_fibers, input_names):
+        for image_extracted_fiber, input_name, input_fibers_index \
+                in zip(extracted_fibers, input_names, input_fibers_indices):
             profiles = [ex.extract_profiles_from_fiber(extracted_fiber)
-                        for extracted_fiber in extracted_fibers]
-            ut.write_profiles(args.output, input_name, profiles)
+                        for extracted_fiber in image_extracted_fiber]
+            ut.write_profiles(args.output, input_name, profiles,
+                              input_fibers_index)
 
         # export to png the grouped fibers or the single fibers + profiles
         if figures is not None:
@@ -424,8 +446,8 @@ def compare_fibers_command(args):
     actual_fibers = np.array(ut.read_fibers(args.actual)).T
 
     # to be comparable, we resample the fiber path to a sample every two pixels
-    expected_fibers[0] = cmp.resample_fibers(expected_fibers[0], rate=2)
-    actual_fibers[0] = cmp.resample_fibers(actual_fibers[0], rate=2)
+    expected_fibers[0] = ut.resample_fibers(expected_fibers[0], rate=2)
+    actual_fibers[0] = ut.resample_fibers(actual_fibers[0], rate=2)
 
     # only fibers with matching image name will be compared;
     # the unique images names are visited sequentially
@@ -483,9 +505,15 @@ def comparison_analyses_command(args):
     expected_analysis = pd.read_csv(args.expected, index_col=args.scheme)
     actual_analysis = pd.read_csv(args.actual, index_col=args.scheme)
 
+    # match_scheme = args.scheme.copy()
+    # match_scheme.insert(-1, 'expected fiber')
+    # match_scheme[-1] = 'actual fiber'
+    # fibers_match = pd.read_csv(args.match, index_col=match_scheme)
+
     # FIXME different fiber indexing in expected and actual is not handled.
     pct_match_fibers, match_fibers_expected, match_fibers_actual = \
-        cmp.match_index_pairs(expected_analysis, actual_analysis)
+        cmp.match_index_pairs(expected_analysis, actual_analysis,
+                              expected_analysis.index)
 
     pct_match_patterns, match_patterns_expected, match_patterns_actual = \
         cmp.match_column(match_fibers_expected, match_fibers_actual,
@@ -843,13 +871,17 @@ if __name__ == '__main__':
     comparison_analyses.set_defaults(func=comparison_analyses_command)
 
     comparison_analyses.add_argument(
-        'expected', type=ut.check_valid_path,
+        'expected', type=ut.check_valid_file,
         help='Expected input to be compared; either a single file (one fiber),'
              'a zip file (multiple fibers) or a directory (multiple fibers).')
     comparison_analyses.add_argument(
-        'actual', type=ut.check_valid_path,
+        'actual', type=ut.check_valid_file,
         help='Actual input to be compared; either a single file (one fiber),'
              'a zip file (multiple fibers) or a directory (multiple fibers).')
+    comparison_analyses.add_argument(
+        'match', type=ut.check_valid_file,
+        help='Fibers match, generated by the compare fibers command. It must '
+             'contain at least expected and actual fiber columns.')
     comparison_analyses.add_argument(
         '--output', type=ut.check_valid_output_file, default=None,
         help='Path of output file in which the comparison results will be '
