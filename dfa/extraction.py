@@ -24,7 +24,7 @@ def _compute_normals(fiber):
 
     Returns
     -------
-    tuple of numpy.ndarray
+    (numpy.ndarray, numpy.ndarray)
         The coordinates along fiber path with their corresponding normals.
     """
     points = []
@@ -41,26 +41,28 @@ def _compute_normals(fiber):
         x4, y4 = fiber[:, i + 1]
         x5, y5 = fiber[:, i + 2]
 
-        slope = (x1 * y2 - 4 * x1 * y1 + x2 * y1 + x1 * y3 - 4 * x2 * y2 +
-                 x3 * y1 + x1 * y4 + x2 * y3 + x3 * y2 + x4 * y1 + x1 *
-                 y5 + x2 * y4 - 4 * x3 * y3 + x4 * y2 + x5 * y1 + x2 * y5 +
-                 x3 * y4 + x4 * y3 + x5 * y2 + x3 * y5 - 4 * x4 * y4 + x5 *
-                 y3 + x4 * y5 + x5 * y4 - 4 * x5 * y5) / \
-                (2 * (- 2 * x1 * x1 + x1 * x2 + x1 * x3 + x1 * x4 + x1 *
-                      x5 - 2 * x2 * x2 + x2 * x3 + x2 * x4 + x2 * x5 - 2 *
-                      x3 * x3 + x3 * x4 + x3 * x5 - 2 * x4 * x4 + x4 * x5 -
-                      2 * x5 * x5))
+        slope_num = (x1 * y2 - 4 * x1 * y1 + x2 * y1 + x1 * y3 - 4 * x2 * y2 +
+                     x3 * y1 + x1 * y4 + x2 * y3 + x3 * y2 + x4 * y1 + x1 *
+                     y5 + x2 * y4 - 4 * x3 * y3 + x4 * y2 + x5 * y1 + x2 * y5 +
+                     x3 * y4 + x4 * y3 + x5 * y2 + x3 * y5 - 4 * x4 * y4 + x5 *
+                     y3 + x4 * y5 + x5 * y4 - 4 * x5 * y5)
+        slope_den = (2 * (- 2 * x1 * x1 + x1 * x2 + x1 * x3 + x1 * x4 + x1 *
+                          x5 - 2 * x2 * x2 + x2 * x3 + x2 * x4 + x2 * x5 - 2 *
+                          x3 * x3 + x3 * x4 + x3 * x5 - 2 * x4 * x4 + x4 * x5 -
+                          2 * x5 * x5))
 
-        # in NaN case, it means horizontal normal (vertical tangent),
-        # so initialize to(1, 0)
-        normal = [1, 0]
+        # if slope denominator is null, it means horizontal normal
+        # (vertical tangent), so set normal to (1, 0)
+        if slope_den != 0:
+            slope = slope_num / slope_den
 
-        if not np.isnan(slope):
             # parametric formula that makes unit vector
             x = np.sqrt(1 / (1 + slope * slope))
 
             # in 2D, orthogonal vector is unique, so closed - form solution
             normal = [-slope * x, x]
+        else:
+            normal = [1, 0]
 
         # Fix heterogeneous orientation of normal vector in order to get
         # consistent results (e.g. image unfolding).
@@ -90,15 +92,15 @@ def unfold_fibers(image, fibers, radius=4):
     image : numpy.ndarray
         Input image.
 
-    fibers : list of numpy.ndarray
+    fibers : List[numpy.ndarray]
         Input fibers.
 
-    radius : strictly positive int
+    radius : 0 < int
         Radius of the band along fiber axis to extract (default is 4).
 
     Returns
     -------
-    list of numpy.ndarray
+    List[numpy.ndarray]
         The unfolded fibers as images.
 
     See Also
@@ -134,18 +136,18 @@ def extract_fibers(images, fibers, radius=4):
 
     Parameters
     ----------
-    images : list of numpy.ndarray
+    images : List[numpy.ndarray]
         Input images.
 
-    fibers : list of list of numpy.ndarray
+    fibers : List[List[numpy.ndarray]]
         Input fibers.
 
-    radius : strictly positive int
+    radius : 0 < int
         Radius of the band along fiber axis to extract (default is 4).
 
     Returns
     -------
-    list of list of numpy.ndarray
+    List[List[numpy.ndarray]]
         The extracted fibers for each image.
 
     See Also
