@@ -4,7 +4,6 @@ Compare module of the DNA fibers analysis package.
 Use this module to compare and quantify the quality of the pipeline.
 """
 import numpy as np
-from scipy.interpolate import splprep, splev
 
 
 def coarse_fibers_spatial_distance(f1, f2):
@@ -173,59 +172,14 @@ def fibers_spatial_distances(f1, f2):
             max(np.max(closest_distances_f1), np.max(closest_distances_f2)))
 
 
-def resample_fiber(fiber, rate=2.0):
-    """
-    Resample a fiber at given rate.
-
-    This method is useful for point-wise comparison of fibers.
-
-    Parameters
-    ----------
-    fiber : numpy.ndarray
-        Input fiber points coordinates to resample.
-
-    rate : 0 < float
-        Resampling rate.
-
-    Returns
-    -------
-    numpy.ndarray
-        Resampled fiber points coordinates.
-    """
-    length = np.sqrt(np.power(np.diff(fiber, axis=1), 2).sum(axis=0)).sum()
-    # noinspection PyTupleAssignmentBalance
-    coeffs, _ = splprep(fiber, u=np.linspace(0, 1, fiber.shape[1]), s=0, k=1)
-    return np.vstack(
-        splev(np.linspace(0, 1, np.round(length / rate).astype(int)), coeffs))
-
-
-def resample_fibers(fibers, rate=2.0):
-    """
-    Resample fibers at given rate.
-
-    Parameters
-    ----------
-    fibers : List[numpy.ndarray]
-        Input fibers points coordinates to resample.
-
-    rate : 0 < float
-        Resampling rate.
-
-    Returns
-    -------
-    List[numpy.ndarray]
-        Resampled fibers points coordinates.
-    """
-    return [resample_fiber(fiber, rate) for fiber in fibers]
-
-
-def match_index_pairs(d1, d2):
+def match_index_pairs(d1, d2, matches, columns=('expected fiber',
+                                                'actual fiber')):
     """
     Match pairs of index from two given data frames.
 
-    Internally, pandas methods are used to match unique index in both data
-    frames. Here this method is used as a convenience method to match fibers
-    in both data frames.
+    The fibers in data frames are matched using a list of fibers match, that
+    can be the index of the output of fiber matching method. Here this method
+    is used as a convenience method to match fibers in both data frames.
 
     The percentage of match is computed as the ratio of the number of identical
     index in both data frames over the maximal number of fibers in one data
@@ -239,23 +193,37 @@ def match_index_pairs(d1, d2):
     d2 : pandas.core.frame.DataFrame
         Second data frame.
 
+    matches : pandas.indexes.multi.MultiIndex
+        Index giving the matches between data frames. It must contain the image
+        identifier scheme (by default 'experiment' and 'image') and columns
+        'expected fiber' and 'actual fiber' giving the fiber id.
+
+    columns : List[str] or (str, str)
+        Names of the columns corresponding respectively to d1 and d2 in index
+        fibers_match.
+
     Returns
     -------
     (float, pandas.core.frame.DataFrame, pandas.core.frame.DataFrame)
         Percentage of match and views of input data frames where index are
         pair-wisely matching (in the same order as input arguments).
     """
-    index1 = d1.index.unique()
-    index2 = d2.index.unique()
-    index = index1.intersection(index2)
+    index1 = matches.droplevel(columns[1])
+    index1.names = index1.names[:-1] + ['fiber']
 
-    return (index.size / max(index1.size, index2.size),
-            d1.ix[index], d2.ix[index])
+    index2 = matches.droplevel(columns[0])
+    index2.names = index2.names[:-1] + ['fiber']
+
+    return matches.size / max(d1.index.unique().size,
+                              d2.index.unique().size), \
+        d1.ix[index1], d2.ix[index2]
 
 
 def match_column(d1, d2, column='pattern'):
     """
     Match column values from two given indexed data frames.
+
+    Data frames are assumed to have index that are pairwise matching.
 
     Internally, pandas methods are used to match columns. The index are
     considered as columns to match in the process. It is used as convenience
@@ -278,19 +246,23 @@ def match_column(d1, d2, column='pattern'):
         Percentage of match and views of input data frames where columns (and
         index) are pair-wisely matching (in the same order as input arguments).
     """
-    single_column1 = d1.reset_index()[
-        np.bitwise_not(
-            d1.reset_index().duplicated(d1.index.names + [column]))] \
-        .set_index(d1.index.names)[column]
+    d1_full = d1.reset_index()
+    single_column1 = d1_full[
+        np.bitwise_not(d1_full.duplicated(d1.index.names + [column]))] \
+        .set_index(d1.index.names)[column].reset_index()
 
-    single_column2 = d2.reset_index()[
-        np.bitwise_not(
-            d2.reset_index().duplicated(d2.index.names + [column]))] \
-        .set_index(d2.index.names)[column]
+    d2_full = d2.reset_index()
+    single_column2 = d2_full[
+        np.bitwise_not(d2_full.duplicated(d2.index.names + [column]))] \
+        .set_index(d2.index.names)[column].reset_index()
 
-    select = np.equal(single_column1, single_column2)
+    select = np.array(single_column1['pattern'].tolist()) == \
+        np.array(single_column2['pattern'].tolist())
 
-    return np.sum(select) / single_column1.size, d1[select], d2[select]
+    index1 = single_column1.set_index(d1.index.names)[select].index
+    index2 = single_column2.set_index(d2.index.names)[select].index
+
+    return np.sum(select) / len(select), d1.ix[index1], d2.ix[index2]
 
 
 def difference_in_column(d1, d2, column='length'):
@@ -317,7 +289,9 @@ def difference_in_column(d1, d2, column='length'):
     pandas.core.series.Series
         Difference between the two given data frames (d1-d2).
     """
-    differences = d1[column] - d2[column]
+    differences = d1.reset_index(drop=True)[column] - \
+        d2.reset_index(drop=True)[column]
+
     differences.name = 'differences of ' + column
 
     return differences
