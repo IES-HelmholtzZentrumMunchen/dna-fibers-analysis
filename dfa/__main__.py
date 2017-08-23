@@ -314,13 +314,13 @@ def analysis_command(args):
                 for path in paths]
 
     # Get data origin information (keys)
-    if args.keys_in_file is None:
-        keys = [tuple(path[:-4].split('/')[-len(args.scheme):])
-                for path in paths]
-    else:
-        keys = [tuple(path.split('/')[-1][:-4]
-                      .split(args.keys_in_file)[-len(args.scheme):])
-                for path in paths]
+    keys = []
+
+    for path in paths:
+        image, fiber_index = tuple(
+            os.path.basename(os.path.splitext(path)[0]).split(
+                ut.fiber_indicator))
+        keys.append(tuple(image.split('-') + [fiber_index]))
 
     # Quantify
     if args.model is None:
@@ -741,7 +741,7 @@ if __name__ == '__main__':
         help='Contrast regularization between intensities of branches of '
              'opposite channels (default is 0, i.e. deactivated).')
     group_model.add_argument(
-        '--output_model', type=str, default=None,
+        '--output-model', type=str, default=None,
         help='Output path for saving the model (default is None).')
 
     group_data = parser_analysis.add_argument_group('Quantification')
@@ -750,11 +750,6 @@ if __name__ == '__main__':
         default=['experiment', 'image', 'fiber'],
         help='Names of the keys used as indexing of the results (default is '
              'experiment, image, fiber; there should be at least one name).')
-    group_data.add_argument(
-        '--keys_in_file', type=str, default=None,
-        help='If set, the keys are searched in the filenames (separator must '
-             'be provided); otherwise the keys are searched in the last path '
-             'elements (folders and filenames separated by /).')
     group_data.add_argument(
         '--output', type=str, default=None,
         help='Output path for saving data analysis (default is None).')
