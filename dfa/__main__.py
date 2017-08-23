@@ -99,7 +99,7 @@ def pipeline_command(args):
 
             # extraction
             extracted_fibers = ex.unfold_fibers(
-                image, fibers, radius=radius)
+                image, ut.resample_fibers(fibers), radius=radius)
 
             extracted_profiles = [
                 ex.extract_profiles_from_fiber(extracted_fiber)

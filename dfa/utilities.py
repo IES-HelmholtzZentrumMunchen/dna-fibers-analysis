@@ -720,7 +720,9 @@ def read_inputs(input_path, mask_path, ext):
 def create_figures_from_fibers_images(names, extracted_fibers,
                                       radius, group_fibers=False, indices=None):
     if indices is None:
-        indices = range(1, len(extracted_fibers) + 1)
+        indices = []
+        for image_extracted_fiber in extracted_fibers:
+            indices.append(range(1, len(image_extracted_fiber) + 1))
 
     figures = []
 
