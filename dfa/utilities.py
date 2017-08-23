@@ -784,11 +784,9 @@ def create_figures_from_fibers_images(names, extracted_fibers,
                 axes[1].set_title('Profiles')
                 axes[0].set_xlim(0, extracted_fiber.shape[2])
 
-                fig.suptitle('{} - fiber #{}'.format(
-                    name, number + 1))
+                fig.suptitle('{} - fiber #{}'.format(name, number))
 
-                figures.append(('{}_fiber-{}.png'.format(name,
-                                                         number + 1), fig))
+                figures.append(('{}_fiber-{}.png'.format(name, number), fig))
 
     return figures
 
