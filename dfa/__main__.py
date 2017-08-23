@@ -411,9 +411,12 @@ def compare_fibers_command(args):
 
     # create and initialize the output data frame
     labels = ['mean dist.', 'median dist.', 'Hausdorff dist.']
-    index = pd.MultiIndex(levels=[[], [], []],
-                          labels=[[], [], []],
-                          names=['image', 'expected fiber', 'actual fiber'])
+    scheme = args.scheme
+    scheme.insert(-1, 'expected fiber')
+    scheme[-1] = 'actual fiber'
+    index = pd.MultiIndex(levels=[[] for _ in range(len(scheme))],
+                          labels=[[] for _ in range(len(scheme))],
+                          names=scheme)
     output = pd.DataFrame(columns=labels, index=index)
 
     # read the fibers in batch
@@ -430,6 +433,8 @@ def compare_fibers_command(args):
         np.concatenate((expected_fibers[1], actual_fibers[1])))
 
     for image_name in unique_image_names:
+        image_info = image_name.split('-', maxsplit=len(scheme)-3)
+
         expected_with_name = _indices_with_name(expected_fibers[1], image_name)
         actual_with_name = _indices_with_name(actual_fibers[1], image_name)
 
@@ -451,7 +456,7 @@ def compare_fibers_command(args):
                     {labels[0]: mean_dist,
                      labels[1]: median_dist,
                      labels[2]: hausdorff_dist},
-                    name=(image_name,
+                    name=(*image_info,
                           expected_fibers[2][expected_with_name][
                               expected_fiber_index],
                           actual_fibers[2][actual_with_name][
@@ -823,6 +828,11 @@ if __name__ == '__main__':
         '--output', type=ut.check_valid_output_file, default=None,
         help='Path of output file in which the comparison results will be '
              'writen.')
+    comparison_fibers.add_argument(
+        '--scheme', type=str, nargs='+',
+        default=['experiment', 'image', 'fiber'],
+        help='Names of the keys used as indexing of the results (default is '
+             'experiment, image, fiber; there should be at least one name).')
 
     # comparison-analysis sub-command
     comparison_analyses = comparison_subparsers.add_parser(
