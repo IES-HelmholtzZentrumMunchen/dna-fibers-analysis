@@ -12,7 +12,7 @@ import zipfile
 
 from debtcollector import removals
 import warnings
-warnings.simplefilter('always')
+warnings.simplefilter('always', category=DeprecationWarning)
 
 
 def static_vars(**kwargs):
