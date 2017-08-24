@@ -98,8 +98,11 @@ def pipeline_command(args):
                     fibers)
 
             # extraction
+            # the coordinates of the fibers are sorted such that the profiles
+            # are extracted in the same orientation for any input.
             extracted_fibers = ex.unfold_fibers(
-                image, ut.resample_fibers(fibers), radius=radius)
+                image, [fiber[:, np.lexsort((*fiber,))]
+                        for fiber in ut.resample_fibers(fibers)], radius=radius)
 
             extracted_profiles = [
                 ex.extract_profiles_from_fiber(extracted_fiber)
@@ -230,7 +233,13 @@ def extraction_command(args):
                 io.imread(os.path.join(image_path, filename)))
             current_fibers = list(zip(*ut.read_fibers(args.fibers,
                                                       image_name=basename)))
-            input_fibers.append(ut.resample_fibers(list(current_fibers[0])))
+
+            # the coordinates of the fibers are sorted such that the profiles
+            # are extracted in the same orientation for any input.
+            input_fibers.append(
+                [fiber[:, np.lexsort((*fiber,))]
+                 for fiber in ut.resample_fibers(list(current_fibers[0]))])
+
             input_fibers_indices.append(list(current_fibers[2]))
             input_names.append(basename)
 
@@ -464,7 +473,7 @@ def compare_fibers_command(args):
             expected_fibers[0][expected_with_name],
             actual_fibers[0][actual_with_name])
 
-        # each pair of matching fibers are is compared and distances
+        # each pair of matching fibers is compared and distances
         # are appended to the output data frame
         for expected_fiber_index, actual_fiber_index in matched_fibers:
             mean_dist, median_dist, hausdorff_dist = \
