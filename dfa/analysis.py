@@ -400,7 +400,8 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
 
 def fork_speed(data, channel='CIdU', pattern_name='ongoing fork',
                kb_per_microns=2.5):
-    """Calculate fork speeds from a detailed analysis.
+    """
+    Calculate fork speeds from a detailed analysis.
 
     Parameters
     ----------
@@ -413,13 +414,13 @@ def fork_speed(data, channel='CIdU', pattern_name='ongoing fork',
     pattern_name : str
         Name of the pattern to consider (default is 'ongoing fork').
 
-    kb_per_microns : strictly positive float
+    kb_per_microns : 0 < float
         Number of kb per microns along the DNA fibers.
 
     Returns
     -------
-    list of float
-        The calculated fork speeds in kb.
+    pandas.Series
+        The calculated fork speeds in kb for each selected fiber.
 
     Raises
     ------
@@ -429,6 +430,7 @@ def fork_speed(data, channel='CIdU', pattern_name='ongoing fork',
     See Also
     --------
     fork_rate : Compute the fork rate of the analyzed fibers.
+    get_patterns : Get the patterns per fiber.
     """
     if type(data) != pd.DataFrame:
         raise TypeError('The data type must be pandas.DataFrame!\n'
@@ -467,14 +469,18 @@ def fork_speed(data, channel='CIdU', pattern_name='ongoing fork',
     subset = data[data['pattern'] == pattern_name]
 
     if not subset.empty:
-        return data[data['channel'] == channel].ix[
-            subset.index.unique(), 'length'].tolist()
+        s = data[data['channel'] == channel].ix[
+            subset.index.unique()]['length']
     else:
-        return []
+        s = pd.Series()
+
+    s.name = 'Fork speed'
+    return s
 
 
 def fork_rate(data, channel='CIdU', pattern_name='1st label origin'):
-    """Calculate fork rates from a detailed analysis.
+    """
+    Calculate fork rates from a detailed analysis.
 
     Parameters
     ----------
@@ -489,7 +495,7 @@ def fork_rate(data, channel='CIdU', pattern_name='1st label origin'):
 
     Returns
     -------
-    list of float
+    pandas.Series
         The calculated fork rates.
 
     Raises
@@ -500,6 +506,7 @@ def fork_rate(data, channel='CIdU', pattern_name='1st label origin'):
     See Also
     --------
     fork_speed : Compute the fork speed of the analyzed fibers.
+    get_patterns : Get the patterns per fiber.
     """
     if type(data) != pd.DataFrame:
         raise TypeError('The data type must be pandas.DataFrame!\n'
@@ -531,7 +538,35 @@ def fork_rate(data, channel='CIdU', pattern_name='1st label origin'):
 
     if not subset.empty:
         for index in subset.index.unique():
-            values = data[data['channel'] == channel].ix[index, 'length']
+            values = data[data['channel'] == channel].ix[index]['length']
             fork_rates.append(values.max() / values.min())
 
-    return fork_rates
+    return pd.Series(data=fork_rates, index=subset.index.unique(),
+                     name='Fork rate')
+
+
+def get_patterns(data):
+    """
+    Output patterns from detailed analysis (useful for pattern frequency
+    analysis).
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Detailed analysis of DNA fibers.
+
+    Returns
+    -------
+    pandas.Series
+        The patterns for each fiber.
+
+    See Also
+    --------
+    fork_speed : Compute the fork speed of the analyzed fibers.
+    fork_rate : Compute the fork rate of the analyzed fibers.
+    """
+    patterns = data.reset_index()[data.index.names + ['pattern']]\
+        .drop_duplicates().set_index(data.index.names)['pattern']
+    patterns.name = 'Patterns'
+
+    return patterns
