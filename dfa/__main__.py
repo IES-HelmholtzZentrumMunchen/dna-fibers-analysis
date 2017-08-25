@@ -359,6 +359,35 @@ def analysis_command(args):
         model.save(args.output_model)
 
 
+def quantification_command(args):
+    """
+    Run the detailed analysis quantification.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Input namespace containing command line arguments.
+    """
+    from os import path as op
+    import pandas as pd
+    from dfa import analysis as ana
+
+    analysis = pd.read_csv(args.input, index_col=args.scheme)
+
+    fork_rate = ana.fork_rate(analysis)
+    fork_speed = ana.fork_speed(analysis)
+    patterns = ana.get_patterns(analysis)
+
+    if args.output is None:
+        print(fork_rate)
+        print(fork_speed)
+        print(patterns)
+    else:
+        fork_rate.to_csv(op.join(args.output, 'fork_rate.csv'), header=True)
+        fork_speed.to_csv(op.join(args.output, 'fork_speed.csv'), header=True)
+        patterns.to_csv(op.join(args.output, 'patterns.csv'), header=True)
+
+
 def simulate_command(args):
     """Run the fibers image simulation process.
 
@@ -773,6 +802,24 @@ if __name__ == '__main__':
     group_data.add_argument(
         '--output', type=str, default=None,
         help='Output path for saving data analysis (default is None).')
+
+    # quantification command
+    parser_quantification = subparsers.add_parser(
+        'quantify',
+        help='quantify a detailed analysis',
+        description='Export relevant quantification from detailed analysis.')
+    parser_quantification.set_defaults(func=quantification_command)
+    parser_quantification.add_argument(
+        'input', type=ut.check_valid_file,
+        help='Input detailed analysis to quantify')
+    parser_quantification.add_argument(
+        '--output', type=ut.check_valid_path, default=None,
+        help='Path where output will be written.')
+    parser_quantification.add_argument(
+        '--scheme', type=str, nargs='+',
+        default=['experiment', 'image', 'fiber'],
+        help='Names of the keys used as indexing of the results (default is '
+             'experiment, image, fiber; there should be at least one name).')
 
     # simulation command
     parser_simulation = subparsers.add_parser(

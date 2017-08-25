@@ -541,8 +541,11 @@ def fork_rate(data, channel='CIdU', pattern_name='1st label origin'):
             values = data[data['channel'] == channel].ix[index]['length']
             fork_rates.append(values.max() / values.min())
 
-    return pd.Series(data=fork_rates, index=subset.index.unique(),
-                     name='Fork rate')
+    fork_rates = pd.Series(data=fork_rates, index=subset.index.unique(),
+                           name='Fork rate')
+    fork_rates.index.names = data.index.names
+
+    return fork_rates
 
 
 def get_patterns(data):
