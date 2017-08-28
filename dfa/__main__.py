@@ -191,11 +191,10 @@ def detection_command(args):
             from matplotlib import pyplot as plt
             plt.imshow(fiber_image, cmap='gray', aspect='equal')
             for c in coordinates:
-                plt.plot(*c, '-r')
+                plt.plot(*c, '-c')
             plt.show()
         else:
-            ut.write_points_to_txt(
-                args.output, name, coordinates)
+            ut.write_fibers(coordinates, args.output, name)
 
 
 def extraction_command(args):
