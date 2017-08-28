@@ -165,6 +165,8 @@ def detection_command(args):
     args : argparse.Namespace
         Input namespace containing command line arguments.
     """
+    from os import path as op
+    from matplotlib import pyplot as plt
     from dfa import detection as det
 
     images, names, masks = ut.read_inputs(args.input, args.mask, '.tif')
@@ -187,14 +189,22 @@ def detection_command(args):
             min_length=args.fibers_minimal_length,
             extent_mask=mask)
 
+        plt.imshow(fiber_image, cmap='gray', aspect='equal')
+        indices = []
+        for k, c in enumerate(coordinates):
+            plt.plot(*c, '-c')
+            plt.text(*c.mean(axis=1), str(k + 1), color='c')
+            indices.append(k + 1)
+        plt.title('Fibers of {}'.format(name))
+        plt.xticks([])
+        plt.yticks([])
+        plt.tight_layout()
+
         if args.output is None:
-            from matplotlib import pyplot as plt
-            plt.imshow(fiber_image, cmap='gray', aspect='equal')
-            for c in coordinates:
-                plt.plot(*c, '-c')
             plt.show()
         else:
-            ut.write_fibers(coordinates, args.output, name)
+            plt.savefig(op.join(args.output, '{}_fibers.pdf'.format(name)))
+            ut.write_fibers(coordinates, args.output, name, indices=indices)
 
 
 def extraction_command(args):
