@@ -598,6 +598,7 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(
         title='available commands', dest='command')
     subparsers.required = True
+    parser.add_argument('--batch', action='store_true')
 
     # pipeline command
     parser_pipeline = subparsers.add_parser(
@@ -961,6 +962,11 @@ if __name__ == '__main__':
         help='Names of the keys used as indexing of the results (default is '
              'experiment, image, fiber; there should be at least one name).')
 
-    # parsing
+    # parsing and dispatch
     args = parser.parse_args()
+
+    if args.batch:
+        from matplotlib import pyplot as plt
+        plt.switch_backend('Agg')
+
     args.func(args)
