@@ -2,7 +2,7 @@
 Module for hessian analysis within scale-space theory.
 """
 import numpy as np
-from scipy.signal import convolve2d
+from scipy.signal import fftconvolve
 
 
 def discrete_centered_space(k):
@@ -152,18 +152,13 @@ def single_scale_hessian(image, size, gamma=1):
     """
     k = round(6*size//2)
 
-    hxx = convolve2d(image,
-                     np.multiply(gaussian_second_derivative_kernel(size, k).T,
-                                 gaussian_kernel(size, k)),
-                     mode='same')
-    hyy = convolve2d(image,
-                     np.multiply(gaussian_second_derivative_kernel(size, k),
-                                 gaussian_kernel(size, k).T),
-                     mode='same')
-    hxy = convolve2d(image,
-                     np.multiply(gaussian_first_derivative_kernel(size, k),
-                                 gaussian_first_derivative_kernel(size, k).T),
-                     mode='same')
+    g0 = gaussian_kernel(size, k)
+    g1 = gaussian_first_derivative_kernel(size, k)
+    g2 = gaussian_second_derivative_kernel(size, k)
+
+    hxx = fftconvolve(image, np.multiply(g2.T, g0), mode='same')
+    hyy = fftconvolve(image, np.multiply(g2, g0.T), mode='same')
+    hxy = fftconvolve(image, np.multiply(g1, g1.T), mode='same')
 
     factor = size ** gamma  # size ** (2*gamma/2)
 
