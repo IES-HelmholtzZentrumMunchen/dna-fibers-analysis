@@ -191,21 +191,30 @@ def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10,
     # Threshold vesselness map and get connected components
     skeletons = skeletonize(reconstruction >= threshold)
     labels = label(skeletons)
+    j, i = np.meshgrid(range(labels.shape[1]), range(labels.shape[0]))
     coordinates = []
 
     for l in range(1, labels.max() + 1):
-        # fiber_skeleton = np.equal(labels, l)
-        fiber_skeleton = _sk.prune_min(np.equal(labels, l))
-        number_of_pixels = fiber_skeleton.sum()
+        fiber_skeleton = np.equal(labels, l)
 
-        if number_of_pixels >= min_length:
-            # we assume the skeleton has only one branch (it is pruned)
-            # noinspection PyTupleAssignmentBalance
-            splines, u = splprep(
-                np.vstack(_order_skeleton_points(fiber_skeleton)), s=smoothing)
-            u_sampled = np.linspace(u.min(), u.max(), number_of_pixels)
-            x, y = splev(u_sampled, splines)
-            coordinates.append(np.vstack((x, y)))
+        if fiber_skeleton.sum() >= min_length:
+            jsk = j[fiber_skeleton]
+            isk = i[fiber_skeleton]
+            inset = slice(isk.min() - 10, isk.max() + 10), \
+                slice(jsk.min() - 10, jsk.max() + 10)
+
+            fiber_skeleton[inset] = _sk.prune_min(fiber_skeleton[inset])
+            number_of_pixels = fiber_skeleton.sum()
+
+            if number_of_pixels >= min_length:
+                # we assume the skeleton has only one branch (it is pruned)
+                # noinspection PyTupleAssignmentBalance
+                splines, u = splprep(
+                    np.vstack(_order_skeleton_points(fiber_skeleton)),
+                    s=smoothing)
+                u_sampled = np.linspace(u.min(), u.max(), number_of_pixels)
+                x, y = splev(u_sampled, splines)
+                coordinates.append(np.vstack((x, y)))
 
     return coordinates
 
