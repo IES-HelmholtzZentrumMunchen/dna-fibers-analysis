@@ -92,10 +92,23 @@ def pipeline_command(args):
                 extent_mask=None)
 
             if args.save_all or args.save_detected_fibers:
-                ut.write_points_to_txt(
+                ut.write_fibers(fibers,
+                                _create_if_not_existing(args.output, 'fibers'),
+                                os.path.basename(name))
+
+                plt.imshow(flat_image, cmap='gray', aspect='equal')
+                indices = []
+                for k, c in enumerate(fibers):
+                    plt.plot(*c, '-c')
+                    plt.text(*c.mean(axis=1), str(k + 1), color='c')
+                    indices.append(k + 1)
+                plt.title('Fibers of {}'.format(name))
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(os.path.join(
                     _create_if_not_existing(args.output, 'fibers'),
-                    os.path.basename(name),
-                    fibers)
+                    '{}_fibers.pdf'.format(name)))
 
             # extraction
             # the coordinates of the fibers are sorted such that the profiles
