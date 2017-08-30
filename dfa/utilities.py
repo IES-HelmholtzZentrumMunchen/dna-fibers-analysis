@@ -8,6 +8,7 @@ import numpy as np
 from scipy.interpolate import splprep, splev
 from skimage import io
 from matplotlib import pyplot as plt
+from matplotlib import collections as coll
 import zipfile
 
 from debtcollector import removals
@@ -718,7 +719,16 @@ def read_inputs(input_path, mask_path, ext):
 
 
 def create_figures_from_fibers_images(names, extracted_fibers,
-                                      radius, group_fibers=False, indices=None):
+                                      radius, group_fibers=False, indices=None,
+                                      analysis=None):
+    def _channel_to_color(channel):
+        if channel == 'IdU':
+            return 'green'
+        elif channel == 'CIdU':
+            return 'red'
+        else:
+            return 'black'
+
     if indices is None:
         indices = []
         for image_extracted_fiber in extracted_fibers:
@@ -775,16 +785,37 @@ def create_figures_from_fibers_images(names, extracted_fibers,
                 display_image[:, :, 1] = 255 * \
                     norm_min_max(extracted_fiber[1], extracted_fiber)
 
+                x = np.arange(extracted_fiber.shape[2])
+                y1 = extracted_fiber[0].sum(axis=0)
+                y2 = extracted_fiber[1].sum(axis=0)
+
+                d = analysis.loc[(slice(None), slice(None), number), :]
+                channels = d['channel'].tolist()
+                pattern = d['pattern'].tolist()[0]
+                landmarks = np.insert(d['length'].tolist(),
+                                      0, [0]).astype('int').cumsum()
+                landmarks[-1] += 1
+
+                regions = [coll.BrokenBarHCollection.span_where(
+                    x, ymin=0, ymax=max(y1.max(), y2.max()) + 1,
+                    where=np.bitwise_and(x >= landmarks[i],
+                                         x <= landmarks[i+1]),
+                    facecolor=_channel_to_color(c), alpha=0.25)
+                    for i, c in enumerate(channels)]
+
                 fig, axes = plt.subplots(nrows=2, ncols=1, sharex='all')
 
                 axes[0].imshow(display_image, aspect='equal')
                 axes[0].set_title('Unfolded fiber')
                 axes[0].axis('off')
+                axes[0].set_xlim(x.min(), x.max())
 
                 axes[1].plot(extracted_fiber[0].sum(axis=0), '-r')
                 axes[1].plot(extracted_fiber[1].sum(axis=0), '-g')
-                axes[1].set_title('Profiles')
-                axes[0].set_xlim(0, extracted_fiber.shape[2])
+                axes[1].set_title('Profiles ({})'.format(pattern))
+                for region in regions:
+                    axes[1].add_collection(region)
+                axes[1].set_ylim(0, max(y1.max(), y2.max()) + 1)
 
                 fig.suptitle('{} - fiber #{}'.format(name, number))
 

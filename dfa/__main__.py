@@ -126,16 +126,6 @@ def pipeline_command(args):
                                                           'profiles'),
                                   name, extracted_profiles)
 
-            if args.save_all or args.save_extracted_fibers:
-                figures = ut.create_figures_from_fibers_images(
-                    [name], [extracted_fibers], radius, group_fibers=False)
-
-                for filename, fig in figures:
-                    fig.savefig(os.path.join(
-                        _create_if_not_existing(args.output, 'profiles'),
-                        filename))
-                    plt.close(fig)
-
             if args.save_all or args.save_grouped_fibers:
                 figures = ut.create_figures_from_fibers_images(
                     [name], [extracted_fibers], radius, group_fibers=True)
@@ -154,6 +144,17 @@ def pipeline_command(args):
                 extracted_profiles, model=model, update_model=False,
                 keys=keys, keys_names=scheme,
                 discrepancy=args.discrepancy, contrast=args.contrast)
+
+            if args.save_all or args.save_extracted_fibers:
+                figures = ut.create_figures_from_fibers_images(
+                    [name], [extracted_fibers], radius, group_fibers=False,
+                    analysis=current_analysis)
+
+                for filename, fig in figures:
+                    fig.savefig(os.path.join(
+                        _create_if_not_existing(args.output, 'profiles'),
+                        filename))
+                    plt.close(fig)
 
             detailed_analysis = detailed_analysis.append(current_analysis)
 
