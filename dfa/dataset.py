@@ -10,7 +10,7 @@ import pandas as pd
 from skimage import io
 import numpy as np
 
-from dfa import utilities as _ut
+from dfa import utilities as ut
 
 
 class Dataset:
@@ -19,7 +19,8 @@ class Dataset:
     """
     def __init__(self, archive, storing_path='/tmp', force_decompress=False,
                  shuffle=True):
-        """Constructor.
+        """
+        Constructor.
 
         The dataset archive is first decompressed in the storing path. If the
         decompressed path already exists (for instance when the archive has
@@ -72,7 +73,8 @@ class Dataset:
             zipfiles.extractall(path=self.storing_path)
 
     def next_batch(self, index, n, mapping, batch_size=None):
-        """Get the next batch of the given size as a generator.
+        """
+        Get the next batch of the given size as a generator.
 
         Parameters
         ----------
@@ -82,17 +84,17 @@ class Dataset:
         n : str
             Name of the current offset of reading
 
-        mapping : callable function
+        mapping : (int,) -> T
             Function that maps an index to elements to return.
 
-        batch_size : strictly positive int or None
+        batch_size : 0 < int | None
             Size of the next batch. When None, the batch size is set to the
             size of the dataset (default behaviour).
 
-        Returns
-        -------
-        generator
-            The elements of the next batch as a generator.
+        Yields
+        ------
+        T
+            The next batch.
         """
         if getattr(self, n) < getattr(self, index).size:
             if batch_size is None:
@@ -108,7 +110,8 @@ class Dataset:
             return None
 
     def next_image_batch(self, batch_size=None):
-        """Get the next image batch of the given size as a generator.
+        """
+        Get the next image batch of the given size as a generator.
 
         Parameters
         ----------
@@ -116,11 +119,10 @@ class Dataset:
             Size of the next batch. When None, the batch size is set to the
             size of the dataset (default behaviour).
 
-        Returns
-        -------
-        :return: generator
-            Tuples of the next batch as a generator. The tuples contain the
-            index, the image and the manually selected fibers.
+        Yields
+        ------
+        (int, numpy.ndarray, List[numpy.ndarray])
+            The next batch (index, image, fibers).
         """
         return self.next_batch(
             batch_size=batch_size, index='image_index', n='_n_image',
@@ -128,12 +130,13 @@ class Dataset:
                 index,
                 io.imread(os.path.join(self.dataset_path, 'input',
                                        '{}-{}.tif'.format(*index))),
-                _ut.read_points_from_imagej_zip(
+                ut.read_points_from_imagej_zip(
                     os.path.join(self.dataset_path, 'fibers',
                                  '{}-{}.zip'.format(*index)))))
 
     def next_profile_batch(self, batch_size=None):
-        """Get the next profile batch of the given size as a generator.
+        """
+        Get the next profile batch of the given size as a generator.
 
         Parameters
         ----------
@@ -146,6 +149,11 @@ class Dataset:
         generator
             Tuples of the next batch as a generator. The tuples contain the
             index, the profiles and the data view to the ground truth.
+
+        Yields
+        ------
+        (int, numpy.ndarray, pandas.DataFrame)
+            The next batch (index, profiles, analysis).
         """
         return self.next_batch(
             batch_size=batch_size, index='profile_index', n='_n_profile',
@@ -157,22 +165,117 @@ class Dataset:
                     delimiter=',', skiprows=1, usecols=(0, 1, 2)),
                 self.summary.ix[index]))
 
+    @staticmethod
+    def _save(summary, output_path, images_path, fibers_path, profiles_path):
+        """
+        Save dataset defined by input as zip file to given path.
+
+        Parameters
+        ----------
+        summary : pandas.DataFrame
+            Data frame used to select files belonging to dataset.
+
+        output_path : str
+            Path to output file (the zip file containing dataset).
+
+        images_path : str
+            Path to the images.
+
+        fibers_path : str
+            Path to the fibers.
+
+        profiles_path : str
+            Path to the profiles.
+        """
+        with zipfile.ZipFile(output_path, mode='w',
+                             compression=zipfile.ZIP_DEFLATED) as archive:
+            for ix in summary.index.droplevel('fiber').unique():
+                name = '-'.join([str(e) for e in ix])
+
+                archive.write(
+                    filename=os.path.join(images_path,
+                                          '{}.tif'.format(name)),
+                    arcname=os.path.join(os.path.basename(images_path),
+                                         '{}.tif'.format(name)))
+                archive.write(
+                    filename=os.path.join(fibers_path,
+                                          '{}.zip'.format(name)),
+                    arcname=os.path.join(os.path.basename(fibers_path),
+                                         '{}.zip'.format(name)))
+
+            for ix in summary.index.unique():
+                name = '{}{}{}.csv'.format(
+                    '-'.join([str(e) for e in ix[:-1]]),
+                    ut.fiber_indicator,
+                    ix[-1])
+
+                archive.write(
+                    filename=os.path.join(profiles_path, name),
+                    arcname=os.path.join(os.path.basename(profiles_path), name))
+
+    def save(self, path):
+        """
+        Save dataset as zip file to given path.
+
+        Parameters
+        ----------
+        path : str
+            Path of the zip file in which the dataset will be saved.
+        """
+        Dataset._save(self.summary, path,
+                      os.path.join(self.dataset_path, 'images'),
+                      os.path.join(self.dataset_path, 'fibers'),
+                      os.path.join(self.dataset_path, 'profiles'))
+
+    @staticmethod
+    def create(summary_path, images_path, fibers_path, profiles_path,
+               output_path):
+        """
+        Create a new dataset from paths to data.
+
+        The summary is important since it is red to search the corresponding
+        images, fibers and profiles in their respective paths.
+
+        Parameters
+        ----------
+        summary_path : str
+            Path to detailed analysis of the dataset.
+
+        images_path : str
+            Path to the images.
+
+        fibers_path : str
+            Path to the fibers.
+
+        profiles_path : str
+            Path to the profiles.
+
+        output_path : str
+            Path to output file (the zip file containing dataset).
+        """
+        summary = pd.read_csv(summary_path,
+                              index_col=['experiment', 'image', 'fiber'])
+        Dataset._save(summary, output_path, images_path,
+                      fibers_path, profiles_path)
+
 
 if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('archive', type=str,
-                        help='Path to the dataset archive.')
-    parser.add_argument('--storing-path', type=str, default='/tmp',
-                        help='Path where to store the decompressed archive '
-                             '(default is "/tmp").')
-    parser.add_argument('--force-decompress', action='store_true',
-                        help='Force the decompression of the archive, even '
-                             'if the storing path is not empty (default is '
-                             'not).')
+    parser.add_argument('summary', type=ut.check_valid_file,
+                        help='Path to the summary csv file.')
+    parser.add_argument('images', type=ut.check_valid_directory,
+                        help='Path to the images.')
+    parser.add_argument('fibers', type=ut.check_valid_directory,
+                        help='Path to the fibers.')
+    parser.add_argument('profiles', type=ut.check_valid_directory,
+                        help='Path to the profiles')
+    parser.add_argument('--output', type=ut.check_valid_output_file,
+                        default='./dataset.zip',
+                        help='Path to the output file (the zip file containing '
+                             'the dataset).')
     args = parser.parse_args()
 
-    dataset = Dataset(archive=args.archive,
-                      storing_path=args.storing_path,
-                      force_decompress=args.force_decompress)
+    Dataset.create(args.summary, args.images, args.fibers,
+                   args.profiles, args.output)

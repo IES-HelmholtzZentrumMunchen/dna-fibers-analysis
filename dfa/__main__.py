@@ -603,6 +603,20 @@ def comparison_analyses_command(args):
         print(length_difference)
 
 
+def create_dataset(args):
+    """
+    Run the dataset creation process.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Input namespace containing command line arguments.
+    """
+    from dfa import dataset as dat
+    dat.Dataset.create(args.summary, args.images, args.fibers,
+                       args.profiles, args.output)
+
+
 if __name__ == '__main__':
     import argparse
 
@@ -975,6 +989,30 @@ if __name__ == '__main__':
         default=['experiment', 'image', 'fiber'],
         help='Names of the keys used as indexing of the results (default is '
              'experiment, image, fiber; there should be at least one name).')
+
+    # dataset creation sub-command
+    parser_dataset = subparsers.add_parser(
+        'create-dataset',
+        help='create a new dataset zip file from paths',
+        description='This command is used to create dataset with for instance '
+                    'manual annotations for benchmarking purposes.')
+    parser_dataset.set_defaults(func=create_dataset)
+    parser_dataset.add_argument(
+        'summary', type=ut.check_valid_file,
+        help='Path to the summary csv file.')
+    parser_dataset.add_argument(
+        'images', type=ut.check_valid_directory,
+        help='Path to the images.')
+    parser_dataset.add_argument(
+        'fibers', type=ut.check_valid_directory,
+        help='Path to the fibers.')
+    parser_dataset.add_argument(
+        'profiles', type=ut.check_valid_directory,
+        help='Path to the profiles')
+    parser_dataset.add_argument(
+        '--output', type=ut.check_valid_output_file,
+        default='./dataset.zip',
+        help='Path to the output file (the zip file containing the dataset).')
 
     # parsing and dispatch
     args = parser.parse_args()
