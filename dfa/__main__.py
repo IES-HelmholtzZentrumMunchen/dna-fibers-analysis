@@ -26,6 +26,8 @@ def pipeline_command(args):
     from dfa import modeling as mod
     from dfa import analysis as ana
 
+    progressbar.streams.wrap_stderr()
+
     def _create_if_not_existing(output, name):
         save_path = os.path.join(output, name)
 
