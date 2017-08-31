@@ -198,23 +198,26 @@ def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10,
         fiber_skeleton = np.equal(labels, l)
 
         if fiber_skeleton.sum() >= min_length:
-            jsk = j[fiber_skeleton]
-            isk = i[fiber_skeleton]
-            inset = slice(isk.min() - 10, isk.max() + 10), \
-                slice(jsk.min() - 10, jsk.max() + 10)
+            try:
+                jsk = j[fiber_skeleton]
+                isk = i[fiber_skeleton]
+                inset = slice(isk.min() - 10, isk.max() + 10), \
+                    slice(jsk.min() - 10, jsk.max() + 10)
 
-            fiber_skeleton[inset] = _sk.prune_min(fiber_skeleton[inset])
-            number_of_pixels = fiber_skeleton.sum()
+                fiber_skeleton[inset] = _sk.prune_min(fiber_skeleton[inset])
+                number_of_pixels = fiber_skeleton.sum()
 
-            if number_of_pixels >= min_length:
-                # we assume the skeleton has only one branch (it is pruned)
-                # noinspection PyTupleAssignmentBalance
-                splines, u = splprep(
-                    np.vstack(_order_skeleton_points(fiber_skeleton)),
-                    s=smoothing)
-                u_sampled = np.linspace(u.min(), u.max(), number_of_pixels)
-                x, y = splev(u_sampled, splines)
-                coordinates.append(np.vstack((x, y)))
+                if number_of_pixels >= min_length:
+                    # we assume the skeleton has only one branch (it is pruned)
+                    # noinspection PyTupleAssignmentBalance
+                    splines, u = splprep(
+                        np.vstack(_order_skeleton_points(fiber_skeleton)),
+                        s=smoothing)
+                    u_sampled = np.linspace(u.min(), u.max(), number_of_pixels)
+                    x, y = splev(u_sampled, splines)
+                    coordinates.append(np.vstack((x, y)))
+            except ValueError:
+                pass
 
     return coordinates
 
