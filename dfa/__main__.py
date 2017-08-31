@@ -885,15 +885,15 @@ if __name__ == '__main__':
              '<y_max>, in pixels, default: [100, 924, 100, 924]).')
     fibers_group.add_argument(
         '--perturbations-force-range', type=float, nargs=2, default=[0.1, 0.3],
-        help='Local perturbations of the fiber path (default is [0.1, 0.2]).')
+        help='Local perturbations of the fiber path (default is [0.1, 0.3]).')
     fibers_group.add_argument(
         '--bending-elasticity-range', type=float, nargs=2, default=[1, 3],
         help='Elasticity of the global bending of the fiber path (default is '
              '[1, 3]).')
     fibers_group.add_argument(
-        '--bending-force-range', type=float, nargs=2, default=[10, 20],
+        '--bending-force-range', type=float, nargs=2, default=[10, 30],
         help='Force of the global bending of the fiber path (default is '
-             '[10, 20]).')
+             '[10, 30]).')
     fibers_group.add_argument(
         '--disconnection-probability-range', type=float, nargs=2,
         default=[0.05, 0.1],
@@ -921,7 +921,7 @@ if __name__ == '__main__':
     image_group.add_argument(
         'psf_file', type=str, default=None, help='Path to 3D PSF file.')
     image_group.add_argument(
-        '--z_index', type=int, nargs=2, default=[-1, 1],
+        '--z-index', type=int, nargs=2, default=[-1, 1],
         help='Z-index of fiber objects (default: [-1, 1]).')
     image_group.add_argument(
         '--snr', type=float, default=7, help='SNR in decibels (default: 7).')
