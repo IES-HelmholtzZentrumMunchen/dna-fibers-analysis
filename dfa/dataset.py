@@ -257,25 +257,3 @@ class Dataset:
                               index_col=['experiment', 'image', 'fiber'])
         Dataset._save(summary, output_path, images_path,
                       fibers_path, profiles_path)
-
-
-if __name__ == '__main__':
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('summary', type=ut.check_valid_file,
-                        help='Path to the summary csv file.')
-    parser.add_argument('images', type=ut.check_valid_directory,
-                        help='Path to the images.')
-    parser.add_argument('fibers', type=ut.check_valid_directory,
-                        help='Path to the fibers.')
-    parser.add_argument('profiles', type=ut.check_valid_directory,
-                        help='Path to the profiles')
-    parser.add_argument('--output', type=ut.check_valid_output_file,
-                        default='./dataset.zip',
-                        help='Path to the output file (the zip file containing '
-                             'the dataset).')
-    args = parser.parse_args()
-
-    Dataset.create(args.summary, args.images, args.fibers,
-                   args.profiles, args.output)
