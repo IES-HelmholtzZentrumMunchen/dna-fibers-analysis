@@ -11,6 +11,7 @@ intensity ratio derivative, to choose the channels pattern.
 import numpy as np
 import pandas as pd
 import copy
+import sys
 
 from dfa import modeling, _tree
 
@@ -378,19 +379,24 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
     detailed_analysis = pd.DataFrame([], columns=labels, index=index)
 
     for key, profile in zip(keys, profiles):
-        pattern, lengths = analyze(profile, model=model,
-                                   channels_names=channels_names,
-                                   discrepancy=discrepancy, contrast=contrast)
+        try:
+            pattern, lengths = analyze(profile, model=model,
+                                       channels_names=channels_names,
+                                       discrepancy=discrepancy,
+                                       contrast=contrast)
 
-        if pattern is not None and lengths is not None:
-            model.append_sample(pattern, lengths)
+            if pattern is not None and lengths is not None:
+                model.append_sample(pattern, lengths)
 
-            for length, channel in zip(lengths, pattern['channels']):
-                s = pd.Series({labels[0]: pattern['name'],
-                               labels[1]: model.channels_names[channel],
-                               labels[2]: length},
-                              name=key)
-                detailed_analysis = detailed_analysis.append(s)
+                for length, channel in zip(lengths, pattern['channels']):
+                    s = pd.Series({labels[0]: pattern['name'],
+                                   labels[1]: model.channels_names[channel],
+                                   labels[2]: length},
+                                  name=key)
+                    detailed_analysis = detailed_analysis.append(s)
+        except AttributeError:
+            print('----> Error during analysis! Omitting {}!'.format(key),
+                  file=sys.stderr)
 
     if update_model:
         model.update_model()
