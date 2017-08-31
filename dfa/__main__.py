@@ -109,6 +109,7 @@ def pipeline_command(args):
                 plt.savefig(os.path.join(
                     _create_if_not_existing(args.output, 'fibers'),
                     '{}_fibers.pdf'.format(name)))
+                plt.close()
 
             # extraction
             # the coordinates of the fibers are sorted such that the profiles
