@@ -472,12 +472,8 @@ def simulate_command(args):
         name, _ = os.path.splitext(os.path.basename(args.output))
 
         io.imsave(args.output, degraded_image.astype('int16'))
-
-        fibers_output = os.path.join(path, '{}_fibers'.format(name))
-        os.mkdir(fibers_output)
-        ut.write_points_to_txt(
-            fibers_output, name,
-            [fiber_object for fiber_object, _ in fibers_objects])
+        ut.write_fibers([fiber_object for fiber_object, _ in fibers_objects],
+                        path, name, zipped=True)
 
 
 def compare_fibers_command(args):
@@ -870,7 +866,7 @@ if __name__ == '__main__':
     parser_simulation.set_defaults(func=simulate_command)
 
     parser_simulation.add_argument(
-        '--output', type=ut.check_valid_path, default=None,
+        '--output', type=ut.check_valid_output_file, default=None,
         help='Output path for saving simulation (default: None).')
 
     fibers_group = parser_simulation.add_argument_group('Fibers')
