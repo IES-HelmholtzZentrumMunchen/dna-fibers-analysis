@@ -789,20 +789,6 @@ def create_figures_from_fibers_images(names, extracted_fibers,
                 y1 = extracted_fiber[0].sum(axis=0)
                 y2 = extracted_fiber[1].sum(axis=0)
 
-                d = analysis.loc[(slice(None), slice(None), number), :]
-                channels = d['channel'].tolist()
-                pattern = d['pattern'].tolist()[0]
-                landmarks = np.insert(d['length'].tolist(),
-                                      0, [0]).astype('int').cumsum()
-                landmarks[-1] += 1
-
-                regions = [coll.BrokenBarHCollection.span_where(
-                    x, ymin=0, ymax=max(y1.max(), y2.max()) + 1,
-                    where=np.bitwise_and(x >= landmarks[i],
-                                         x <= landmarks[i+1]),
-                    facecolor=_channel_to_color(c), alpha=0.25)
-                    for i, c in enumerate(channels)]
-
                 fig, axes = plt.subplots(nrows=2, ncols=1, sharex='all')
 
                 axes[0].imshow(display_image, aspect='equal')
@@ -812,13 +798,32 @@ def create_figures_from_fibers_images(names, extracted_fibers,
 
                 axes[1].plot(extracted_fiber[0].sum(axis=0), '-r')
                 axes[1].plot(extracted_fiber[1].sum(axis=0), '-g')
-                axes[1].set_title('Profiles ({})'.format(pattern))
-                for region in regions:
-                    axes[1].add_collection(region)
+                axes[1].set_title('Profiles')
                 axes[1].set_ylim(0, max(y1.max(), y2.max()) + 1)
 
-                fig.suptitle('{} - fiber #{}'.format(name, number))
+                try:
+                    d = analysis.loc[(slice(None), slice(None), number), :]
+                    channels = d['channel'].tolist()
+                    pattern = d['pattern'].tolist()[0]
+                    landmarks = np.insert(d['length'].tolist(),
+                                          0, [0]).astype('int').cumsum()
+                    landmarks[-1] += 1
 
+                    regions = [coll.BrokenBarHCollection.span_where(
+                        x, ymin=0, ymax=max(y1.max(), y2.max()) + 1,
+                        where=np.bitwise_and(x >= landmarks[i],
+                                             x <= landmarks[i+1]),
+                        facecolor=_channel_to_color(c), alpha=0.25)
+                        for i, c in enumerate(channels)]
+
+                    axes[1].set_title('Profiles ({})'.format(pattern))
+
+                    for region in regions:
+                        axes[1].add_collection(region)
+                except KeyError:
+                    pass
+
+                fig.suptitle('{} - fiber #{}'.format(name, number))
                 figures.append(('{}_fiber-{}.png'.format(name, number), fig))
 
     return figures
