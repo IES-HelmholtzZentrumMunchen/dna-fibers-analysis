@@ -439,39 +439,63 @@ def simulate_command(args):
 
     simulated_psf = io.imread(args.psf_file)
 
-    fibers_objects = sim.rfibers(
-        number=args.number, angle_range=args.orientation,
-        shift_range=[tuple(args.location[:2]), tuple(args.location[2:])],
-        perturbations_force_range=args.perturbations_force_range,
-        bending_elasticity_range=args.bending_elasticity_range,
-        bending_force_range=args.bending_force_range,
-        disc_prob_range=args.disconnection_probability_range,
-        return_prob_range=args.return_probability_range,
-        local_force_range=args.local_force_range,
-        global_force_range=args.global_force_range,
-        global_rate_range=args.global_rate_range, model=args.model)
+    if args.simulated_fibers == '':
+        fibers_objects = sim.rfibers(
+            number=args.number, angle_range=args.orientation,
+            shift_range=[tuple(args.location[:2]), tuple(args.location[2:])],
+            perturbations_force_range=args.perturbations_force_range,
+            bending_elasticity_range=args.bending_elasticity_range,
+            bending_force_range=args.bending_force_range,
+            disc_prob_range=args.disconnection_probability_range,
+            return_prob_range=args.return_probability_range,
+            local_force_range=args.local_force_range,
+            global_force_range=args.global_force_range,
+            global_rate_range=args.global_rate_range, model=args.model)
+    else:
+        fibers = list(list(zip(*ut.read_fibers(args.simulated_fibers)))[0])
 
-    degraded_image = sim.rimage(
-        fiber_objects=fibers_objects, shape=args.shape,
-        zindex_range=args.z_index, psf=simulated_psf, snr=args.snr)
+        dirname, basename = os.path.split(args.simulated_fibers)
+        basename = os.path.splitext(basename)[0]
+        signals = list(list(zip(*ut.read_fibers(
+            os.path.join(dirname, '{}_signal.zip'.format(basename)))))[0])
+
+        fibers_objects = list(zip(fibers, signals))
+
+    if args.no_image:
+        degraded_image = None
+    else:
+        degraded_image = sim.rimage(
+            fiber_objects=fibers_objects, shape=args.shape,
+            zindex_range=args.z_index, psf=simulated_psf, snr=args.snr)
 
     if args.output is None:
         from matplotlib import pyplot as plt
 
-        display_image = np.zeros(degraded_image.shape[1:] + (3,), dtype='uint8')
-        display_image[:, :, 0] = 255 * \
-            _ut.norm_min_max(degraded_image[0], degraded_image)
-        display_image[:, :, 1] = 255 * \
-            _ut.norm_min_max(degraded_image[1], degraded_image)
+        if degraded_image is not None:
+            display_image = np.zeros(degraded_image.shape[1:] + (3,),
+                                     dtype='uint8')
+            display_image[:, :, 0] = 255 * \
+                _ut.norm_min_max(degraded_image[0], degraded_image)
+            display_image[:, :, 1] = 255 * \
+                _ut.norm_min_max(degraded_image[1], degraded_image)
 
-        plt.imshow(display_image, aspect='equal')
+            plt.imshow(display_image, aspect='equal')
 
-        plt.show()
+            plt.show()
+        else:
+            for fiber_object, signal in fibers_objects:
+                plt.scatter(*fiber_object, 1, signal[0], cmap='gray')
+            plt.show()
     else:
         path = os.path.dirname(args.output)
         name, _ = os.path.splitext(os.path.basename(args.output))
 
-        io.imsave(args.output, degraded_image.astype('int16'))
+        if degraded_image is not None:
+            io.imsave(args.output, degraded_image.astype('int16'))
+        else:
+            ut.write_fibers([signal for _, signal in fibers_objects],
+                            path, '{}_signal'.format(name), zipped=True)
+
         ut.write_fibers([fiber_object for fiber_object, _ in fibers_objects],
                         path, name, zipped=True)
 
@@ -868,6 +892,12 @@ if __name__ == '__main__':
     parser_simulation.add_argument(
         '--output', type=ut.check_valid_output_file, default=None,
         help='Output path for saving simulation (default: None).')
+    parser_simulation.add_argument(
+        '--no-image', action='store_true',
+        help='Setting this flag will lead to no image degradation output.')
+    parser_simulation.add_argument(
+        '--simulated-fibers', type=ut.check_valid_or_empty_path, default='',
+        help='Input already simulated fibers.')
 
     fibers_group = parser_simulation.add_argument_group('Fibers')
     fibers_group.add_argument(
