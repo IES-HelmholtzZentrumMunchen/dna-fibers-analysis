@@ -801,27 +801,28 @@ def create_figures_from_fibers_images(names, extracted_fibers,
                 axes[1].set_title('Profiles')
                 axes[1].set_ylim(0, max(y1.max(), y2.max()) + 1)
 
-                try:
-                    d = analysis.loc[(slice(None), slice(None), number), :]
-                    channels = d['channel'].tolist()
-                    pattern = d['pattern'].tolist()[0]
-                    landmarks = np.insert(d['length'].tolist(),
-                                          0, [0]).astype('int').cumsum()
-                    landmarks[-1] += 1
+                if analysis is not None:
+                    try:
+                        d = analysis.loc[(slice(None), slice(None), number), :]
+                        channels = d['channel'].tolist()
+                        pattern = d['pattern'].tolist()[0]
+                        landmarks = np.insert(d['length'].tolist(),
+                                              0, [0]).astype('int').cumsum()
+                        landmarks[-1] += 1
 
-                    regions = [coll.BrokenBarHCollection.span_where(
-                        x, ymin=0, ymax=max(y1.max(), y2.max()) + 1,
-                        where=np.bitwise_and(x >= landmarks[i],
-                                             x <= landmarks[i+1]),
-                        facecolor=_channel_to_color(c), alpha=0.25)
-                        for i, c in enumerate(channels)]
+                        regions = [coll.BrokenBarHCollection.span_where(
+                            x, ymin=0, ymax=max(y1.max(), y2.max()) + 1,
+                            where=np.bitwise_and(x >= landmarks[i],
+                                                 x <= landmarks[i+1]),
+                            facecolor=_channel_to_color(c), alpha=0.25)
+                            for i, c in enumerate(channels)]
 
-                    axes[1].set_title('Profiles ({})'.format(pattern))
+                        axes[1].set_title('Profiles ({})'.format(pattern))
 
-                    for region in regions:
-                        axes[1].add_collection(region)
-                except KeyError:
-                    pass
+                        for region in regions:
+                            axes[1].add_collection(region)
+                    except KeyError:
+                        pass
 
                 fig.suptitle('{} - fiber #{}'.format(name, number))
                 figures.append(('{}_fiber-{}.png'.format(name, number), fig))

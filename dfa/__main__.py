@@ -276,9 +276,12 @@ def extraction_command(args):
         input_images, input_fibers, radius=args.radius)
 
     # output
-    figures = ut.create_figures_from_fibers_images(
-        input_names, extracted_fibers, args.radius, args.group_fibers,
-        input_fibers_indices)
+    if args.profiles_only:
+        figures = None
+    else:
+        figures = ut.create_figures_from_fibers_images(
+            input_names, extracted_fibers, args.radius, args.group_fibers,
+            input_fibers_indices)
 
     if args.output is None:
         plt.show()
@@ -852,6 +855,9 @@ if __name__ == '__main__':
         '--output', type=ut.check_valid_path, default=None,
         help='Output path for saving profiles and extracted fibers (default '
              'is None).')
+    parser_extraction.add_argument(
+        '--profiles-only', action='store_true',
+        help='Output only the profiles (not figures).')
 
     # analysis command
     parser_analysis = subparsers.add_parser(
