@@ -14,7 +14,8 @@ from dfa import modeling
 def fiber(angle, length, shift=(0, 0), step=4, interp_step=1,
           perturbations_force=0.5, bending_elasticity=2,
           bending_force=2):
-    """Simulate a fiber path object with local and global perturbations.
+    """
+    Simulate a fiber path object with local and global perturbations.
 
     Parameters
     ----------
@@ -24,7 +25,7 @@ def fiber(angle, length, shift=(0, 0), step=4, interp_step=1,
     length : float
         Length of the fiber to simulate (in pixels.
 
-    shift : np.ndarray
+    shift : numpy.ndarray
         Translation vector of the fiber from image's center (in pixels,
         default is [0, 0]).
 
@@ -90,7 +91,8 @@ def fiber(angle, length, shift=(0, 0), step=4, interp_step=1,
 
 def fiber_inhomogeneity(num_of_points, number_of_channels, pattern, length,
                         local_force=0.05, global_force=0.25, global_rate=1.5):
-    """Simulate signal inhomogeneity in fiber.
+    """
+    Simulate signal inhomogeneity in fiber.
 
     The intensity factors are simulated using local and global perturbations of
     a even illumination (every point with intensity set to 1).
@@ -158,7 +160,8 @@ def fiber_inhomogeneity(num_of_points, number_of_channels, pattern, length,
 
 
 def fiber_disconnections(fiber_points, disc_prob=0.2, return_prob=0.5):
-    """Simulate disconnections in fiber.
+    """
+    Simulate disconnections in fiber.
 
     The disconnections are modeled as a state of a Markov process. The points
     sampled on the fiber path define a Markov chain and those points can have
@@ -200,33 +203,58 @@ def fiber_disconnections(fiber_points, disc_prob=0.2, return_prob=0.5):
     return fiber_points[:, select]
 
 
-def fibers(number_of_channels, patterns, lengths, geom_props, disc_props,
+def fiber_paths(geom_props):
+    """
+    Simulate fiber paths as points in image space (fluophores).
+
+    Parameters
+    ----------
+    geom_props : List[dict]
+        Geometrical properties (see dfa.simulation.fiber_spline).
+
+    Returns
+    -------
+    List[numpy.ndarray]
+        The list of fibers paths (list of coordinates of the points as
+        (2,N) arrays).
+    """
+    paths = []
+
+    for geom_prop in geom_props:
+        paths.append(fiber(**geom_prop))
+
+    return paths
+
+
+def fibers(number_of_channels, patterns, lengths, paths, disc_props,
            signal_props):
-    """Simulate fibers fluophores as points in image space.
+    """
+    Simulate fibers fluophores as points in image space.
 
     Parameters
     ----------
     number_of_channels : int
         Number of channels of the output image.
 
-    patterns : list of list of int
+    patterns : List[List[int]]
         The input patterns of the fibers to simulate.
 
-    lengths : list of list of float
+    lengths : List[List[float]]
         The lengths of the input pattern segments to simulate.
 
-    geom_props : list of dict
-        Geometrical properties (see dfa.simulation.fiber_spline).
+    paths : List[numpy.ndarray]
+        The list of fibers paths (list of coordinates of the points as
+        (2,N) arrays).
 
-    disc_props : list of dict
+    disc_props : List[dict]
         Disconnections properties (see dfa.simulation.fiber_disconnections).
 
-    signal_props : list of dict
+    signal_props : List[dict]
         Signal properties (see dfa.simulation.fiber_inhomogeneity).
 
     Returns
     -------
-    list of tuple
+    List[(numpy.ndarray, numpy.ndarray)]
         The points/signal of fibers paths simulated.
 
     See Also
@@ -238,9 +266,9 @@ def fibers(number_of_channels, patterns, lengths, geom_props, disc_props,
     """
     fiber_objects = []
 
-    for pattern, length, geom_prop, disc_prop, signal_prop in \
-            zip(patterns, lengths, geom_props, disc_props, signal_props):
-        f = fiber_disconnections(fiber(**geom_prop), **disc_prop)
+    for pattern, length, path, disc_prop, signal_prop in \
+            zip(patterns, lengths, paths, disc_props, signal_props):
+        f = fiber_disconnections(path, **disc_prop)
         s = fiber_inhomogeneity(f.shape[1], number_of_channels,
                                 pattern, length, **signal_prop)
         fiber_objects.append((f, s))
@@ -248,11 +276,59 @@ def fibers(number_of_channels, patterns, lengths, geom_props, disc_props,
     return fiber_objects
 
 
-def rfibers(number, angle_range, shift_range, perturbations_force_range,
-            bending_elasticity_range, bending_force_range, disc_prob_range,
+def _uniform_sample_within_range(sampling_range, sample_number):
+    return np.abs(np.diff(sampling_range)) * \
+           np.random.rand(sample_number) + \
+           np.min(sampling_range)
+
+
+def rpaths(number, angle_range, shift_range, perturbations_force_range,
+           bending_elasticity_range, bending_force_range,
+           model=modeling.standard):
+    """
+    Randomly simulate fiber paths.
+
+    For information abount the ranges, refer to dfa.simulation.fiber_spline,
+    dfa.simulation.fiber_disconnections and
+    dfa.simulation.inhomogeneity.
+
+    See Also
+    --------
+    fiber_spline : Simulate fiber path with a spline.
+    fiber_disconnections : Simulate disconnections along fiber path.
+    fiber_inhomogeneity : Simulate signal inhomogeneity along fiber path.
+    fibers : Simulate a set of fibers with given parameters.
+    rfibers : Simulate a set of fibers with random parameters within ranges.
+    """
+    patterns, lengths = model.simulate_patterns(number)
+
+    geom_props = []
+
+    angles = _uniform_sample_within_range(angle_range, number)
+    shifts_x = _uniform_sample_within_range(shift_range[0], number)
+    shifts_y = _uniform_sample_within_range(shift_range[1], number)
+    perturbations_forces = _uniform_sample_within_range(
+        perturbations_force_range, number)
+    bending_elasticities = _uniform_sample_within_range(
+        bending_elasticity_range, number)
+    bending_forces = _uniform_sample_within_range(bending_force_range, number)
+
+    for i in range(number):
+        geom_props.append({
+            'angle': angles[i], 'length': sum(lengths[i]),
+            'shift': (shifts_x[i], shifts_y[i]),
+            'perturbations_force': perturbations_forces[i],
+            'bending_elasticity': bending_elasticities[i],
+            'bending_force': bending_forces[i]})
+
+    return fiber_paths(geom_props), patterns, lengths
+
+
+def rfibers(number, patterns, lengths, paths, disc_prob_range,
             return_prob_range, local_force_range, global_force_range,
             global_rate_range, model=modeling.standard):
-    """Randomly simulate fibers objects with geometrical deterioration /
+    """
+    Randomly simulate fibers objects with geometrical deterioration /
     signal inhomogeneity.
 
     For information abount the ranges, refer to dfa.simulation.fiber_spline,
@@ -267,43 +343,20 @@ def rfibers(number, angle_range, shift_range, perturbations_force_range,
     fibers : Simulate a set of fibers with given parameters.
     rfibers : Simulate a set of fibers with random parameters within ranges.
     """
-    def _uniform_sample_within_range(sampling_range, sample_number=number):
-        return np.abs(np.diff(sampling_range)) * \
-               np.random.rand(sample_number) + \
-               np.min(sampling_range)
-
-    patterns, lengths = model.simulate_patterns(number)
     number_of_channels = len(model.channels_names)
-
-    geom_props = []
-
-    angles = _uniform_sample_within_range(angle_range)
-    shifts_x = _uniform_sample_within_range(shift_range[0])
-    shifts_y = _uniform_sample_within_range(shift_range[1])
-    perturbations_forces = _uniform_sample_within_range(
-        perturbations_force_range)
-    bending_elasticities = _uniform_sample_within_range(
-        bending_elasticity_range)
-    bending_forces = _uniform_sample_within_range(bending_force_range)
 
     disc_props = []
 
-    disc_probs = _uniform_sample_within_range(disc_prob_range)
-    return_probs = _uniform_sample_within_range(return_prob_range)
+    disc_probs = _uniform_sample_within_range(disc_prob_range, number)
+    return_probs = _uniform_sample_within_range(return_prob_range, number)
 
     signal_props = []
 
-    local_forces = _uniform_sample_within_range(local_force_range)
-    global_forces = _uniform_sample_within_range(global_force_range)
-    global_rates = _uniform_sample_within_range(global_rate_range)
+    local_forces = _uniform_sample_within_range(local_force_range, number)
+    global_forces = _uniform_sample_within_range(global_force_range, number)
+    global_rates = _uniform_sample_within_range(global_rate_range, number)
 
     for i in range(number):
-        geom_props.append({
-            'angle': angles[i], 'length': sum(lengths[i]),
-            'shift': (shifts_x[i], shifts_y[i]),
-            'perturbations_force': perturbations_forces[i],
-            'bending_elasticity': bending_elasticities[i],
-            'bending_force': bending_forces[i]})
         disc_props.append({
             'disc_prob': disc_probs[i], 'return_prob': return_probs[i]})
         signal_props.append({
@@ -311,12 +364,13 @@ def rfibers(number, angle_range, shift_range, perturbations_force_range,
             'global_rate': global_rates[i]})
 
     return fibers(number_of_channels, patterns, lengths,
-                  geom_props, disc_props, signal_props)
+                  paths, disc_props, signal_props)
 
 
 def image_by_diffraction(shape, fibers_points, fibers_signal, psf,
                          positions=None):
-    """Create a diffraction limited image from points along fiber paths.
+    """
+    Create a diffraction limited image from points along fiber paths.
 
     Parameters
     ----------
@@ -383,7 +437,8 @@ def image_by_diffraction(shape, fibers_points, fibers_signal, psf,
 
 
 def shot_noise(input_image, snr):
-    """Simulate photon noise on input noise-free image.
+    """
+    Simulate photon noise on input noise-free image.
 
     Parameters
     ----------
@@ -419,7 +474,8 @@ def shot_noise(input_image, snr):
 
 
 def image(fiber_objects, shape, zindices, psf, snr=20):
-    """Simulate image acquisition conditions of fiber objects.
+    """
+    Simulate image acquisition conditions of fiber objects.
 
     The fiber objects need to be first simulated using the appropriate
     functions. With each object is associated a z-index giving the relative
@@ -427,8 +483,8 @@ def image(fiber_objects, shape, zindices, psf, snr=20):
 
     Parameters
     ----------
-    fiber_objects : list of numpy.ndarray with 2 dimensions
-        Input simulated fiber objects.
+    fiber_objects : List[(numpy.ndarray, numpy.ndarray)] with 2 dimensions
+        Input simulated fiber objects and signals.
 
     shape : (int, int)
         Shape of the output image.
@@ -467,13 +523,13 @@ def rimage(fiber_objects, shape, zindex_range, psf, snr=10):
 
     Parameters
     ----------
-    fiber_objects : list of numpy.ndarray with 2 dimensions
-        Input simulated fiber objects.
+    fiber_objects : List[(numpy.ndarray, numpy.ndarray)] with 2 dimensions
+        Input simulated fiber objects and signals.
 
     shape : (int, int)
         Shape of the output image.
 
-    zindex_range : tuple of int
+    zindex_range : (int, int)
         Plane positions range of fibers relative to the focal plane.
 
     psf : numpy.ndarray with 3 dimensions

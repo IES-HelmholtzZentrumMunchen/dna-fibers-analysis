@@ -3,6 +3,8 @@ Main entry point of the dfa package.
 This can be used to actual run the analysis (partially of fully).
 """
 
+import warnings
+
 import numpy as np
 
 from dfa import utilities as ut
@@ -423,6 +425,7 @@ def simulate_command(args):
         Input namespace containing command line arguments.
     """
     import os
+    import pickle
     from skimage import io
     from dfa import modeling as mod
     from dfa import simulation as sim
@@ -439,27 +442,57 @@ def simulate_command(args):
 
     simulated_psf = io.imread(args.psf_file)
 
+    patterns = None
+    lengths = None
+
     if args.simulated_fibers == '':
-        fibers_objects = sim.rfibers(
+        paths, patterns, lengths = sim.rpaths(
             number=args.number, angle_range=args.orientation,
             shift_range=[tuple(args.location[:2]), tuple(args.location[2:])],
             perturbations_force_range=args.perturbations_force_range,
             bending_elasticity_range=args.bending_elasticity_range,
-            bending_force_range=args.bending_force_range,
-            disc_prob_range=args.disconnection_probability_range,
-            return_prob_range=args.return_probability_range,
-            local_force_range=args.local_force_range,
-            global_force_range=args.global_force_range,
-            global_rate_range=args.global_rate_range, model=args.model)
+            bending_force_range=args.bending_force_range)
+
+        if not args.paths_only:
+            fibers_objects = sim.rfibers(
+                number=args.number,
+                patterns=patterns, lengths=lengths, paths=paths,
+                disc_prob_range=args.disconnection_probability_range,
+                return_prob_range=args.return_probability_range,
+                local_force_range=args.local_force_range,
+                global_force_range=args.global_force_range,
+                global_rate_range=args.global_rate_range, model=args.model)
+        else:
+            fibers_objects = list(zip(paths, [np.ones(path.shape)
+                                              for path in paths]))
     else:
         fibers = list(list(zip(*ut.read_fibers(args.simulated_fibers)))[0])
-
         dirname, basename = os.path.split(args.simulated_fibers)
         basename = os.path.splitext(basename)[0]
-        signals = list(list(zip(*ut.read_fibers(
-            os.path.join(dirname, '{}_signal.zip'.format(basename)))))[0])
 
-        fibers_objects = list(zip(fibers, signals))
+        if not args.paths_only:
+            signals = list(list(zip(*ut.read_fibers(
+                os.path.join(dirname, '{}_signal.zip'.format(basename)))))[0])
+            fibers_objects = list(zip(fibers, signals))
+        else:
+            with open(os.path.join(dirname,
+                                   '{}_patterns.pickle'.format(basename)),
+                      'rb') as f:
+                patterns = pickle.load(f)
+
+            with open(os.path.join(dirname,
+                                   '{}_lengths.pickle'.format(basename)),
+                      'rb') as f:
+                lengths = pickle.load(f)
+
+            fibers_objects = sim.rfibers(
+                number=args.number,
+                patterns=patterns, lengths=lengths, paths=fibers,
+                disc_prob_range=args.disconnection_probability_range,
+                return_prob_range=args.return_probability_range,
+                local_force_range=args.local_force_range,
+                global_force_range=args.global_force_range,
+                global_rate_range=args.global_rate_range, model=args.model)
 
     if args.no_image:
         degraded_image = None
@@ -493,6 +526,15 @@ def simulate_command(args):
         if degraded_image is not None:
             io.imsave(args.output, degraded_image.astype('int16'))
         else:
+            if args.paths_only:
+                with open(os.path.join(path, '{}_patterns.pickle'.format(name)),
+                          'wb') as f:
+                    pickle.dump(patterns, f)
+
+                with open(os.path.join(path,'{}_lengths.pickle'.format(name)),
+                          'wb') as f:
+                    pickle.dump(lengths, f)
+
             ut.write_fibers([signal for _, signal in fibers_objects],
                             path, '{}_signal'.format(name), zipped=True)
 
@@ -898,6 +940,10 @@ if __name__ == '__main__':
     parser_simulation.add_argument(
         '--simulated-fibers', type=ut.check_valid_or_empty_path, default='',
         help='Input already simulated fibers.')
+    parser_simulation.add_argument(
+        '--paths-only', action='store_true',
+        help='Setting this flag will lead to no fibers paths and no image '
+             'degradation output.')
 
     fibers_group = parser_simulation.add_argument_group('Fibers')
     fibers_group.add_argument(
@@ -1050,4 +1096,6 @@ if __name__ == '__main__':
         from matplotlib import pyplot as plt
         plt.switch_backend('Agg')
 
-    args.func(args)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=UserWarning)
+        args.func(args)
