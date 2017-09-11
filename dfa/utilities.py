@@ -599,6 +599,10 @@ def check_valid_output_file(path):
         raise argparse.ArgumentTypeError('The path of the requested output file'
                                          ' is not valid!')
 
+    if os.path.isdir(path):
+        raise argparse.ArgumentTypeError('The output path must be a file, not '
+                                         'a directory!')
+
     return path
 
 
