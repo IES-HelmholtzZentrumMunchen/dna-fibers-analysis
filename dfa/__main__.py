@@ -262,14 +262,15 @@ def extraction_command(args):
             current_fibers = list(zip(*ut.read_fibers(args.fibers,
                                                       image_name=basename)))
 
-            # the coordinates of the fibers are sorted such that the profiles
-            # are extracted in the same orientation for any input.
-            input_fibers.append(
-                [fiber[:, np.lexsort((*fiber,))]
-                 for fiber in ut.resample_fibers(list(current_fibers[0]))])
+            if len(current_fibers) > 0:
+                # the coordinates of the fibers are sorted such that the
+                # profiles are extracted in the same orientation for any input.
+                input_fibers.append(
+                    [fiber[:, np.lexsort((*fiber,))]
+                     for fiber in ut.resample_fibers(list(current_fibers[0]))])
 
-            input_fibers_indices.append(list(current_fibers[2]))
-            input_names.append(basename)
+                input_fibers_indices.append(list(current_fibers[2]))
+                input_names.append(basename)
 
     # process
     extracted_fibers = ex.extract_fibers(
@@ -574,44 +575,48 @@ def compare_fibers_command(args):
     expected_fibers = np.array(ut.read_fibers(args.expected)).T
     actual_fibers = np.array(ut.read_fibers(args.actual)).T
 
-    # to be comparable, we resample the fiber path to a sample every two pixels
-    expected_fibers[0] = ut.resample_fibers(expected_fibers[0], rate=2)
-    actual_fibers[0] = ut.resample_fibers(actual_fibers[0], rate=2)
+    if actual_fibers.size > 0 and expected_fibers.size > 0:
+        # to be comparable, we resample the fiber path to a
+        # sample every two pixels
+        expected_fibers[0] = ut.resample_fibers(expected_fibers[0], rate=2)
+        actual_fibers[0] = ut.resample_fibers(actual_fibers[0], rate=2)
 
-    # only fibers with matching image name will be compared;
-    # the unique images names are visited sequentially
-    unique_image_names = np.unique(
-        np.concatenate((expected_fibers[1], actual_fibers[1])))
+        # only fibers with matching image name will be compared;
+        # the unique images names are visited sequentially
+        unique_image_names = np.unique(
+            np.concatenate((expected_fibers[1], actual_fibers[1])))
 
-    for image_name in unique_image_names:
-        image_info = image_name.split('-', maxsplit=len(scheme)-3)
+        for image_name in unique_image_names:
+            image_info = image_name.split('-', maxsplit=len(scheme)-3)
 
-        expected_with_name = _indices_with_name(expected_fibers[1], image_name)
-        actual_with_name = _indices_with_name(actual_fibers[1], image_name)
+            expected_with_name = _indices_with_name(expected_fibers[1],
+                                                    image_name)
+            actual_with_name = _indices_with_name(actual_fibers[1],
+                                                  image_name)
 
-        matched_fibers = cmp.match_fibers_pairs(
-            expected_fibers[0][expected_with_name],
-            actual_fibers[0][actual_with_name])
+            matched_fibers = cmp.match_fibers_pairs(
+                expected_fibers[0][expected_with_name],
+                actual_fibers[0][actual_with_name])
 
-        # each pair of matching fibers is compared and distances
-        # are appended to the output data frame
-        for expected_fiber_index, actual_fiber_index in matched_fibers:
-            mean_dist, median_dist, hausdorff_dist = \
-                cmp.fibers_spatial_distances(
-                    expected_fibers[0][expected_with_name][
-                        expected_fiber_index],
-                    actual_fibers[0][actual_with_name][actual_fiber_index])
+            # each pair of matching fibers is compared and distances
+            # are appended to the output data frame
+            for expected_fiber_index, actual_fiber_index in matched_fibers:
+                mean_dist, median_dist, hausdorff_dist = \
+                    cmp.fibers_spatial_distances(
+                        expected_fibers[0][expected_with_name][
+                            expected_fiber_index],
+                        actual_fibers[0][actual_with_name][actual_fiber_index])
 
-            output = output.append(
-                pd.Series(
-                    {labels[0]: mean_dist,
-                     labels[1]: median_dist,
-                     labels[2]: hausdorff_dist},
-                    name=(*image_info,
-                          expected_fibers[2][expected_with_name][
-                              expected_fiber_index],
-                          actual_fibers[2][actual_with_name][
-                              actual_fiber_index])))
+                output = output.append(
+                    pd.Series(
+                        {labels[0]: mean_dist,
+                         labels[1]: median_dist,
+                         labels[2]: hausdorff_dist},
+                        name=(*image_info,
+                              expected_fibers[2][expected_with_name][
+                                  expected_fiber_index],
+                              actual_fibers[2][actual_with_name][
+                                  actual_fiber_index])))
 
     if args.output is not None:
         output.to_csv(args.output)
@@ -634,41 +639,48 @@ def comparison_analyses_command(args):
     expected_analysis = pd.read_csv(args.expected, index_col=args.scheme)
     actual_analysis = pd.read_csv(args.actual, index_col=args.scheme)
 
-    match_scheme = args.scheme.copy()
-    match_scheme.insert(-1, 'expected fiber')
-    match_scheme[-1] = 'actual fiber'
-    fibers_match = pd.read_csv(args.match, index_col=match_scheme)
+    if len(expected_analysis) > 0 and len(actual_analysis) > 0:
+        match_scheme = args.scheme.copy()
+        match_scheme.insert(-1, 'expected fiber')
+        match_scheme[-1] = 'actual fiber'
+        fibers_match = pd.read_csv(args.match, index_col=match_scheme)
 
-    pct_match_fibers, match_fibers_expected, match_fibers_actual = \
-        cmp.match_index_pairs(expected_analysis, actual_analysis,
-                              fibers_match.index)
+        pct_match_fibers, match_fibers_expected, match_fibers_actual = \
+            cmp.match_index_pairs(expected_analysis, actual_analysis,
+                                  fibers_match.index)
 
-    pct_match_patterns, match_patterns_expected, match_patterns_actual = \
-        cmp.match_column(match_fibers_expected, match_fibers_actual,
-                         column='pattern')
+        import sys
+        print(match_fibers_expected, match_fibers_actual, file=sys.stderr)
 
-    length_difference = cmp.difference_in_column(
-        match_patterns_expected, match_patterns_actual, column='length')
+        pct_match_patterns, match_patterns_expected, match_patterns_actual = \
+            cmp.match_column(match_fibers_expected, match_fibers_actual,
+                             column='pattern')
 
-    new_index = np.array([list(ix_expected) + [ix_actual[-1]]
-                          for ix_expected, ix_actual in
-                          zip(match_patterns_expected.index,
-                              match_patterns_actual.index)]).T
+        length_difference = cmp.difference_in_column(
+            match_patterns_expected, match_patterns_actual, column='length')
 
-    length_difference = length_difference.to_frame()
+        new_index = np.array([list(ix_expected) + [ix_actual[-1]]
+                              for ix_expected, ix_actual in
+                              zip(match_patterns_expected.index,
+                                  match_patterns_actual.index)]).T
 
-    for i, scheme in enumerate(match_scheme):
-        length_difference[scheme] = new_index[i]
+        length_difference = length_difference.to_frame()
 
-    length_difference.set_index(match_scheme, inplace=True)
+        for i, scheme in enumerate(match_scheme):
+            length_difference[scheme] = new_index[i]
 
-    if args.output is not None:
-        length_difference.to_csv(args.output)
+        length_difference.set_index(match_scheme, inplace=True)
+
+        if args.output is not None:
+            length_difference.to_csv(args.output)
+        else:
+            print('percentage of fiber match: {}'.format(
+                pct_match_fibers * 100))
+            print('percentage of pattern match: {}'.format(
+                pct_match_patterns * 100))
+            print(length_difference)
     else:
-        print('percentage of fiber match: {}'.format(pct_match_fibers * 100))
-        print('percentage of pattern match: {}'.format(
-            pct_match_patterns * 100))
-        print(length_difference)
+        print('At least one analysis is empty!')
 
 
 def create_dataset(args):
