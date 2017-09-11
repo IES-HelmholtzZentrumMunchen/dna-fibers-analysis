@@ -47,12 +47,16 @@ class Dataset:
         self.dataset_path = os.path.join(storing_path,
                                          os.path.splitext(
                                              os.path.basename(archive))[0])
+        self.images_path = os.path.join(self.dataset_path, 'images')
+        self.fibers_path = os.path.join(self.dataset_path, 'fibers')
+        self.profiles_path = os.path.join(self.dataset_path, 'profiles')
+        self.summary_path = os.path.join(self.dataset_path, 'summary.csv')
 
         if force_decompress or not os.path.exists(self.dataset_path):
             self._decompress()
 
         self.summary = pd.read_csv(
-            os.path.join(self.dataset_path, 'summary.csv'),
+            self.summary_path,
             index_col=list(range(3))).sort_index()
 
         tmp = self.summary.copy()
@@ -70,7 +74,10 @@ class Dataset:
         Utility method used to decompress the dataset at the correct path.
         """
         with zipfile.ZipFile(self.archive) as zipfiles:
-            zipfiles.extractall(path=self.storing_path)
+            zipfiles.extractall(
+                path=os.path.join(self.storing_path,
+                                  os.path.splitext(
+                                      os.path.basename(self.archive))[0]))
 
     def next_batch(self, index, n, mapping, batch_size=None):
         """
@@ -84,7 +91,7 @@ class Dataset:
         n : str
             Name of the current offset of reading
 
-        mapping : (int,) -> T
+        mapping : (pandas.MultiIndex,) -> T
             Function that maps an index to elements to return.
 
         batch_size : 0 < int | None
@@ -109,7 +116,56 @@ class Dataset:
         else:
             return None
 
-    def next_image_batch(self, batch_size=None):
+    def get_image_path(self, index):
+        """
+        Get the path to the image file corresponding to given index.
+
+        Parameters
+        ----------
+        index : pandas.MultiIndex
+            Index of the image.
+
+        Returns
+        -------
+        str
+            Path of the file.
+        """
+        return os.path.join(self.images_path, '{}-{}.tif'.format(*index))
+
+    def get_fibers_file(self, index):
+        """
+        Get the path to the fiber file corresponding to given index.
+
+        Parameters
+        ----------
+        index : pandas.MultiIndex
+            Index of the fiber.
+
+        Returns
+        -------
+        str
+            Path of the file.
+        """
+        return os.path.join(self.fibers_path, '{}-{}.zip'.format(*index))
+
+    def get_profiles_file(self, index):
+        """
+        Get the path to the profiles file corresponding to given index.
+
+        Parameters
+        ----------
+        index : pandas.MultiIndex
+            Index of the fiber.
+
+        Returns
+        -------
+        str
+            Path to the file.
+        """
+        return os.path.join(
+            self.profiles_path, '{}-{}_fiber-{}.csv'.format(*index))
+
+    def next_image_batch(self, batch_size=None, paths_only=False):
         """
         Get the next image batch of the given size as a generator.
 
@@ -119,22 +175,25 @@ class Dataset:
             Size of the next batch. When None, the batch size is set to the
             size of the dataset (default behaviour).
 
+        paths_only : bool
+            If True, only paths to files are returned, otherwise the files
+            are red.
+
         Yields
         ------
-        (int, numpy.ndarray, List[numpy.ndarray])
+        (pandas.MultiIndex, numpy.ndarray, List[numpy.ndarray])
             The next batch (index, image, fibers).
         """
         return self.next_batch(
             batch_size=batch_size, index='image_index', n='_n_image',
             mapping=lambda index: (
+                index, self.get_image_path(index), self.get_fibers_file(index))
+            if paths_only else lambda index: (
                 index,
-                io.imread(os.path.join(self.dataset_path, 'input',
-                                       '{}-{}.tif'.format(*index))),
-                ut.read_points_from_imagej_zip(
-                    os.path.join(self.dataset_path, 'fibers',
-                                 '{}-{}.zip'.format(*index)))))
+                io.imread(self.get_image_path(index)),
+                ut.read_fibers(self.get_fibers_file(index))))
 
-    def next_profile_batch(self, batch_size=None):
+    def next_profile_batch(self, batch_size=None, paths_only=False):
         """
         Get the next profile batch of the given size as a generator.
 
@@ -144,36 +203,35 @@ class Dataset:
             Size of the next batch. When None, the batch size is set to the
             size of the dataset (default behaviour).
 
-        Returns
-        -------
-        generator
-            Tuples of the next batch as a generator. The tuples contain the
-            index, the profiles and the data view to the ground truth.
+        paths_only : bool
+            If True, only paths to files are returned, otherwise the files
+            are red.
 
         Yields
         ------
-        (int, numpy.ndarray, pandas.DataFrame)
+        (pandas.MultiIndex, numpy.ndarray, pandas.DataFrame)
             The next batch (index, profiles, analysis).
         """
         return self.next_batch(
             batch_size=batch_size, index='profile_index', n='_n_profile',
             mapping=lambda index: (
+                index, self.get_profiles_file(index))
+            if paths_only else lambda index: (
                 index,
-                np.loadtxt(os.path.join(
-                    self.dataset_path, 'profiles',
-                    '{}-{}-Profiles #{}.csv'.format(*index)),
+                np.loadtxt(self.get_profiles_file(index),
                     delimiter=',', skiprows=1, usecols=(0, 1, 2)),
                 self.summary.ix[index]))
 
     @staticmethod
-    def _save(summary, output_path, images_path, fibers_path, profiles_path):
+    def _save(summary_path, output_path, images_path, fibers_path,
+              profiles_path):
         """
         Save dataset defined by input as zip file to given path.
 
         Parameters
         ----------
-        summary : pandas.DataFrame
-            Data frame used to select files belonging to dataset.
+        summary_path : str
+            Path to detailed analysis of the dataset.
 
         output_path : str
             Path to output file (the zip file containing dataset).
@@ -187,6 +245,9 @@ class Dataset:
         profiles_path : str
             Path to the profiles.
         """
+        summary = pd.read_csv(summary_path,
+                              index_col=['experiment', 'image', 'fiber'])
+
         with zipfile.ZipFile(output_path, mode='w',
                              compression=zipfile.ZIP_DEFLATED) as archive:
             for ix in summary.index.droplevel('fiber').unique():
@@ -213,6 +274,10 @@ class Dataset:
                     filename=os.path.join(profiles_path, name),
                     arcname=os.path.join(os.path.basename(profiles_path), name))
 
+            archive.write(
+                filename=summary_path,
+                arcname=os.path.join('summary.csv'))
+
     def save(self, path):
         """
         Save dataset as zip file to given path.
@@ -222,10 +287,8 @@ class Dataset:
         path : str
             Path of the zip file in which the dataset will be saved.
         """
-        Dataset._save(self.summary, path,
-                      os.path.join(self.dataset_path, 'images'),
-                      os.path.join(self.dataset_path, 'fibers'),
-                      os.path.join(self.dataset_path, 'profiles'))
+        Dataset._save(self.dataset_path, path, self.images_path,
+                      self.fibers_path, self.profiles_path)
 
     @staticmethod
     def create(summary_path, images_path, fibers_path, profiles_path,
@@ -253,7 +316,5 @@ class Dataset:
         output_path : str
             Path to output file (the zip file containing dataset).
         """
-        summary = pd.read_csv(summary_path,
-                              index_col=['experiment', 'image', 'fiber'])
-        Dataset._save(summary, output_path, images_path,
+        Dataset._save(summary_path, output_path, images_path,
                       fibers_path, profiles_path)
