@@ -87,7 +87,8 @@ class TestDetection(unittest.TestCase):
             fiberness, directions = det.fiberness_filter(
                 self.image, [2, 3, 4], alpha=0.5, beta=beta, gamma=1)
             det.np.testing.assert_allclose(fiberness, self.fiberness[beta])
-            det.np.testing.assert_allclose(directions, self.directions[beta])
+            det.np.testing.assert_allclose(directions, self.directions[beta],
+                                           rtol=1e-5)
 
     def test_reconstruct_fibers(self):
         for length in self.reconstructions.keys():
