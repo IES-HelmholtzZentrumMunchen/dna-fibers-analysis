@@ -434,6 +434,7 @@ def simulate_command(args):
     from dfa import modeling as mod
     from dfa import simulation as sim
     from dfa import utilities as _ut
+    from matplotlib import pyplot as plt
 
     if args.model is None:
         args.model = mod.standard
@@ -450,6 +451,7 @@ def simulate_command(args):
     lengths = None
 
     if args.simulated_fibers == '':
+        nums = list(range(1, args.number + 1))
         paths, patterns, lengths = sim.rpaths(
             number=args.number, angle_range=args.orientation,
             shift_range=[tuple(args.location[:2]), tuple(args.location[2:])],
@@ -470,7 +472,7 @@ def simulate_command(args):
             fibers_objects = list(zip(paths, [np.ones(path.shape)
                                               for path in paths]))
     else:
-        fibers = list(list(zip(*ut.read_fibers(args.simulated_fibers)))[0])
+        fibers, _, nums = tuple(zip(*ut.read_fibers(args.simulated_fibers)))
         dirname, basename = os.path.split(args.simulated_fibers)
         basename = os.path.splitext(basename)[0]
 
@@ -488,6 +490,10 @@ def simulate_command(args):
                                    '{}_lengths.pickle'.format(basename)),
                       'rb') as f:
                 lengths = pickle.load(f)
+
+            # reorder patterns and lengths with fibers numbers
+            patterns = [patterns[i-1] for i in nums]
+            lengths = [lengths[i-1] for i in nums]
 
             fibers_objects = sim.rfibers(
                 number=args.number,
@@ -535,15 +541,31 @@ def simulate_command(args):
                           'wb') as f:
                     pickle.dump(patterns, f)
 
-                with open(os.path.join(path,'{}_lengths.pickle'.format(name)),
+                with open(os.path.join(path, '{}_lengths.pickle'.format(name)),
                           'wb') as f:
                     pickle.dump(lengths, f)
 
+                for fiber_object, fiber_num in zip(fibers_objects, nums):
+                    plt.plot(fiber_object[0][0], -fiber_object[0][1], '-k')
+                    plt.text(fiber_object[0][0].mean(),
+                             -fiber_object[0][1].mean(),
+                             str(fiber_num), color='k')
+                plt.axes().set_aspect('equal')
+                plt.title('Fibers of {}'.format(name))
+                plt.xlim(0, 1024)
+                plt.ylim(-1024, 0)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(os.path.join(path, '{}_fibers.pdf'.format(name)))
+                plt.close()
+
             ut.write_fibers([signal for _, signal in fibers_objects],
-                            path, '{}_signal'.format(name), zipped=True)
+                            path, '{}_signal'.format(name),
+                            indices=nums, zipped=True)
 
         ut.write_fibers([fiber_object for fiber_object, _ in fibers_objects],
-                        path, name, zipped=True)
+                        path, name, indices=nums, zipped=True)
 
 
 def compare_fibers_command(args):
@@ -562,14 +584,22 @@ def compare_fibers_command(args):
         return np.indices(names.shape).flatten()[names == name]
 
     # create and initialize the output data frame
-    labels = ['mean dist.', 'median dist.', 'Hausdorff dist.']
+    labels_detection = ['TP', 'FN', 'FP']
+    output_detection = pd.DataFrame(
+        columns=labels_detection,
+        index=pd.MultiIndex(levels=[[] for _ in range(len(args.scheme) - 1)],
+                            labels=[[] for _ in range(len(args.scheme) - 1)],
+                            names=args.scheme[:-1]))
+
+    labels_accuracy = ['mean dist.', 'median dist.', 'Hausdorff dist.']
     scheme = args.scheme
     scheme.insert(-1, 'expected fiber')
     scheme[-1] = 'actual fiber'
-    index = pd.MultiIndex(levels=[[] for _ in range(len(scheme))],
-                          labels=[[] for _ in range(len(scheme))],
-                          names=scheme)
-    output = pd.DataFrame(columns=labels, index=index)
+    output_accuracy = pd.DataFrame(
+        columns=labels_accuracy,
+        index=pd.MultiIndex(levels=[[] for _ in range(len(scheme))],
+                            labels=[[] for _ in range(len(scheme))],
+                            names=scheme))
 
     # read the fibers in batch
     expected_fibers = np.array(ut.read_fibers(args.expected)).T
@@ -594,34 +624,46 @@ def compare_fibers_command(args):
             actual_with_name = _indices_with_name(actual_fibers[1],
                                                   image_name)
 
+            expected_fibers_with_name = expected_fibers[0][expected_with_name]
+            actual_fibers_with_name = actual_fibers[0][actual_with_name]
+
             matched_fibers = cmp.match_fibers_pairs(
-                expected_fibers[0][expected_with_name],
-                actual_fibers[0][actual_with_name])
+                expected_fibers_with_name, actual_fibers_with_name)
+
+            number_of_matches = 0
 
             # each pair of matching fibers is compared and distances
             # are appended to the output data frame
             for expected_fiber_index, actual_fiber_index in matched_fibers:
-                mean_dist, median_dist, hausdorff_dist = \
+                number_of_matches += 1
+                distances = \
                     cmp.fibers_spatial_distances(
-                        expected_fibers[0][expected_with_name][
-                            expected_fiber_index],
-                        actual_fibers[0][actual_with_name][actual_fiber_index])
+                        expected_fibers_with_name[expected_fiber_index],
+                        actual_fibers_with_name[actual_fiber_index])
 
-                output = output.append(
+                output_accuracy = output_accuracy.append(
                     pd.Series(
-                        {labels[0]: mean_dist,
-                         labels[1]: median_dist,
-                         labels[2]: hausdorff_dist},
+                        dict(zip(labels_accuracy, distances)),
                         name=(*image_info,
                               expected_fibers[2][expected_with_name][
                                   expected_fiber_index],
                               actual_fibers[2][actual_with_name][
                                   actual_fiber_index])))
 
+            output_detection = output_detection.append(
+                pd.Series(
+                    dict(zip(labels_detection,
+                             [number_of_matches,
+                              len(expected_fibers_with_name)-number_of_matches,
+                              len(actual_fibers_with_name)-number_of_matches])),
+                    name=(image_info[0], image_info[1])))
+
     if args.output is not None:
-        output.to_csv(args.output)
+        output_accuracy.to_csv('{}_accuracy.csv'.format(args.output))
+        output_detection.to_csv('{}_detection.csv'.format(args.output))
     else:
-        print(output)
+        print(output_detection)
+        print(output_accuracy)
 
 
 def comparison_analyses_command(args):
@@ -648,9 +690,6 @@ def comparison_analyses_command(args):
         pct_match_fibers, match_fibers_expected, match_fibers_actual = \
             cmp.match_index_pairs(expected_analysis, actual_analysis,
                                   fibers_match.index)
-
-        import sys
-        print(match_fibers_expected, match_fibers_actual, file=sys.stderr)
 
         pct_match_patterns, match_patterns_expected, match_patterns_actual = \
             cmp.match_column(match_fibers_expected, match_fibers_actual,
@@ -998,8 +1037,8 @@ if __name__ == '__main__':
         help='Probability of recovering when the fiber path is disconnected '
              '(default is [0.5, 0.7]).')
     fibers_group.add_argument(
-        '--local-force-range', type=float, nargs=2, default=[0.05, 0.2],
-        help='Force of local signal inhomogeneity (default is [0.05, 0.2]).')
+        '--local-force-range', type=float, nargs=2, default=[0.1, 0.4],
+        help='Force of local signal inhomogeneity (default is [0.1, 0.4]).')
     fibers_group.add_argument(
         '--global-force-range', type=float, nargs=2, default=[2, 5],
         help='Force of global signal inhomogeneity (default is [2, 5]).')
@@ -1015,7 +1054,7 @@ if __name__ == '__main__':
     image_group.add_argument(
         'psf_file', type=str, default=None, help='Path to 3D PSF file.')
     image_group.add_argument(
-        '--z-index', type=int, nargs=2, default=[-1, 1],
+        '--z-index', type=float, nargs=2, default=[-1, 1],
         help='Z-index of fiber objects (default: [-1, 1]).')
     image_group.add_argument(
         '--snr', type=float, default=7, help='SNR in decibels (default: 7).')

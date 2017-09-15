@@ -149,12 +149,14 @@ def fiber_inhomogeneity(num_of_points, number_of_channels, pattern, length,
             if pattern[j] == i:
                 s[i, np.bitwise_and(length_cumsum[j] <= u,
                                     u <= length_cumsum[j+1])] = 1
+                # local inhomogeneity for current pattern
+                s[i] += local_force * np.random.randn(num_of_points)
+            else:
+                # local inhomogeneity for non-current pattern
+                s[i] += np.abs(local_force * np.random.randn(num_of_points))
 
-        # create local inhomogeneity
-        s[i] += local_force * np.random.randn(num_of_points)
-
-        s[i] += global_force * d
-        s[i] -= s[i].min()
+        # global inhomogeneity
+        s[i] *= global_force * d
 
     return s
 
@@ -464,7 +466,7 @@ def shot_noise(input_image, snr):
     # When poisson noise, we have parameter lambda = 10^(SNR_dB / 5)
     for i in range(input_image.shape[0]):
         input_image[i] = np.round(input_image[i] * np.power(10, snr / 5))
-        background = np.equal(input_image[i], 0)
+        background = np.less_equal(input_image[i], 0)
         input_image[i, background] = np.random.rand(
             input_image[i, background].size)
         input_image[i] = np.random.poisson(

@@ -4,6 +4,7 @@ Compare module of the DNA fibers analysis package.
 Use this module to compare and quantify the quality of the pipeline.
 """
 import numpy as np
+import pandas as pd
 
 
 def coarse_fibers_spatial_distance(f1, f2):
@@ -214,6 +215,11 @@ def match_index_pairs(d1, d2, matches, columns=('expected fiber',
     index2 = matches.droplevel(columns[0])
     index2.names = index2.names[:-1] + ['fiber']
 
+    for idx1, idx2 in zip(index1, index2):
+        if idx1 not in d1.index or idx2 not in d2.index:
+            index1 = index1.drop(idx1)
+            index2 = index2.drop(idx2)
+
     return matches.size / max(d1.index.unique().size,
                               d2.index.unique().size), \
         d1.ix[index1], d2.ix[index2]
@@ -262,7 +268,9 @@ def match_column(d1, d2, column='pattern'):
     index1 = single_column1.set_index(d1.index.names)[select].index
     index2 = single_column2.set_index(d2.index.names)[select].index
 
-    return np.sum(select) / len(select), d1.ix[index1], d2.ix[index2]
+    return np.sum(select) / len(select), \
+        pd.DataFrame(d1.to_dict(), index=index1, columns=d1.columns), \
+        pd.DataFrame(d2.to_dict(), index=index2, columns=d2.columns)
 
 
 def difference_in_column(d1, d2, column='length'):
