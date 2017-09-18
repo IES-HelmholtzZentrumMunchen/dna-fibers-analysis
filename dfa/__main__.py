@@ -120,7 +120,8 @@ def pipeline_command(args):
             # are extracted in the same orientation for any input.
             extracted_fibers = ex.unfold_fibers(
                 image, [fiber[:, np.lexsort((*fiber,))]
-                        for fiber in ut.resample_fibers(fibers)], radius=radius)
+                        for fiber in ut.resample_fibers(fibers, 1)],
+                radius=radius)
 
             extracted_profiles = [
                 ex.extract_profiles_from_fiber(extracted_fiber)
@@ -696,12 +697,15 @@ def comparison_analyses_command(args):
                              column='pattern')
 
         length_difference = cmp.difference_in_column(
-            match_patterns_expected, match_patterns_actual, column='length')
+            expected_analysis.ix[match_patterns_expected.index],
+            actual_analysis.ix[match_patterns_actual.index],
+            column='length')
 
-        new_index = np.array([list(ix_expected) + [ix_actual[-1]]
-                              for ix_expected, ix_actual in
-                              zip(match_patterns_expected.index,
-                                  match_patterns_actual.index)]).T
+        new_index = np.array(
+            [list(ix_expected) + [ix_actual[-1]]
+             for ix_expected, ix_actual in
+             zip(expected_analysis.ix[match_patterns_expected.index].index,
+                 actual_analysis.ix[match_patterns_actual.index].index)]).T
 
         length_difference = length_difference.to_frame()
 
