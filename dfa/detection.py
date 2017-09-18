@@ -7,6 +7,7 @@ import numpy as np
 from scipy.interpolate import splprep, splev
 from skimage.measure import label
 from skimage.morphology import skeletonize, binary_dilation, disk, white_tophat
+from skimage.filters import gaussian
 
 from dfa import _grayscale_morphology as _gm
 from dfa import _scale_space_hessian as _sha
@@ -162,7 +163,7 @@ def _order_skeleton_points(skeleton):
 
 
 def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10,
-                         min_length=30):
+                         min_length=30, size=3):
     """Estimate the medial axis of the detected fibers from the reconstructed
     fiberness map.
 
@@ -183,27 +184,33 @@ def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10,
     min_length : strictly positive int
         Approximate minimal length of fibers in pixels (default is 30).
 
+    size : int > 0
+        Thickness of the fibers.
+
     Returns
     -------
     list of numpy.ndarray
         Coordinates of the medial axis lines of corresponding fibers.
     """
-    # Threshold vesselness map and get connected components
-    skeletons = skeletonize(reconstruction >= threshold)
-    labels = label(skeletons)
+    labels = label(reconstruction >= threshold)
     j, i = np.meshgrid(range(labels.shape[1]), range(labels.shape[0]))
     coordinates = []
 
     for l in range(1, labels.max() + 1):
-        fiber_skeleton = np.equal(labels, l)
+        fiber_piece = np.equal(labels, l)
 
-        if fiber_skeleton.sum() >= min_length:
+        if fiber_piece.sum() >= size * min_length:
             try:
-                jsk = j[fiber_skeleton]
-                isk = i[fiber_skeleton]
+                jsk = j[fiber_piece]
+                isk = i[fiber_piece]
                 inset = slice(isk.min() - 10, isk.max() + 10), \
                     slice(jsk.min() - 10, jsk.max() + 10)
 
+                fiber_piece[inset] = np.greater_equal(
+                    gaussian(fiber_piece[inset], 3), 0.5)
+
+                fiber_skeleton = np.zeros(fiber_piece.shape).astype('int')
+                fiber_skeleton[inset] = skeletonize(fiber_piece[inset])
                 fiber_skeleton[inset] = _sk.prune_min(fiber_skeleton[inset])
                 number_of_pixels = fiber_skeleton.sum()
 
@@ -280,6 +287,7 @@ def detect_fibers(image, scales, alpha, beta, length, size, smoothing,
         extent_mask=extent_mask)
 
     coordinates = estimate_medial_axis(
-        reconstructed_vesselness, smoothing=smoothing, min_length=min_length)
+        reconstructed_vesselness, smoothing=smoothing, min_length=min_length,
+        size=size)
 
     return coordinates
