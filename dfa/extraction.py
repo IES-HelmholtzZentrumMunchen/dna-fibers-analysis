@@ -190,7 +190,7 @@ def extract_profiles_from_fiber(fiber, func=np.mean):
                           func(fiber[0], axis=0),
                           func(fiber[1], axis=0))).T
 
-    profiles = profiles[np.all(np.greater(profiles, 0), axis=1)]
+    profiles = profiles[np.all(np.greater_equal(profiles[:, 1:], 0), axis=1)]
     profiles = profiles[np.all(np.bitwise_not(np.isnan(profiles)), axis=1)]
     profiles = profiles[np.all(np.bitwise_not(np.isinf(profiles)), axis=1)]
 
