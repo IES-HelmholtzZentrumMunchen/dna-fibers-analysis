@@ -147,26 +147,26 @@ class TestAnalysis(unittest.TestCase):
             2: ('1st label origin', [17.31262, 51.93787, 18.16406]),
             3: ('2nd label origin', [25.68512]),
             4: ('stalled fork/1st label termination', [12.49389362]),
-            5: ('1st label origin', [5.8210187, 12.35191679, 0.85185623]),
+            5: ('ongoing fork', [13.20377302, 5.8210187]),
             6: ('ongoing fork', [100., 88.])}
 
         self.data = ana.pd.DataFrame({
-            'profile': [0, 0, 0, 1, 1, 1, 2, 3, 4, 4, 4, 5, 5],
+            'profile': [0, 0, 0, 1, 1, 1, 2, 3, 4, 4, 5, 5],
             'pattern': ['2nd label termination', '2nd label termination',
                         '2nd label termination', '1st label origin',
                         '1st label origin', '1st label origin',
                         '2nd label origin',
                         'stalled fork/1st label termination',
-                        '1st label origin', '1st label origin',
-                        '1st label origin', 'ongoing fork', 'ongoing fork'],
+                        'ongoing fork', 'ongoing fork',
+                        'ongoing fork', 'ongoing fork'],
             'channel': ['IdU', 'CIdU', 'IdU', 'CIdU', 'IdU', 'CIdU', 'CIdU',
-                        'IdU', 'CIdU', 'IdU', 'CIdU', 'IdU', 'CIdU'],
+                        'IdU', 'IdU', 'CIdU', 'IdU', 'CIdU'],
             'length': [48.248290, 42.572020, 43.565370, 17.312620, 51.937870,
-                       18.164060, 25.685120, 12.493894, 5.821019, 12.351917,
-                       0.851856, 100., 88.]},
+                       18.164060, 25.685120, 12.493894, 13.203773, 5.821019,
+                       100., 88.]},
             columns=['pattern', 'channel', 'length'],
             index=ana.pd.Int64Index(
-                [0, 0, 0, 1, 1, 1, 2, 3, 4, 4, 4, 5, 5], name='profile'))
+                [0, 0, 0, 1, 1, 1, 2, 3, 4, 4, 5, 5], name='profile'))
 
         self.fork_rate = ana.pd.Series(
             data=[1.049180308930711, 6.8333346578917489], index=[1, 4],
