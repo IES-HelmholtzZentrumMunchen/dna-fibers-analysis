@@ -753,40 +753,42 @@ def create_figures_from_fibers_images(names, extracted_fibers,
     if group_fibers:
         for image_extracted_fiber, name, fiber_indices \
                 in zip(extracted_fibers, names, indices):
-            height = 2 * radius + 1
-            space = 5
-            offset = 15
-            group_image = np.zeros((
-                len(image_extracted_fiber) * height +
-                (len(image_extracted_fiber) - 1) * space,
-                max(extracted_fiber.shape[2]
-                    for extracted_fiber in image_extracted_fiber) + 2 * offset,
-                3), dtype='uint8')
+            if len(image_extracted_fiber) > 0:
+                height = 2 * radius + 1
+                space = 5
+                offset = 15
+                group_image = np.zeros((
+                    len(image_extracted_fiber) * height +
+                    (len(image_extracted_fiber) - 1) * space,
+                    max(extracted_fiber.shape[2]
+                        for extracted_fiber
+                        in image_extracted_fiber) + 2 * offset,
+                    3), dtype='uint8')
 
-            for number, extracted_fiber in enumerate(image_extracted_fiber):
-                group_image[number * (height + space):
-                            number * (height + space) + height,
-                            offset:extracted_fiber.shape[2] + offset,
-                            0] = 255 * \
-                    norm_min_max(extracted_fiber[0], extracted_fiber)
-                group_image[number * (height + space):
-                            number * (height + space) + height,
-                            offset:extracted_fiber.shape[2] + offset,
-                            1] = 255 * \
-                    norm_min_max(extracted_fiber[1], extracted_fiber)
+                for number, extracted_fiber in enumerate(image_extracted_fiber):
+                    group_image[number * (height + space):
+                                number * (height + space) + height,
+                                offset:extracted_fiber.shape[2] + offset,
+                                0] = 255 * \
+                        norm_min_max(extracted_fiber[0], extracted_fiber)
+                    group_image[number * (height + space):
+                                number * (height + space) + height,
+                                offset:extracted_fiber.shape[2] + offset,
+                                1] = 255 * \
+                        norm_min_max(extracted_fiber[1], extracted_fiber)
 
-            fig, ax = plt.subplots(1, 1)
-            ax.imshow(group_image, aspect='equal')
+                fig, ax = plt.subplots(1, 1)
+                ax.imshow(group_image, aspect='equal')
 
-            # for number in range(len(image_extracted_fiber)):
-            for number, index in enumerate(fiber_indices):
-                ax.text(0, number * (height + space) + height / 2 + 2,
-                        '#{}'.format(index), color='white')
+                # for number in range(len(image_extracted_fiber)):
+                for number, index in enumerate(fiber_indices):
+                    ax.text(0, number * (height + space) + height / 2 + 2,
+                            '#{}'.format(index), color='white')
 
-            ax.set_title(name)
-            ax.axis('off')
+                ax.set_title(name)
+                ax.axis('off')
 
-            figures.append(('{}_fibers.png'.format(name), fig))
+                figures.append(('{}_fibers.png'.format(name), fig))
     else:
         for image_extracted_fiber, name, fiber_indices \
                 in zip(extracted_fibers, names, indices):
