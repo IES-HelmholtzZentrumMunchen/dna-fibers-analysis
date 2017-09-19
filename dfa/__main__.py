@@ -71,7 +71,7 @@ def pipeline_command(args):
 
     # process image by image
     with progressbar.ProgressBar(max_value=len(images)) as bar:
-        for num, (image, name) in enumerate(zip(images, names)):
+        for num, (image, name, mask) in enumerate(zip(images, names, masks)):
             # pre-processing
             if len(image.shape) != 3:
                 raise ValueError('Input image {} does not have 3 channels! '
@@ -93,7 +93,7 @@ def pipeline_command(args):
                 size=args.fiber_size,
                 smoothing=smoothing,
                 min_length=min_length,
-                extent_mask=None)
+                user_mask=mask)
 
             if args.save_all or args.save_detected_fibers:
                 ut.write_fibers(fibers,
@@ -207,7 +207,7 @@ def detection_command(args):
             size=(args.scales[0]+args.scales[1])/2,
             smoothing=args.smoothing,
             min_length=args.fibers_minimal_length,
-            extent_mask=mask)
+            user_mask=mask)
 
         plt.imshow(fiber_image, cmap='gray', aspect='equal')
         indices = []
@@ -810,9 +810,9 @@ if __name__ == '__main__':
     pipeline_detection = parser_pipeline.add_argument_group('Detection')
     pipeline_detection.add_argument(
         '--intensity-sensitivity',
-        type=ut.check_positive_float, default=0.7,
+        type=ut.check_positive_float, default=0.75,
         help='Sensitivity of detection to intensity in percentage (default is '
-             '0.5, valid range is ]0, +inf[).')
+             '0.75, valid range is ]0, +inf[).')
     pipeline_detection.add_argument(
         '--fiber-size', type=float, default=3,
         help='Size in pixels of fiber''s average width (default is 3).')
@@ -861,9 +861,9 @@ if __name__ == '__main__':
              '0.5, valid range is ]0, 1]).')
     detection_detection.add_argument(
         '--intensity-sensitivity',
-        type=ut.check_positive_float, default=0.7,
+        type=ut.check_positive_float, default=0.75,
         help='Sensitivity of detection to intensity in percentage (default is '
-             '0.5, valid range is ]0, +inf[).')
+             '0.75, valid range is ]0, +inf[).')
     detection_detection.add_argument(
         '--scales', type=ut.check_scales, nargs=3, default=[2, 4, 3],
         help='Scales to use in pixels (minimum, maximum, number of scales). '
