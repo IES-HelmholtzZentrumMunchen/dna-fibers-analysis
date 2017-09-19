@@ -692,7 +692,7 @@ def norm_min_max(data, norm_data=None):
     return (data - norm_data.min()) / (norm_data.max() - norm_data.min())
 
 
-def read_inputs(input_path, mask_path, ext):
+def read_inputs(input_path, mask_path, ext, mask_suffix='mask'):
     def _read_images_from_path(input_path, ext):
         if os.path.isdir(input_path):
             paths = [os.path.join(input_path, filename)
@@ -713,7 +713,17 @@ def read_inputs(input_path, mask_path, ext):
     if mask_path == '':
         masks = [None] * len(images)
     else:
-        masks, _ = _read_images_from_path(mask_path, ext)
+        mask_images, masks_names = _read_images_from_path(mask_path, ext)
+
+        masks = []
+        for name in names:
+            mask_name = '{}_{}'.format(name, mask_suffix)
+
+            if mask_name in masks_names:
+                masks.append(mask_images[masks_names.index(mask_name)]
+                             .astype('bool'))
+            else:
+                masks.append(None)
 
     if len(masks) != len(images):
         raise ValueError('The number of masks is not the same as the'
