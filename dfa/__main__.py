@@ -707,6 +707,16 @@ def comparison_analyses_command(args):
              zip(expected_analysis.ix[match_patterns_expected.index].index,
                  actual_analysis.ix[match_patterns_actual.index].index)]).T
 
+        match_patterns = pd.DataFrame(
+            match_patterns_expected.reset_index()[match_scheme[:2] +
+                                                  ['pattern']])
+        match_patterns['expected fiber'] = \
+            match_patterns_expected.reset_index()['fiber']
+        match_patterns['actual fiber'] = \
+            match_patterns_actual.reset_index()['fiber']
+        match_patterns = match_patterns[match_scheme + ['pattern']]
+        match_patterns.set_index(match_scheme, inplace=True)
+
         length_difference = length_difference.to_frame()
 
         for i, scheme in enumerate(match_scheme):
@@ -715,12 +725,14 @@ def comparison_analyses_command(args):
         length_difference.set_index(match_scheme, inplace=True)
 
         if args.output is not None:
-            length_difference.to_csv(args.output)
+            match_patterns.to_csv('{}_patterns.csv'.format(args.output))
+            length_difference.to_csv('{}_lengths.csv'.format(args.output))
         else:
             print('percentage of fiber match: {}'.format(
                 pct_match_fibers * 100))
             print('percentage of pattern match: {}'.format(
                 pct_match_patterns * 100))
+            print(match_patterns)
             print(length_difference)
     else:
         print('At least one analysis is empty!')
