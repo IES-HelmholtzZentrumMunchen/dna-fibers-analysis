@@ -257,8 +257,10 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
     channels_indices = [1 + model.channels_names.index(cn)
                         for cn in channels_names]
 
+    # the + 1 is here to avoid nan due to zero values
     x = profile[:, 0]
-    y1, y2 = profile[:, channels_indices[1]], profile[:, channels_indices[0]]
+    y1 = profile[:, channels_indices[1]] + 1
+    y2 = profile[:, channels_indices[0]] + 1
     y = np.log(y1) - np.log(y2)
     possible_patterns = _select_possible_patterns(
         x, y, model=model, min_length=min_length)
