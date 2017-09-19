@@ -262,8 +262,8 @@ def match_column(d1, d2, column='pattern'):
         np.bitwise_not(d2_full.duplicated(d2.index.names + [column]))] \
         .set_index(d2.index.names)[column].reset_index()
 
-    select = np.array(single_column1['pattern'].tolist()) == \
-        np.array(single_column2['pattern'].tolist())
+    select = np.array(single_column1[column].tolist()) == \
+        np.array(single_column2[column].tolist())
 
     index1 = single_column1.set_index(d1.index.names)[select].index
     index2 = single_column2.set_index(d2.index.names)[select].index
