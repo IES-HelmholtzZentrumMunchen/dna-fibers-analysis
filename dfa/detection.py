@@ -230,7 +230,7 @@ def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10,
 
 
 def detect_fibers(image, scales, alpha, beta, length, size, smoothing,
-                  min_length, fiberness_threshold=0.5, extent_mask=None):
+                  min_length, fiberness_threshold=0.5, user_mask=None):
     """Convenience method of the fibers detection pipeline.
 
     Parameters
@@ -264,7 +264,7 @@ def detect_fibers(image, scales, alpha, beta, length, size, smoothing,
     fiberness_threshold : float between 0 and 1
         Threshold used on the fiberness map (default is 0.5).
 
-    extent_mask : numpy.ndarray or None
+    user_mask : numpy.ndarray or None
         Mask where the fibers will be detected.
 
     Returns
@@ -276,11 +276,12 @@ def detect_fibers(image, scales, alpha, beta, length, size, smoothing,
         white_tophat(image, disk(max(scales))),
         scales=scales, alpha=alpha, beta=beta)
 
-    if extent_mask is None:
-        mask = fiberness >= fiberness_threshold
-        extent_mask = binary_dilation(mask, disk(length))
-    else:
-        mask = extent_mask
+    mask = np.greater_equal(fiberness, fiberness_threshold)
+    extent_mask = binary_dilation(mask, disk(length))
+
+    if user_mask is not None:
+        mask = np.bitwise_and(mask, user_mask)
+        extent_mask = np.bitwise_and(extent_mask, user_mask)
 
     reconstructed_vesselness = reconstruct_fibers(
         fiberness, directions, length=length, size=size, mask=mask,
