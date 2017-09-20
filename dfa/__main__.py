@@ -989,7 +989,7 @@ if __name__ == '__main__':
         'input', type=ut.check_valid_file,
         help='Input detailed analysis to quantify')
     parser_quantification.add_argument(
-        '--output', type=ut.check_valid_path, default=None,
+        '--output', type=ut.check_valid_directory, default=None,
         help='Path where output will be written.')
     parser_quantification.add_argument(
         '--scheme', type=str, nargs='+',
