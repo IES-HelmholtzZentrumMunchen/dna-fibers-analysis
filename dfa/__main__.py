@@ -186,45 +186,49 @@ def detection_command(args):
         Input namespace containing command line arguments.
     """
     from os import path as op
+    import progressbar
     from matplotlib import pyplot as plt
     from dfa import detection as det
 
     images, names, masks = ut.read_inputs(args.input, args.mask, '.tif')
 
-    for image, name, mask in zip(images, names, masks):
-        if len(image.shape) == 2:
-            fiber_image = image
-        else:
-            fiber_image = image.sum(axis=0)
+    with progressbar.ProgressBar(max_value=len(images)) as bar:
+        for num, (image, name, mask) in enumerate(zip(images, names, masks)):
+            if len(image.shape) == 2:
+                fiber_image = image
+            else:
+                fiber_image = image.sum(axis=0)
 
-        coordinates = det.detect_fibers(
-            fiber_image,
-            scales=np.linspace(args.scales[0], args.scales[1],
-                               int(args.scales[2])).tolist(),
-            alpha=args.fiber_sensitivity,
-            beta=1 / args.intensity_sensitivity,
-            length=args.reconstruction_extent,
-            size=(args.scales[0]+args.scales[1])/2,
-            smoothing=args.smoothing,
-            min_length=args.fibers_minimal_length,
-            user_mask=mask)
+            coordinates = det.detect_fibers(
+                fiber_image,
+                scales=np.linspace(args.scales[0], args.scales[1],
+                                   int(args.scales[2])).tolist(),
+                alpha=args.fiber_sensitivity,
+                beta=1 / args.intensity_sensitivity,
+                length=args.reconstruction_extent,
+                size=(args.scales[0]+args.scales[1])/2,
+                smoothing=args.smoothing,
+                min_length=args.fibers_minimal_length,
+                user_mask=mask)
 
-        plt.imshow(fiber_image, cmap='gray', aspect='equal')
-        indices = []
-        for k, c in enumerate(coordinates):
-            plt.plot(*c, '-c')
-            plt.text(*c.mean(axis=1), str(k + 1), color='c')
-            indices.append(k + 1)
-        plt.title('Fibers of {}'.format(name))
-        plt.xticks([])
-        plt.yticks([])
-        plt.tight_layout()
+            plt.imshow(fiber_image, cmap='gray', aspect='equal')
+            indices = []
+            for k, c in enumerate(coordinates):
+                plt.plot(*c, '-c')
+                plt.text(*c.mean(axis=1), str(k + 1), color='c')
+                indices.append(k + 1)
+            plt.title('Fibers of {}'.format(name))
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
 
-        if args.output is None:
-            plt.show()
-        else:
-            plt.savefig(op.join(args.output, '{}_fibers.pdf'.format(name)))
-            ut.write_fibers(coordinates, args.output, name, indices=indices)
+            if args.output is None:
+                plt.show()
+            else:
+                plt.savefig(op.join(args.output, '{}_fibers.pdf'.format(name)))
+                ut.write_fibers(coordinates, args.output, name, indices=indices)
+
+            bar.update(num + 1)
 
 
 def extraction_command(args):
