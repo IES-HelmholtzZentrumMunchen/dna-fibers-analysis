@@ -5,7 +5,7 @@ __all__ = [
     'modeling', 'detection', 'extraction', 'analysis', 'simulation',
     'comparison']
 
-# gold number (continuous fraction approximation, current iteration is 5)
+# gold number (continuous fraction approximation, current iteration is 6)
 # def dfa_version(n):
 #     def _approx_gold_rec(e, n):
 #         if n == 0:
@@ -13,4 +13,4 @@ __all__ = [
 #         else:
 #             return _approx_gold_rec(1/(1 + e), n - 1)
 #     return str(_approx_gold_rec(1, n))
-__version__ = '1.6153846153846154'
+__version__ = '1.619047619047619'
