@@ -405,7 +405,6 @@ def quantification_command(args):
     args : argparse.Namespace
         Input namespace containing command line arguments.
     """
-    from os import path as op
     import pandas as pd
     from dfa import analysis as ana
 
@@ -420,9 +419,9 @@ def quantification_command(args):
         print(fork_speed)
         print(patterns)
     else:
-        fork_rate.to_csv(op.join(args.output, 'fork_rate.csv'), header=True)
-        fork_speed.to_csv(op.join(args.output, 'fork_speed.csv'), header=True)
-        patterns.to_csv(op.join(args.output, 'patterns.csv'), header=True)
+        fork_rate.to_csv('{}_fork_rate.csv'.format(args.output), header=True)
+        fork_speed.to_csv('{}_fork_speed.csv'.format(args.output), header=True)
+        patterns.to_csv('{}_patterns.csv'.format(args.output), header=True)
 
 
 def simulate_command(args):
@@ -590,7 +589,7 @@ def compare_fibers_command(args):
 
     # create and initialize the output data frame
     labels_detection = ['TP', 'FN', 'FP']
-    output_detection = pd.DataFrame(
+    output_precision = pd.DataFrame(
         columns=labels_detection,
         index=pd.MultiIndex(levels=[[] for _ in range(len(args.scheme) - 1)],
                             labels=[[] for _ in range(len(args.scheme) - 1)],
@@ -655,7 +654,7 @@ def compare_fibers_command(args):
                               actual_fibers[2][actual_with_name][
                                   actual_fiber_index])))
 
-            output_detection = output_detection.append(
+            output_precision = output_precision.append(
                 pd.Series(
                     dict(zip(labels_detection,
                              [number_of_matches,
@@ -665,9 +664,9 @@ def compare_fibers_command(args):
 
     if args.output is not None:
         output_accuracy.to_csv('{}_accuracy.csv'.format(args.output))
-        output_detection.to_csv('{}_detection.csv'.format(args.output))
+        output_precision.to_csv('{}_precision.csv'.format(args.output))
     else:
-        print(output_detection)
+        print(output_precision)
         print(output_accuracy)
 
 
@@ -993,7 +992,7 @@ if __name__ == '__main__':
         'input', type=ut.check_valid_file,
         help='Input detailed analysis to quantify')
     parser_quantification.add_argument(
-        '--output', type=ut.check_valid_directory, default=None,
+        '--output', type=ut.check_valid_output_file, default=None,
         help='Path where output will be written.')
     parser_quantification.add_argument(
         '--scheme', type=str, nargs='+',
