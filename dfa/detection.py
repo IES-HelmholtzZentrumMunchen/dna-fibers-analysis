@@ -214,6 +214,8 @@ def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10,
                 fiber_skeleton[inset] = _sk.prune_min(fiber_skeleton[inset])
                 number_of_pixels = fiber_skeleton.sum()
 
+                # the length is underestimated due to square pixel (for
+                # instance a diagonal is sqrt(2) * p where p is the pixel size)
                 if number_of_pixels >= min_length:
                     # we assume the skeleton has only one branch (it is pruned)
                     # noinspection PyTupleAssignmentBalance
