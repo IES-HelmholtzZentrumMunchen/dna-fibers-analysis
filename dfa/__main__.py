@@ -124,7 +124,8 @@ def pipeline_command(args):
                 radius=radius)
 
             extracted_profiles = [
-                ex.extract_profiles_from_fiber(extracted_fiber, args.pixel_size)
+                ex.extract_profiles_from_fiber(extracted_fiber,
+                                               pixel_size=args.pixel_size)
                 for extracted_fiber in extracted_fibers]
 
             if args.save_all or args.save_extracted_profiles:
@@ -296,8 +297,8 @@ def extraction_command(args):
         # export to csv the profiles
         for image_extracted_fiber, input_name, input_fibers_index \
                 in zip(extracted_fibers, input_names, input_fibers_indices):
-            profiles = [ex.extract_profiles_from_fiber(extracted_fiber,
-                                                       args.pixel_size)
+            profiles = [ex.extract_profiles_from_fiber(
+                extracted_fiber, pixel_size=args.pixel_size)
                         for extracted_fiber in image_extracted_fiber]
             ut.write_profiles(args.output, input_name, profiles,
                               input_fibers_index)
