@@ -124,7 +124,7 @@ def pipeline_command(args):
                 radius=radius)
 
             extracted_profiles = [
-                ex.extract_profiles_from_fiber(extracted_fiber)
+                ex.extract_profiles_from_fiber(extracted_fiber, args.pixel_size)
                 for extracted_fiber in extracted_fibers]
 
             if args.save_all or args.save_extracted_profiles:
@@ -272,7 +272,8 @@ def extraction_command(args):
                 # profiles are extracted in the same orientation for any input.
                 input_fibers.append(
                     [fiber[:, np.lexsort((*fiber,))]
-                     for fiber in ut.resample_fibers(list(current_fibers[0]))])
+                     for fiber in ut.resample_fibers(list(current_fibers[0]),
+                                                     rate=1)])
 
                 input_fibers_indices.append(list(current_fibers[2]))
                 input_names.append(basename)
@@ -295,7 +296,8 @@ def extraction_command(args):
         # export to csv the profiles
         for image_extracted_fiber, input_name, input_fibers_index \
                 in zip(extracted_fibers, input_names, input_fibers_indices):
-            profiles = [ex.extract_profiles_from_fiber(extracted_fiber)
+            profiles = [ex.extract_profiles_from_fiber(extracted_fiber,
+                                                       args.pixel_size)
                         for extracted_fiber in image_extracted_fiber]
             ut.write_profiles(args.output, input_name, profiles,
                               input_fibers_index)
@@ -845,6 +847,10 @@ if __name__ == '__main__':
         help='Names of the keys used as indexing of the results that can be '
              'found in filename, separated by ''-'' (default is experiment, '
              'image; there should be at least one name).')
+    pipeline_analysis.add_argument(
+        '--pixel-size', type=float, default=1,
+        help='Set the pixel size to the given size in any unit. By default the '
+             'pixel size is 1 (no calibration).')
 
     # detection command
     parser_detection = subparsers.add_parser(
@@ -929,6 +935,10 @@ if __name__ == '__main__':
     parser_extraction.add_argument(
         '--profiles-only', action='store_true',
         help='Output only the profiles (not figures).')
+    parser_extraction.add_argument(
+        '--pixel-size', type=float, default=1,
+        help='Set the pixel size to the given size in any unit. By default the '
+             'pixel size is 1 (no calibration).')
 
     # analysis command
     parser_analysis = subparsers.add_parser(

@@ -131,7 +131,7 @@ def unfold_fibers(image, fibers, radius=4):
     return unfolded_fibers
 
 
-def extract_fibers(images, fibers, radius=4):
+def extract_fibers(images, fibers, radius=5):
     """Extract the fibers in images.
 
     Parameters
@@ -143,7 +143,7 @@ def extract_fibers(images, fibers, radius=4):
         Input fibers.
 
     radius : 0 < int
-        Radius of the band along fiber axis to extract (default is 4).
+        Radius of the band along fiber axis to extract (default is 5).
 
     Returns
     -------
@@ -162,7 +162,7 @@ def extract_fibers(images, fibers, radius=4):
     return extracted_fibers
 
 
-def extract_profiles_from_fiber(fiber, func=np.mean):
+def extract_profiles_from_fiber(fiber, func=np.mean, pixel_size=1):
     """Extract profiles from fiber.
 
     The fiber is an image of the unfolded fiber path with a given height
@@ -181,12 +181,16 @@ def extract_profiles_from_fiber(fiber, func=np.mean):
         Function used to reduce the columns of the fiber image (default is
         mean).
 
+    pixel_size : float > 0
+        Size of the pixel used for calibration (default is 1, meaning
+        that pixel size is equal to unit size).
+
     Returns
     -------
     numpy.ndarray
         The profiles of the fiber as a column-oriented array (x, y1, y2).
     """
-    profiles = np.vstack((range(fiber.shape[2]),
+    profiles = np.vstack((np.arange(fiber.shape[2]) * pixel_size,
                           func(fiber[0], axis=0),
                           func(fiber[1], axis=0))).T
 
