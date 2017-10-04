@@ -11,10 +11,6 @@ from matplotlib import pyplot as plt
 from matplotlib import collections as coll
 import zipfile
 
-from debtcollector import removals
-import warnings
-warnings.simplefilter('always', category=DeprecationWarning)
-
 
 def static_vars(**kwargs):
     def decorate(func):
@@ -24,62 +20,49 @@ def static_vars(**kwargs):
     return decorate
 
 
-@removals.remove
-def write_points_to_txt(path, prefix, coordinates):
-    """Write points coordinates to text file.
-
-    Parameters
-    ----------
-    path : str
-        Path for output files of fibers.
-
-    prefix : str
-        Prefix of the filenames.
-
-    coordinates : list of numpy.ndarray
-        Coordinates of the medial axis lines of corresponding fibers.
-    """
-    for index, points in enumerate(coordinates):
-        np.savetxt(
-            os.path.join(path, '{}_fiber-{}.txt'.format(prefix, index + 1)),
-            points[::-1].T)
-
-
-@removals.remove
-def read_points_from_txt(path, prefix):
-    """Read points coordinates from text file.
-
-    Parameters
-    ----------
-    path : str
-        Path to the folder containing the fibers files.
-
-    prefix : str
-        Prefix of the fibers filenames.
-
-    Returns
-    -------
-    list of numpy.ndarray
-        Coordinates of the median-axis lines corresponding to fibers and that
-        have been red.
-    """
-    indices = [int(str(os.path.splitext(filename)[0]
-                       .split('_')[-1]).split('-')[-1])
-               for filename in os.listdir(path)
-               if filename.startswith(prefix)]
-
-    return [np.loadtxt(os.path.join(path, '{}_fiber-{}.txt').format(
-        prefix, index)).T[::-1] for index in indices]
-
 fiber_indicator = '_fiber-'
 
 
-def write_fiber(fiber, path, image_name, index):
+def write_fiber(fiber, path, image_name, index, roi_ij=False):
+    """
+    Write a single fiber to a file (text or ImageJ ROI format).
+
+    The parameters are used to format the output filename format. It is defined
+    as the following:
+
+        <path>/<image_name>_fiber-<index>.ext
+
+    Parameters
+    ----------
+    fiber : numpy.ndarray
+        Points coordinates of the median-axis of the fiber to write. The fiber
+        shape must be (2, N) in the order y-x (or i-j).
+
+    path : str
+        Path to the directory in which the output file will be written.
+
+    image_name : str
+        Name of the image from which the fiber comes from.
+
+    index : 0 < int
+        Number of the fiber in that particular image.
+
+    roi_ij : bool
+        If True, the file will be written using ImageJ ROI file format and will
+        therefore be compatible with ImageJ software (default False).
+    """
+    if roi_ij:
+        _write_fiber_to_imagej_roi(fiber, path, image_name, index)
+    else:
+        _write_fiber_to_txt(fiber, path, image_name, index)
+
+
+def _write_fiber_to_txt(fiber, path, image_name, index):
     """
     Write a single fiber to a text file.
 
     The parameters are used to format the output filename format. It is defined
-    as the following: ::
+    as the following:
 
         <path>/<image_name>_fiber-<index>.txt
 
@@ -99,18 +82,20 @@ def write_fiber(fiber, path, image_name, index):
         Number of the fiber in that particular image.
     """
     np.savetxt(
-        os.path.join(path, '{}{}{}.txt'.format(image_name, fiber_indicator,
+        os.path.join(path, '{}{}{}.txt'.format(image_name,
+                                               fiber_indicator,
                                                index)),
         fiber[::-1].T)
 
 
-def write_fibers(fibers, path, image_name, indices=None, zipped=False):
+def write_fibers(fibers, path, image_name, indices=None, zipped=False,
+                 roi_ij=False):
     """
-    Write multiple fibers into text files.
+    Write multiple fibers into files (text or ImageJ ROI format).
 
     The files will be either grouped in a directory or in a zip file, depending
-    on the path given. For the output filenames format, please refer to
-    write_fiber_from_txt.
+    on the argument given. For the output filenames format, please refer to
+    write_fiber.
 
     Parameters
     ----------
@@ -131,11 +116,15 @@ def write_fibers(fibers, path, image_name, indices=None, zipped=False):
     zipped : bool
         If True, the fibers files will be zipped into the file
         <path>/<image_name>.zip instead of being written in directory
-        <path> with filenames <image_name>_fiber-N.txt (default False).
+        <path> with filenames <image_name>_fiber-N.(txt|roi) (default False).
+
+    roi_ij : bool
+        If True, the file will be written using ImageJ ROI file format and will
+        therefore be compatible with ImageJ software (default False).
     """
-    def _write_fibers(indices, fibers, path, image_name):
+    def _write_fibers(indices, fibers, path, image_name, roi_ij):
         for index, fiber in zip(indices, fibers):
-            write_fiber(fiber, path, image_name, index)
+            write_fiber(fiber, path, image_name, index, roi_ij)
 
     if indices is None:
         indices = range(1, len(fibers) + 1)
@@ -149,7 +138,7 @@ def write_fibers(fibers, path, image_name, indices=None, zipped=False):
         os.chdir(tmp_path)
 
         try:
-            _write_fibers(indices, fibers, tmp_path, image_name)
+            _write_fibers(indices, fibers, tmp_path, image_name, roi_ij)
 
             with zipfile.ZipFile(
                     os.path.join(abs_path, '.'.join([image_name, 'zip'])),
@@ -161,7 +150,7 @@ def write_fibers(fibers, path, image_name, indices=None, zipped=False):
             shutil.rmtree(tmp_path)
 
     else:
-        _write_fibers(indices, fibers, path, image_name)
+        _write_fibers(indices, fibers, path, image_name, roi_ij)
 
 
 def _read_fibers(path):
@@ -186,7 +175,7 @@ def _read_fibers(path):
     ext = os.path.splitext(path)[-1]
 
     if ext not in available_readers.keys():
-        raise NotImplementedError('There is not reader for {} files '
+        raise NotImplementedError('There is not reader for "{}" files '
                                   'implemented yet!'.format(ext))
     return available_readers[ext](path)
 
@@ -325,7 +314,8 @@ class ImageJRoiSizes:
 
 # noinspection PyTypeChecker
 def _read_points_from_imagej_roi(binaries):
-    """Read points coordinates from binaries of ImageJ rois.
+    """
+    Read points coordinates from binaries of ImageJ rois.
 
     This code is based on the ijroi package (https://github.com/tdsmith/ijroi),
     which is based on the gist https://gist.github.com/luispedro/3437255, which
@@ -370,8 +360,9 @@ def _read_points_from_imagej_roi(binaries):
 
     # It seems that the roi type field occupies 2 Bytes, but only one is used
     roi_type = get8()
-    # Discard second Byte:
+    # Discard second byte:
     get8()
+
     if roi_type is not ImageJRoiType.polyline and \
        roi_type is not ImageJRoiType.line:
         raise NotImplementedError('Reading ImageJ roi: ROI type {} not '
@@ -402,20 +393,23 @@ def _read_points_from_imagej_roi(binaries):
     _ = get32()  # position
     _ = get32()  # header2offset
 
-    if options & ImageJRoiSizes.SUB_PIXEL_RESOLUTION:
-        get_c = getfloat
-        points = np.empty((n_coordinates, 2), dtype=np.float32)
-        binaries.seek(4 * n_coordinates, 1)
+    if n_coordinates > 0:
+        if options & ImageJRoiSizes.SUB_PIXEL_RESOLUTION:
+            get_c = getfloat
+            points = np.empty((n_coordinates, 2), dtype=np.float32)
+            binaries.seek(4 * n_coordinates, 1)
+        else:
+            get_c = get16
+            points = np.empty((n_coordinates, 2), dtype=np.int16)
+
+        points[:, 1] = [get_c() for _ in range(n_coordinates)]
+        points[:, 0] = [get_c() for _ in range(n_coordinates)]
+
+        if options & ImageJRoiSizes.SUB_PIXEL_RESOLUTION == 0:
+            points[:, 1] += left
+            points[:, 0] += top
     else:
-        get_c = get16
-        points = np.empty((n_coordinates, 2), dtype=np.int16)
-
-    points[:, 1] = [get_c() for _ in range(n_coordinates)]
-    points[:, 0] = [get_c() for _ in range(n_coordinates)]
-
-    if options & ImageJRoiSizes.SUB_PIXEL_RESOLUTION == 0:
-        points[:, 1] += left
-        points[:, 0] += top
+        points = np.empty((0, ), dtype=np.float32)
 
     return points
 
@@ -452,34 +446,16 @@ available_readers = {
     '.zip': _read_fibers_from_zip}
 
 
-@removals.remove
-def read_points_from_imagej_zip(filename):
-    """Read points coordinates from zip file containing ImageJ rois.
-
-    Parameters
-    ----------
-    filename : str
-        Path of file to read. It must be a zip file.
-
-    Returns
-    -------
-    list of numpy.ndarray
-        Arrays containing the coordinates in the (I, J) and (Y, X) order.
-    """
-    with zipfile.ZipFile(filename) as archive:
-        return [(n, _read_points_from_imagej_roi(archive.open(n)))
-                for n in archive.namelist()]
-
-
-# noinspection PyUnusedLocal
+# noinspection PyTypeChecker
 def _write_points_to_imagej_roi(binaries, coordinates):
-    """Write points coordinates to binaries of ImageJ rois.
+    """
+    Write points coordinates to binaries of ImageJ rois.
 
-    This code is based on the ijroi package (https://github.com/tdsmith/ijroi),
-    which is based on the gist https://gist.github.com/luispedro/3437255, which
-    is finally based on the official ImageJ sources (see http://rsbweb.nih.gov/-
-    ij/developer/source/ij/io/RoiDecoder.java.html and http://rsbweb.nih.gov/-
-    ij/developer/source/ij/io/RoiEncoder.java.html).
+    This code is based on the official ImageJ sources (see http://rsbweb.nih.-
+    gov/ij/developer/source/ij/io/RoiDecoder.java.html and http://rsbweb.nih.-
+    gov/ij/developer/source/ij/io/RoiEncoder.java.html).
+
+    The version of binary file format used here is 227.
 
     Parameters
     ----------
@@ -495,67 +471,101 @@ def _write_points_to_imagej_roi(binaries, coordinates):
     numpy.ndarray
         Array containing the coordinates in the (I, J) and (Y, X) order.
     """
-    raise NotImplementedError
-#     def put8(word):
-#         binaries.write(word)
-#
-#     def put16(word):
-#         put8(word >> 8)
-#         put8(word)
-#
-#     def put32(word):
-#         put16(word >> 16)
-#         put16(word)
-#
-#     def putfloat(value):
-#         put32(value.view(np.int32))
-#
-#     binaries.write(b'Iout')  # magic_number
-#     put16(np.int16(0))  # version
-#
-#     # It seems that the roi type field occupies 2 Bytes, but only one is used
-#     put8(ImageJRoiType.polyline)
-#     put8(np.int8(0))
-#
-#     put16(np.int16(coordinates[:, 0].min()))  # top
-#     put16(np.int16(coordinates[:, 1].min()))  # left
-#     put16(np.int16(coordinates[:, 0].max()))  # bottom
-#     put16(np.int16(coordinates[:, 1].max()))  # right
-#     put16(np.int16(coordinates.shape[0]))  # n_coordinates
-#     putfloat(np.float32(0))  # x1
-#     putfloat(np.float32(0))  # y1
-#     putfloat(np.float32(0))  # x2
-#     putfloat(np.float32(0))  # y2
-#     put16(np.int16(1))  # stroke_width
-#     put32(np.int32(1))  # shape_roi_size
-#     put32(np.int32(0))  # stroke_color
-#     put32(np.int32(0))  # fill_color
-#
-#     put16(np.int16(0))  # subtype
-#
-#     options = put16()
-#     _ = put8()  # arrow_style
-#     _ = put8()  # arrow_head_size
-#     _ = put16()  # rect_arc_size
-#     _ = put32()  # position
-#     _ = put32()  # header2offset
-#
-#     if options & ImageJRoiSizes.SUB_PIXEL_RESOLUTION:
-#         get_c = putfloat
-#         points = np.empty((n_coordinates, 2), dtype=np.float32)
-#         binaries.seek(4 * n_coordinates, 1)
-#     else:
-#         get_c = put16
-#         points = np.empty((n_coordinates, 2), dtype=np.int16)
-#
-#     points[:, 1] = [get_c() for _ in range(n_coordinates)]
-#     points[:, 0] = [get_c() for _ in range(n_coordinates)]
-#
-#     if options & ImageJRoiSizes.SUB_PIXEL_RESOLUTION == 0:
-#         points[:, 1] += left
-#         points[:, 0] += top
-#
-#     return points
+    def put8(number, binaries):
+        if binaries.write(np.int8(number).tobytes()) != 1:
+            raise RuntimeError('Unable to write a byte to the file!')
+
+    def put16(number, binaries):
+        put8(number >> 8, binaries)
+        put8(number & 255, binaries)
+
+    def put32(number, binaries):
+        put16(number >> 16, binaries)
+        put16(number & 65535, binaries)
+
+    def putfloat(float_number, binaries):
+        return put32(np.float32(float_number).view(np.int32), binaries)
+
+    binaries.write(b'Iout')  # magic_number
+    put16(227, binaries)  # version
+    put8(ImageJRoiType.polyline, binaries)  # roi type
+    put8(0, binaries)
+
+    if coordinates.size > 0:
+        top = np.int16(coordinates[:, 0].min())
+        left = np.int16(coordinates[:, 1].min())
+        bottom = np.int16(coordinates[:, 0].max())
+        right = np.int16(coordinates[:, 1].max())
+    else:
+        top = 0
+        left = 0
+        bottom = 0
+        right = 0
+
+    put16(top, binaries)  # top
+    put16(left, binaries)  # left
+    put16(bottom, binaries)  # bottom
+    put16(right, binaries)  # right
+    put16(coordinates.shape[0], binaries)  # n_coordinates
+    putfloat(0.0, binaries)  # x1
+    putfloat(0.0, binaries)  # y1
+    putfloat(0.0, binaries)  # x2
+    putfloat(0.0, binaries)  # y2
+    put16(0, binaries)  # stroke_width
+    put32(0, binaries)  # shape_roi_size
+    put32(0, binaries)  # stroke_color
+    put32(0, binaries)  # fill_color
+
+    put16(0, binaries)  # subtype
+
+    put16(ImageJRoiSizes.SUB_PIXEL_RESOLUTION, binaries)
+    put8(0, binaries)  # arrow_style
+    put8(0, binaries)  # arrow_head_size
+    put16(0, binaries)  # rect_arc_size
+    put32(0, binaries)  # position
+    put32(0, binaries)  # header2offset
+
+    coordinates = coordinates.astype('float32')
+
+    for _ in range(4 * coordinates.shape[0]):
+        binaries.write(b'\x00')
+
+    for i in range(coordinates.shape[0]):
+        putfloat(coordinates[i, 1], binaries)
+
+    for i in range(coordinates.shape[0]):
+        putfloat(coordinates[i, 0], binaries)
+
+
+def _write_fiber_to_imagej_roi(fiber, path, image_name, index):
+    """
+    Write a single fiber to a ImageJ ROI file.
+
+    The parameters are used to format the output filename format. It is defined
+    as the following:
+
+        <path>/<image_name>_fiber-<index>.roi
+
+    Parameters
+    ----------
+    fiber : numpy.ndarray
+        Points coordinates of the median-axis of the fiber to write. The fiber
+        shape must be (2, N) in the order y-x (or i-j).
+
+    path : str
+        Path to the directory in which the output file will be written.
+
+    image_name : str
+        Name of the image from which the fiber comes from.
+
+    index : 0 < int
+        Number of the fiber in that particular image.
+    """
+    filepath = os.path.join(path, '{}{}{}.roi'.format(
+        image_name, fiber_indicator, index))
+
+    with open(filepath, 'wb') as file:
+        _write_points_to_imagej_roi(file, fiber[::-1].T)
 
 
 def check_valid_path(path):
@@ -678,7 +688,8 @@ def check_scales(variable):
 
 
 def norm_min_max(data, norm_data=None):
-    """Do a min-max normalization.
+    """
+    Do a min-max normalization.
 
     Parameters
     ----------
@@ -734,7 +745,7 @@ def read_inputs(input_path, mask_path, ext, mask_suffix='mask'):
 
 def create_figures_from_fibers_images(names, extracted_fibers,
                                       radius, group_fibers=False, indices=None,
-                                      analysis=None):
+                                      analysis=None, pixel_size=1):
     def _channel_to_color(channel):
         if channel == 'IdU':
             return 'green'
@@ -801,7 +812,7 @@ def create_figures_from_fibers_images(names, extracted_fibers,
                 display_image[:, :, 1] = 255 * \
                     norm_min_max(extracted_fiber[1], extracted_fiber)
 
-                x = np.arange(extracted_fiber.shape[2])
+                x = np.arange(extracted_fiber.shape[2]) * pixel_size
                 y1 = extracted_fiber[0].sum(axis=0)
                 y2 = extracted_fiber[1].sum(axis=0)
 
@@ -812,8 +823,8 @@ def create_figures_from_fibers_images(names, extracted_fibers,
                 axes[0].axis('off')
                 axes[0].set_xlim(x.min(), x.max())
 
-                axes[1].plot(extracted_fiber[0].sum(axis=0), '-r')
-                axes[1].plot(extracted_fiber[1].sum(axis=0), '-g')
+                axes[1].plot(x, y1, '-r')
+                axes[1].plot(x, y2, '-g')
                 axes[1].set_title('Profiles')
                 axes[1].set_ylim(0, max(y1.max(), y2.max()) + 1)
 
@@ -847,7 +858,8 @@ def create_figures_from_fibers_images(names, extracted_fibers,
 
 
 def write_profiles(path, prefix, profiles, indices=None):
-    """Write the given set of profiles to the specified path with given prefix.
+    """
+    Write the given set of profiles to the specified path with given prefix.
 
     Parameters
     ----------

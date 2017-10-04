@@ -98,7 +98,8 @@ def pipeline_command(args):
             if args.save_all or args.save_detected_fibers:
                 ut.write_fibers(fibers,
                                 _create_if_not_existing(args.output, 'fibers'),
-                                os.path.basename(name))
+                                os.path.basename(name),
+                                zipped=True, roi_ij=args.ij)
 
                 plt.imshow(flat_image, cmap='gray', aspect='equal')
                 indices = []
@@ -155,7 +156,7 @@ def pipeline_command(args):
             if args.save_all or args.save_extracted_fibers:
                 figures = ut.create_figures_from_fibers_images(
                     [name], [extracted_fibers], radius, group_fibers=False,
-                    analysis=current_analysis)
+                    analysis=current_analysis, pixel_size=args.pixel_size)
 
                 for filename, fig in figures:
                     fig.savefig(os.path.join(
@@ -227,7 +228,8 @@ def detection_command(args):
                 plt.show()
             else:
                 plt.savefig(op.join(args.output, '{}_fibers.pdf'.format(name)))
-                ut.write_fibers(coordinates, args.output, name, indices=indices)
+                ut.write_fibers(coordinates, args.output, name, indices=indices,
+                                zipped=True, roi_ij=args.ij)
 
             bar.update(num + 1)
 
@@ -289,7 +291,7 @@ def extraction_command(args):
     else:
         figures = ut.create_figures_from_fibers_images(
             input_names, extracted_fibers, args.radius, args.group_fibers,
-            input_fibers_indices)
+            input_fibers_indices, pixel_size=args.pixel_size)
 
     if args.output is None:
         plt.show()
@@ -569,10 +571,10 @@ def simulate_command(args):
 
             ut.write_fibers([signal for _, signal in fibers_objects],
                             path, '{}_signal'.format(name),
-                            indices=nums, zipped=True)
+                            indices=nums, zipped=True, roi_ij=args.ij)
 
         ut.write_fibers([fiber_object for fiber_object, _ in fibers_objects],
-                        path, name, indices=nums, zipped=True)
+                        path, name, indices=nums, zipped=True, roi_ij=args.ij)
 
 
 def compare_fibers_command(args):
@@ -812,6 +814,10 @@ if __name__ == '__main__':
         '--output-name', type=str, default='detailed_analysis',
         help='Name of the output file containing the analysis (default '
              'is ''detailed_analysis''.')
+    pipeline_inout.add_argument(
+        '--ij', action='store_true',
+        help='If set, the fibers will be exported as ImageJ ROI files '
+             'that can be opened with ImageJ.')
 
     pipeline_detection = parser_pipeline.add_argument_group('Detection')
     pipeline_detection.add_argument(
@@ -906,6 +912,10 @@ if __name__ == '__main__':
     detection_medial.add_argument(
         '--output', type=ut.check_valid_path, default=None,
         help='Output path for saving detected fibers (default is None).')
+    detection_medial.add_argument(
+        '--ij', action='store_true',
+        help='If set, the fibers will be exported as ImageJ ROI files '
+             'that can be opened with ImageJ.')
 
     # extraction command
     parser_extraction = subparsers.add_parser(
@@ -1031,6 +1041,10 @@ if __name__ == '__main__':
         '--paths-only', action='store_true',
         help='Setting this flag will lead to no fibers paths and no image '
              'degradation output.')
+    parser_simulation.add_argument(
+        '--ij', action='store_true',
+        help='If set, the fibers will be exported as ImageJ ROI files '
+             'that can be opened with ImageJ.')
 
     fibers_group = parser_simulation.add_argument_group('Fibers')
     fibers_group.add_argument(
