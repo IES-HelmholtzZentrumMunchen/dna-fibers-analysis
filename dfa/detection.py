@@ -15,8 +15,9 @@ from dfa import _skeleton_pruning as _sk
 from dfa import _structuring_segments as _ss
 
 
-def fiberness_filter(image, scales, alpha=0.5, beta=1.0, gamma=1):
-    """Enhance fiber image using a multi-scale vesselness filter.
+def fiberness_filter(image, scales, mask, alpha=0.5, beta=1.0, gamma=1):
+    """
+    Enhance fiber image using a multi-scale vesselness filter.
 
     This vesselness is based on the Frangi filter [1]_.
 
@@ -27,6 +28,9 @@ def fiberness_filter(image, scales, alpha=0.5, beta=1.0, gamma=1):
 
     scales : list of float or iterable of float
         Sizes range.
+
+    mask : numpy.ndarray | None
+        Mask within which the vesselness map will be computed.
 
     alpha : float between 0 and 1
         Soft threshold of the tubular shape weighting term. Default is the
@@ -59,7 +63,7 @@ def fiberness_filter(image, scales, alpha=0.5, beta=1.0, gamma=1):
     for n, scale in enumerate(scales):
         hxx, hyy, hxy = _sha.single_scale_hessian(image, scale, gamma)
         (l1, l2), (v1, _) = _sha.hessian_eigen_decomposition(hxx, hyy, hxy)
-        fiberness[n] = _sha.single_scale_vesselness(l1, l2, alpha, beta)
+        fiberness[n] = _sha.single_scale_vesselness(l1, l2, mask, alpha, beta)
         directions[n] = v1
 
     ss, si, sj = fiberness.shape
@@ -75,7 +79,8 @@ def fiberness_filter(image, scales, alpha=0.5, beta=1.0, gamma=1):
 
 
 def reconstruct_fibers(fiberness, directions, length, size, mask, extent_mask):
-    """Reconstruct fibers disconnections from vesselness map and directions of
+    """
+    Reconstruct fibers disconnections from vesselness map and directions of
     less intensity variations.
 
     The reconstruction is based on morphological closing using variant
@@ -130,7 +135,8 @@ def reconstruct_fibers(fiberness, directions, length, size, mask, extent_mask):
 
 
 def _order_skeleton_points(skeleton):
-    """Gives the list of points corresponding to the skeleton, in the
+    """
+    Gives the list of points corresponding to the skeleton, in the
     consecutive order.
 
     Parameters
@@ -164,7 +170,8 @@ def _order_skeleton_points(skeleton):
 
 def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10,
                          min_length=30, size=3):
-    """Estimate the medial axis of the detected fibers from the reconstructed
+    """
+    Estimate the medial axis of the detected fibers from the reconstructed
     fiberness map.
 
     This current implementation uses a parametric B-Spline fitting to estimate,
@@ -234,7 +241,8 @@ def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10,
 def detect_fibers(image, scales, alpha, beta, length, size, smoothing,
                   min_length, fiberness_threshold=0.5, user_mask=None,
                   force_mask=False):
-    """Convenience method of the fibers detection pipeline.
+    """
+    Convenience method of the fibers detection pipeline.
 
     Parameters
     ----------
@@ -272,7 +280,7 @@ def detect_fibers(image, scales, alpha, beta, length, size, smoothing,
 
     force_mask : bool
         If True, there will be no automatic masking of fibers, i.e. the process
-        will be held anywhere in the user-defiend mask. In case the user-defined
+        will be held anywhere in the user-defined mask. In case the user-defined
         mask is None, this option is non-effective.
 
     Returns
@@ -282,7 +290,7 @@ def detect_fibers(image, scales, alpha, beta, length, size, smoothing,
     """
     fiberness, directions = fiberness_filter(
         white_tophat(image, disk(max(scales))),
-        scales=scales, alpha=alpha, beta=beta)
+        scales=scales, mask=user_mask, alpha=alpha, beta=beta)
 
     mask = np.greater_equal(fiberness, fiberness_threshold)
     extent_mask = binary_dilation(mask, disk(length))

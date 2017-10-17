@@ -6,7 +6,8 @@ from scipy.signal import fftconvolve
 
 
 def discrete_centered_space(k):
-    """Compute a centered discrete sequence (1D) from its half-size.
+    """
+    Compute a centered discrete sequence (1D) from its half-size.
 
     Parameters
     ----------
@@ -23,7 +24,8 @@ def discrete_centered_space(k):
 
 
 def gaussian_kernel(sigma, k):
-    """Compute a discrete gaussian kernel.
+    """
+    Compute a discrete gaussian kernel.
 
     Compute a discrete sequence of size 2*k+1 corresponding to a centered
     gaussian kernel of width sigma.
@@ -58,7 +60,8 @@ def gaussian_kernel(sigma, k):
 
 
 def gaussian_first_derivative_kernel(sigma, k):
-    """Compute a discrete kernel of the first Gaussian derivative.
+    """
+    Compute a discrete kernel of the first Gaussian derivative.
 
     Compute a discrete sequence of size 2*k+1 corresponding to the first order
     derivative of a centered gaussian kernel of width sigma.
@@ -92,7 +95,8 @@ def gaussian_first_derivative_kernel(sigma, k):
 
 
 def gaussian_second_derivative_kernel(sigma, k):
-    """Compute a discrete kernel of the second Gaussian derivative.
+    """
+    Compute a discrete kernel of the second Gaussian derivative.
 
     Compute a discrete sequence of size 2*k+1 corresponding to the second order
     derivative of a centered gaussian kernel of width sigma.
@@ -127,7 +131,8 @@ def gaussian_second_derivative_kernel(sigma, k):
 
 
 def single_scale_hessian(image, size, gamma=1):
-    """Compute the Hessian matrix for an image using the scale-space theory.
+    """
+    Compute the Hessian matrix for an image using the scale-space theory.
 
     Parameters
     ----------
@@ -166,7 +171,8 @@ def single_scale_hessian(image, size, gamma=1):
 
 
 def hessian_eigen_decomposition(hxx, hyy, hxy):
-    """Compute the eigen values/vectors for Hessian matrix.
+    """
+    Compute the eigen values/vectors for Hessian matrix.
 
     Parameters
     ----------
@@ -237,8 +243,9 @@ def hessian_eigen_decomposition(hxx, hyy, hxy):
 
 
 # noinspection SpellCheckingInspection
-def single_scale_vesselness(l1, l2, alpha=0.5, beta=1.0):
-    """Compute the vesselness using the scale-space theory.
+def single_scale_vesselness(l1, l2, mask=None, alpha=0.5, beta=1.0):
+    """
+    Compute the vesselness using the scale-space theory.
 
     This vesselness is based on the Frangi filter [1]_.
 
@@ -251,6 +258,9 @@ def single_scale_vesselness(l1, l2, alpha=0.5, beta=1.0):
     l2 : numpy.ndarray
         First eigen-value of the Hessian matrix of an input image for a
         given scale.
+
+    mask : numpy.ndarray | None
+        Mask within which the vesselness map will be computed.
 
     alpha : float between 0 and 1
         Soft threshold of the tubular shape weighting term. Default is the
@@ -287,7 +297,7 @@ def single_scale_vesselness(l1, l2, alpha=0.5, beta=1.0):
     s[l2_is_negative] = np.sqrt(
         np.power(l1[l2_is_negative], 2) + np.power(l2[l2_is_negative], 2))
 
-    beta *= structurness_parameter_auto(s)
+    beta *= structurness_parameter_auto(s, mask)
 
     vesselness = np.zeros(l1.shape)
     vesselness[l2_is_negative] = np.exp(
@@ -297,8 +307,9 @@ def single_scale_vesselness(l1, l2, alpha=0.5, beta=1.0):
     return vesselness
 
 
-def structurness_parameter_auto(structurness, res=128):
-    """Automatically estimate the structurness drop parameter from the
+def structurness_parameter_auto(structurness, mask=None, res=128):
+    """
+    Automatically estimate the structurness drop parameter from the
     structurness image.
 
     The parameter is estimated using an histogram-based method: the optimal
@@ -313,6 +324,9 @@ def structurness_parameter_auto(structurness, res=128):
     ----------
     structurness : numpy.ndarray
         Structurness image measured from Hessian tensors.
+
+    mask : numpy.ndarray | None
+        Mask within which the structurness weight will be computed.
 
     res : int
         Resolution used for computing the histogram (number of bins).
@@ -333,7 +347,12 @@ def structurness_parameter_auto(structurness, res=128):
        chromatid exchange frequency. In: *J. Histochem. Cytochem.*, vol. 25,
        num. 7, pp. 741–53.
     """
-    hy, hx = np.histogram(structurness[structurness > 0], res)
+    if mask is not None:
+        hy, hx = np.histogram(
+            structurness[np.bitwise_and(structurness > 0, mask)], res)
+    else:
+        hy, hx = np.histogram(structurness[structurness > 0], res)
+
     hx = hx[:-1] + np.diff(hx)
 
     i = hy.argmax()

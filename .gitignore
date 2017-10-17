@@ -2,3 +2,4 @@
 __pycache__
 .dfa_venv
 .coverage
+doc/build
