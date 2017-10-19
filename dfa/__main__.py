@@ -1062,15 +1062,18 @@ if __name__ == '__main__':
              '<y_max>, in pixels, default: [100, 924, 100, 924]).')
     fibers_group.add_argument(
         '--perturbations-force-range', type=float, nargs=2, default=[0.1, 0.3],
-        help='Local perturbations of the fiber path (default is [0.1, 0.3]).')
+        help='Local perturbations of the fiber path which corresponds to the '
+             'standard deviation of a 2D Gaussian density (default is '
+             '[0.1, 0.3]).')
     fibers_group.add_argument(
-        '--bending-elasticity-range', type=float, nargs=2, default=[1, 3],
-        help='Elasticity of the global bending of the fiber path (default is '
-             '[1, 3]).')
+        '--bending-elasticity-range', type=float, nargs=2, default=[0.3, 1],
+        help='Elasticity of the global bending of the fiber path which '
+             'corresponds to the inverse of the half-height size of the '
+             'bending (default is [0.3, 1]).')
     fibers_group.add_argument(
         '--bending-force-range', type=float, nargs=2, default=[10, 30],
-        help='Force of the global bending of the fiber path (default is '
-             '[10, 30]).')
+        help='Force of the global bending of the fiber path which corresponds '
+             'to the amount of displacement along path (default is [10, 30]).')
     fibers_group.add_argument(
         '--disconnection-probability-range', type=float, nargs=2,
         default=[0.05, 0.1],
@@ -1082,13 +1085,16 @@ if __name__ == '__main__':
              '(default is [0.5, 0.7]).')
     fibers_group.add_argument(
         '--local-force-range', type=float, nargs=2, default=[0.1, 0.4],
-        help='Force of local signal inhomogeneity (default is [0.1, 0.4]).')
+        help='Force of local signal inhomogeneity which is a percentage of the '
+             'true signal (default is [0.1, 0.4]).')
     fibers_group.add_argument(
         '--global-force-range', type=float, nargs=2, default=[2, 5],
-        help='Force of global signal inhomogeneity (default is [2, 5]).')
+        help='Force of global signal inhomogeneity which corresponds to the '
+             'amount of signal increase along path (default is [2, 5]).')
     fibers_group.add_argument(
-        '--global-rate-range', type=float, nargs=2, default=[0.5, 1.5],
-        help='Rate of global signal inhomogeneity (default is [0.5, 1.5]).')
+        '--global-rate-range', type=float, nargs=2, default=[0.4, 0.9],
+        help='Rate of global signal inhomogeneity which corresponds to the '
+             'intensity rate per pixel (default is [0.4, 0.9]).')
 
     image_group = parser_simulation.add_argument_group('Image degradations')
     image_group.add_argument(

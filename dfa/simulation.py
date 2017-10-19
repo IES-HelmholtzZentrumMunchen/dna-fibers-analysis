@@ -76,7 +76,7 @@ def fiber(angle, length, shift=(0, 0), step=4, interp_step=1,
 
     # Create global perturbation along the fiber path
     d = np.exp(-0.5 * (u - 0.25 * np.random.randn() - 0.5)**2
-               * bending_elasticity**2)
+               / bending_elasticity**2)
     bending_force *= (-1)**np.random.binomial(1, 0.5)
     x += -bending_force * vy * d + bending_force * vy
     y += bending_force * vx * d - bending_force * vx
@@ -138,10 +138,10 @@ def fiber_inhomogeneity(num_of_points, number_of_channels, pattern, length,
     s = np.zeros((number_of_channels, num_of_points))
 
     # create global inhomogeneity
-    global_rate /= num_of_points
+    global_rate *= num_of_points
     d = np.exp(-0.5 * (t - np.abs(0.5 *
                                   (t.max()-t.min()) * np.random.randn()))**2
-               * global_rate**2)
+               / global_rate**2)
 
     for i in range(len(s)):
         # create channel signal (following pattern)
