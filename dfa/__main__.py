@@ -101,6 +101,7 @@ def pipeline_command(args):
                                 os.path.basename(name),
                                 zipped=True, roi_ij=args.ij)
 
+            if args.save_all or args.overlay_fibers:
                 plt.imshow(flat_image, cmap='gray', aspect='equal')
                 indices = []
                 for k, c in enumerate(fibers):
@@ -802,6 +803,9 @@ if __name__ == '__main__':
         '--save-detected-fibers', action='store_true',
         help='Save intermediate files of detected fibers (default is not '
              'saving).')
+    pipeline_inout.add_argument(
+        '--overlay-fibers', action='store_true',
+        help='Save overlays of fibers on images (defaults is not saving).')
     pipeline_inout.add_argument(
         '--save-extracted-fibers', action='store_true',
         help='Save intermediate files of extracted fibers (default is not '
