@@ -238,7 +238,7 @@ class TestAnalysis(unittest.TestCase):
 
     def test_analyze(self):
         for index in self.profiles.keys():
-            pattern, length = ana.analyze(
+            pattern, length, _ = ana.analyze(
                 self.profiles[index], discrepancy=30, contrast=80)
 
             self.assertEqual(pattern['name'], self.models[index][0])

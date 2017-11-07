@@ -59,7 +59,11 @@ class Model:
         """
         Normalize the patterns frequencies.
         """
-        norm_factor = 1.0 / sum([pattern['freq'] for pattern in self.patterns])
+        try:
+            norm_factor = 1.0 / sum([pattern['freq']
+                                     for pattern in self.patterns])
+        except ZeroDivisionError:
+            norm_factor = 0
 
         for pattern in self.patterns:
             pattern['freq'] *= norm_factor

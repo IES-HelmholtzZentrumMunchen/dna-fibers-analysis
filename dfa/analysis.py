@@ -196,24 +196,24 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
         Model defining the patterns to detect and filter (default is the
         standard model defined in dfa.modeling.standard).
 
-    channels_names : tuple of str of size 2
+    channels_names : (str, str)
         Names of the channels in the same order as they appear in the profile.
 
-    min_length : strictly positive integer
+    min_length : int > 0
         Minimal length of a segment. Default is 4 pixels, which corresponds to
         the thickness of a fiber when pixel size is equal to 0.1419761 microns.
 
-    discrepancy : positive float
+    discrepancy : float >= 0
         Factor of discrepancy regularization between amplitudes of the
         same marker.
 
-    contrast : positive float
+    contrast : float >= 0
         Factor of contrast regularization between amplitudes of opposite
         markers.
 
     Returns
     -------
-    list of dict and list or None (if no pattern is found)
+    (dict | None, List[float] | None, List[int] | None)
         A reference to a pattern defined in model and the lengths.
 
     Raises
@@ -279,9 +279,9 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
             pattern = model.search(channels_pattern[::-1])
             lengths = lengths[::-1]
 
-        return pattern, lengths
+        return pattern, lengths, channels_pattern
     else:
-        return None, None
+        return None, None, None
 
 
 def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
@@ -382,10 +382,10 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
 
     for key, profile in zip(keys, profiles):
         try:
-            pattern, lengths = analyze(profile, model=model,
-                                       channels_names=channels_names,
-                                       discrepancy=discrepancy,
-                                       contrast=contrast)
+            pattern, lengths, _ = analyze(profile, model=model,
+                                          channels_names=channels_names,
+                                          discrepancy=discrepancy,
+                                          contrast=contrast)
 
             if pattern is not None and lengths is not None:
                 model.append_sample(pattern, lengths)
@@ -549,8 +549,13 @@ def fork_rate(data, channel='CIdU', pattern_name='1st label origin'):
             values = data[data['channel'] == channel].ix[index]['length']
             fork_rates.append(values.max() / values.min())
 
-    fork_rates = pd.Series(data=fork_rates, index=subset.index.unique(),
-                           name='Fork rate')
+        fork_rates = pd.Series(data=fork_rates, index=subset.index.unique(),
+                               name='Fork rate')
+    else:
+        fork_rates = pd.Series(data=[],
+                               index=pd.MultiIndex(
+                                   levels=[[], [], []], labels=[[], [], []]),
+                               name='Fork rate')
     fork_rates.index.names = data.index.names
 
     return fork_rates

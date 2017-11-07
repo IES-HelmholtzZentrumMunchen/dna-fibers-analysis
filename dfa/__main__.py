@@ -696,52 +696,55 @@ def comparison_analyses_command(args):
         match_scheme[-1] = 'actual fiber'
         fibers_match = pd.read_csv(args.match, index_col=match_scheme)
 
-        pct_match_fibers, match_fibers_expected, match_fibers_actual = \
-            cmp.match_index_pairs(expected_analysis, actual_analysis,
-                                  fibers_match.index)
+        if len(fibers_match) > 0:
+            pct_match_fibers, match_fibers_expected, match_fibers_actual = \
+                cmp.match_index_pairs(expected_analysis, actual_analysis,
+                                      fibers_match.index)
 
-        pct_match_patterns, match_patterns_expected, match_patterns_actual = \
-            cmp.match_column(match_fibers_expected, match_fibers_actual,
-                             column='pattern')
+            pct_match_patterns, match_patterns_expected, match_patterns_actual = \
+                cmp.match_column(match_fibers_expected, match_fibers_actual,
+                                 column='pattern')
 
-        length_difference = cmp.difference_in_column(
-            expected_analysis.ix[match_patterns_expected.index],
-            actual_analysis.ix[match_patterns_actual.index],
-            column='length')
+            length_difference = cmp.difference_in_column(
+                expected_analysis.ix[match_patterns_expected.index],
+                actual_analysis.ix[match_patterns_actual.index],
+                column='length')
 
-        new_index = np.array(
-            [list(ix_expected) + [ix_actual[-1]]
-             for ix_expected, ix_actual in
-             zip(expected_analysis.ix[match_patterns_expected.index].index,
-                 actual_analysis.ix[match_patterns_actual.index].index)]).T
+            new_index = np.array(
+                [list(ix_expected) + [ix_actual[-1]]
+                 for ix_expected, ix_actual in
+                 zip(expected_analysis.ix[match_patterns_expected.index].index,
+                     actual_analysis.ix[match_patterns_actual.index].index)]).T
 
-        match_patterns = pd.DataFrame(
-            match_patterns_expected.reset_index()[match_scheme[:2] +
-                                                  ['pattern']])
-        match_patterns['expected fiber'] = \
-            match_patterns_expected.reset_index()['fiber']
-        match_patterns['actual fiber'] = \
-            match_patterns_actual.reset_index()['fiber']
-        match_patterns = match_patterns[match_scheme + ['pattern']]
-        match_patterns.set_index(match_scheme, inplace=True)
+            match_patterns = pd.DataFrame(
+                match_patterns_expected.reset_index()[match_scheme[:2] +
+                                                      ['pattern']])
+            match_patterns['expected fiber'] = \
+                match_patterns_expected.reset_index()['fiber']
+            match_patterns['actual fiber'] = \
+                match_patterns_actual.reset_index()['fiber']
+            match_patterns = match_patterns[match_scheme + ['pattern']]
+            match_patterns.set_index(match_scheme, inplace=True)
 
-        length_difference = length_difference.to_frame()
+            length_difference = length_difference.to_frame()
 
-        for i, scheme in enumerate(match_scheme):
-            length_difference[scheme] = new_index[i]
+            for i, scheme in enumerate(match_scheme):
+                length_difference[scheme] = new_index[i]
 
-        length_difference.set_index(match_scheme, inplace=True)
+            length_difference.set_index(match_scheme, inplace=True)
 
-        if args.output is not None:
-            match_patterns.to_csv('{}_patterns.csv'.format(args.output))
-            length_difference.to_csv('{}_lengths.csv'.format(args.output))
+            if args.output is not None:
+                match_patterns.to_csv('{}_patterns.csv'.format(args.output))
+                length_difference.to_csv('{}_lengths.csv'.format(args.output))
+            else:
+                print('percentage of fiber match: {}'.format(
+                    pct_match_fibers * 100))
+                print('percentage of pattern match: {}'.format(
+                    pct_match_patterns * 100))
+                print(match_patterns)
+                print(length_difference)
         else:
-            print('percentage of fiber match: {}'.format(
-                pct_match_fibers * 100))
-            print('percentage of pattern match: {}'.format(
-                pct_match_patterns * 100))
-            print(match_patterns)
-            print(length_difference)
+            print('No match of fibers pair found!')
     else:
         print('At least one analysis is empty!')
 
