@@ -707,7 +707,7 @@ def comparison_analyses_command(args):
                                  column='pattern')
 
             if len(match_patterns_expected) > 0 and \
-                            len(match_patterns_actual) > 0:
+               len(match_patterns_actual) > 0:
                 length_difference = cmp.difference_in_column(
                     expected_analysis.ix[match_patterns_expected.index],
                     actual_analysis.ix[match_patterns_actual.index],
