@@ -50,10 +50,14 @@ class Dataset:
         self.images_path = os.path.join(self.dataset_path, 'images')
         self.fibers_path = os.path.join(self.dataset_path, 'fibers')
         self.profiles_path = os.path.join(self.dataset_path, 'profiles')
+        self.masks_path = os.path.join(self.dataset_path, 'masks')
         self.summary_path = os.path.join(self.dataset_path, 'summary.csv')
 
         if force_decompress or not os.path.exists(self.dataset_path):
             self._decompress()
+
+        if not os.path.exists(self.masks_path):  # masks are optional
+            self.masks_path = None
 
         self.summary = pd.read_csv(
             self.summary_path,
@@ -132,6 +136,25 @@ class Dataset:
         """
         return os.path.join(self.images_path, '{}-{}.tif'.format(*index))
 
+    def get_mask_path(self, index):
+        """
+        Get the path to the mask file corresponding to given index.
+
+        Parameters
+        ----------
+        index : pandas.MultiIndex
+            Index of the image corresponding to the mask.
+
+        Returns
+        -------
+        str
+            Path to the file.
+        """
+        if self.masks_path is not None:
+            return os.path.join(self.masks_path, '{}-{}.tif'.format(*index))
+        else:
+            return None
+
     def get_fibers_file(self, index):
         """
         Get the path to the fiber file corresponding to given index.
@@ -181,16 +204,23 @@ class Dataset:
 
         Yields
         ------
-        (pandas.MultiIndex, numpy.ndarray, List[numpy.ndarray])
-            The next batch (index, image, fibers).
+        (pandas.MultiIndex, numpy.ndarray, numpy.ndarray|None,
+        List[numpy.ndarray])
+            The next batch (index, image, mask, fibers). The mask can be None if
+            no mask has been defined.
         """
         return self.next_batch(
             batch_size=batch_size, index='image_index', n='_n_image',
             mapping=lambda index: (
-                index, self.get_image_path(index), self.get_fibers_file(index))
+                index,
+                self.get_image_path(index),
+                self.get_mask_path(index),
+                self.get_fibers_file(index))
             if paths_only else lambda index: (
                 index,
                 io.imread(self.get_image_path(index)),
+                io.imread(self.get_mask_path(index))
+                if self.get_mask_path(index) is not None else None,
                 ut.read_fibers(self.get_fibers_file(index))))
 
     def next_profile_batch(self, batch_size=None, paths_only=False):
@@ -219,11 +249,11 @@ class Dataset:
             if paths_only else lambda index: (
                 index,
                 np.loadtxt(self.get_profiles_file(index),
-                    delimiter=',', skiprows=1, usecols=(0, 1, 2)),
+                           delimiter=',', skiprows=1, usecols=(0, 1, 2)),
                 self.summary.ix[index]))
 
     @staticmethod
-    def _save(summary_path, output_path, images_path, fibers_path,
+    def _save(summary_path, output_path, images_path, mask_path, fibers_path,
               profiles_path):
         """
         Save dataset defined by input as zip file to given path.
@@ -238,6 +268,9 @@ class Dataset:
 
         images_path : str
             Path to the images.
+
+        mask_path : str | None
+            Path to the masks or None if there is no masks.
 
         fibers_path : str
             Path to the fibers.
@@ -258,6 +291,14 @@ class Dataset:
                                           '{}.tif'.format(name)),
                     arcname=os.path.join(os.path.basename(images_path),
                                          '{}.tif'.format(name)))
+
+                if mask_path is not None:
+                    archive.write(
+                        filename=os.path.join(mask_path,
+                                              '{}.tif'.format(name)),
+                        arcname=os.path.join(os.path.basename(mask_path),
+                                             '{}.tif'.format(name)))
+
                 archive.write(
                     filename=os.path.join(fibers_path,
                                           '{}.zip'.format(name)),
@@ -288,11 +329,11 @@ class Dataset:
             Path of the zip file in which the dataset will be saved.
         """
         Dataset._save(self.dataset_path, path, self.images_path,
-                      self.fibers_path, self.profiles_path)
+                      self.masks_path, self.fibers_path, self.profiles_path)
 
     @staticmethod
     def create(summary_path, images_path, fibers_path, profiles_path,
-               output_path):
+               output_path, mask_path=None):
         """
         Create a new dataset from paths to data.
 
@@ -315,6 +356,9 @@ class Dataset:
 
         output_path : str
             Path to output file (the zip file containing dataset).
+
+        mask_path : str | None
+            Path to the masks (or None if there is no mask, default).
         """
-        Dataset._save(summary_path, output_path, images_path,
+        Dataset._save(summary_path, output_path, images_path, mask_path,
                       fibers_path, profiles_path)
