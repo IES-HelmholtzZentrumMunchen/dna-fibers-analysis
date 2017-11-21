@@ -6,6 +6,8 @@ Use this module to decompress, load and use the example dataset.
 import zipfile
 import os
 
+import tqdm
+
 import pandas as pd
 from skimage import io
 import numpy as np
@@ -254,7 +256,7 @@ class Dataset:
 
     @staticmethod
     def _save(summary_path, output_path, images_path, mask_path, fibers_path,
-              profiles_path):
+              profiles_path, progress_bar=True):
         """
         Save dataset defined by input as zip file to given path.
 
@@ -277,13 +279,18 @@ class Dataset:
 
         profiles_path : str
             Path to the profiles.
+
+        progress_bar : bool
+            If True, display a progress bar (command line); default is True.
         """
         summary = pd.read_csv(summary_path,
                               index_col=['experiment', 'image', 'fiber'])
 
         with zipfile.ZipFile(output_path, mode='w',
                              compression=zipfile.ZIP_DEFLATED) as archive:
-            for ix in summary.index.droplevel('fiber').unique():
+            for ix in tqdm.tqdm(summary.index.droplevel('fiber').unique(),
+                                desc='Compressing images, masks and fibers',
+                                disable=not progress_bar):
                 name = '-'.join([str(e) for e in ix])
 
                 archive.write(
@@ -305,7 +312,9 @@ class Dataset:
                     arcname=os.path.join(os.path.basename(fibers_path),
                                          '{}.zip'.format(name)))
 
-            for ix in summary.index.unique():
+            for ix in tqdm.tqdm(summary.index.unique(),
+                                desc='Compressing profiles',
+                                disable=not progress_bar):
                 name = '{}{}{}.csv'.format(
                     '-'.join([str(e) for e in ix[:-1]]),
                     ut.fiber_indicator,
@@ -319,7 +328,7 @@ class Dataset:
                 filename=summary_path,
                 arcname=os.path.join('summary.csv'))
 
-    def save(self, path):
+    def save(self, path, progress_bar=True):
         """
         Save dataset as zip file to given path.
 
@@ -327,13 +336,17 @@ class Dataset:
         ----------
         path : str
             Path of the zip file in which the dataset will be saved.
+
+        progress_bar : bool
+            If True, display a progress bar (command line); default is True.
         """
         Dataset._save(self.dataset_path, path, self.images_path,
-                      self.masks_path, self.fibers_path, self.profiles_path)
+                      self.masks_path, self.fibers_path, self.profiles_path,
+                      progress_bar)
 
     @staticmethod
     def create(summary_path, images_path, fibers_path, profiles_path,
-               output_path, mask_path=None):
+               output_path, mask_path=None, progress_bar=True):
         """
         Create a new dataset from paths to data.
 
@@ -359,6 +372,9 @@ class Dataset:
 
         mask_path : str | None
             Path to the masks (or None if there is no mask, default).
+
+        progress_bar : bool
+            If True, display a progress bar (command line); default is True.
         """
         Dataset._save(summary_path, output_path, images_path, mask_path,
-                      fibers_path, profiles_path)
+                      fibers_path, profiles_path, progress_bar)

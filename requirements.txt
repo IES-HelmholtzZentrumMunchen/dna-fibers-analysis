@@ -1,3 +1,4 @@
+tqdm
 coverage==4.4.1
 cycler==0.10.0
 dask==0.15.1
