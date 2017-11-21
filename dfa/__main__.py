@@ -764,8 +764,10 @@ def create_dataset(args):
         Input namespace containing command line arguments.
     """
     from dfa import dataset as dat
-    dat.Dataset.create(args.summary, args.images, args.fibers,
-                       args.profiles, args.output)
+    dat.Dataset.create(
+        args.summary, args.images, args.fibers,
+        args.profiles, args.output,
+        args.masks if args.masks != '' else None)
 
 
 if __name__ == '__main__':
@@ -1206,6 +1208,9 @@ if __name__ == '__main__':
         '--output', type=ut.check_valid_output_file,
         default='./dataset.zip',
         help='Path to the output file (the zip file containing the dataset).')
+    parser_dataset.add_argument(
+        '--masks', type=ut.check_valid_or_empty_path, default='',
+        help='Path to the mask files corresponding to images.')
 
     # parsing and dispatch
     args = parser.parse_args()
