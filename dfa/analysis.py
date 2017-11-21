@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import copy
 import sys
+import tqdm
 
 from dfa import modeling, _tree
 
@@ -286,8 +287,9 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
 
 def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
              keys_names=None, channels_names=('CIdU', 'IdU'),
-             discrepancy=0, contrast=0):
-    """Detect the segments in each profile and analyze it.
+             discrepancy=0, contrast=0, progress_bar=False):
+    """
+    Detect the segments in each profile and analyze it.
 
     Internally, it loops over the profiles and use the analyze function.
 
@@ -323,6 +325,9 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
     contrast : positive float
         Factor of contrast regularization between amplitudes of opposite
         markers.
+
+    progress_bar : bool
+        If True, displays a progress bar (command line); default is False.
 
     Returns
     -------
@@ -380,7 +385,8 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
     labels = ['pattern', 'channel', 'length']
     detailed_analysis = pd.DataFrame([], columns=labels, index=index)
 
-    for key, profile in zip(keys, profiles):
+    for key, profile in zip(tqdm.tqdm(keys, desc='Analyzing profiles'),
+                            profiles):
         try:
             pattern, lengths, _ = analyze(profile, model=model,
                                           channels_names=channels_names,

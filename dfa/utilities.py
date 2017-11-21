@@ -7,8 +7,6 @@ import shutil
 import numpy as np
 from scipy.interpolate import splprep, splev
 from skimage import io
-from matplotlib import pyplot as plt
-from matplotlib import collections as coll
 import zipfile
 
 
@@ -746,6 +744,9 @@ def read_inputs(input_path, mask_path, ext, mask_suffix='mask'):
 def create_figures_from_fibers_images(names, extracted_fibers,
                                       radius, group_fibers=False, indices=None,
                                       analysis=None, pixel_size=1):
+    from matplotlib import pyplot as plt
+    from matplotlib import collections as coll
+
     def _channel_to_color(channel):
         if channel == 'IdU':
             return 'green'

@@ -4,14 +4,16 @@ This can be used to actual run the analysis (partially of fully).
 """
 
 import warnings
-
 import numpy as np
 
-from dfa import utilities as ut
+import matplotlib
+default_backend = matplotlib.rc_params()['backend']
+matplotlib.use('Agg')
 
 
 def pipeline_command(args):
-    """Run the full DFA pipeline.
+    """
+    Run the full DFA pipeline.
 
     Parameters
     ----------
@@ -20,15 +22,15 @@ def pipeline_command(args):
     """
     import os
     import copy
-    import progressbar
+    import tqdm
     import pandas as pd
     from matplotlib import pyplot as plt
+
+    from dfa import utilities as ut
     from dfa import detection as det
     from dfa import extraction as ex
     from dfa import modeling as mod
     from dfa import analysis as ana
-
-    progressbar.streams.wrap_stderr()
 
     def _create_if_not_existing(output, name):
         save_path = os.path.join(output, name)
@@ -70,104 +72,102 @@ def pipeline_command(args):
                             name=scheme))
 
     # process image by image
-    with progressbar.ProgressBar(max_value=len(images)) as bar:
-        for num, (image, name, mask) in enumerate(zip(images, names, masks)):
-            # pre-processing
-            if len(image.shape) != 3:
-                raise ValueError('Input image {} does not have 3 channels! '
-                                 'Its shape is {}! '
-                                 'Only two-channels images are supported!'
-                                 .format(name, len(image.shape)))
+    for num, (image, name, mask) in enumerate(
+            zip(tqdm.tqdm(images, desc='Running pipeline'), names, masks)):
+        # pre-processing
+        if len(image.shape) != 3:
+            raise ValueError('Input image {} does not have 3 channels! '
+                             'Its shape is {}! '
+                             'Only two-channels images are supported!'
+                             .format(name, len(image.shape)))
 
-            flat_image = image.sum(axis=0)
+        flat_image = image.sum(axis=0)
 
-            # detection
-            fibers = det.detect_fibers(
-                flat_image,
-                scales=[args.fiber_size - 1,
-                        args.fiber_size,
-                        args.fiber_size + 1],
-                alpha=alpha,
-                beta=1 / args.intensity_sensitivity,
-                length=args.reconstruction_extent,
-                size=args.fiber_size,
-                smoothing=smoothing,
-                min_length=min_length,
-                user_mask=mask)
+        # detection
+        fibers = det.detect_fibers(
+            flat_image,
+            scales=[args.fiber_size - 1,
+                    args.fiber_size,
+                    args.fiber_size + 1],
+            alpha=alpha,
+            beta=1 / args.intensity_sensitivity,
+            length=args.reconstruction_extent,
+            size=args.fiber_size,
+            smoothing=smoothing,
+            min_length=min_length,
+            user_mask=mask)
 
-            if args.save_all or args.save_detected_fibers:
-                ut.write_fibers(fibers,
-                                _create_if_not_existing(args.output, 'fibers'),
-                                os.path.basename(name),
-                                zipped=True, roi_ij=args.ij)
+        if args.save_all or args.save_detected_fibers:
+            ut.write_fibers(fibers,
+                            _create_if_not_existing(args.output, 'fibers'),
+                            os.path.basename(name),
+                            zipped=True, roi_ij=args.ij)
 
-            if args.save_all or args.overlay_fibers:
-                plt.imshow(flat_image, cmap='gray', aspect='equal')
-                indices = []
-                for k, c in enumerate(fibers):
-                    plt.plot(*c, '-c')
-                    plt.text(*c.mean(axis=1), str(k + 1), color='c')
-                    indices.append(k + 1)
-                plt.title('Fibers of {}'.format(name))
-                plt.xticks([])
-                plt.yticks([])
-                plt.tight_layout()
-                plt.savefig(os.path.join(
-                    _create_if_not_existing(args.output, 'fibers'),
-                    '{}_fibers.pdf'.format(name)))
-                plt.close()
+        if args.save_all or args.overlay_fibers:
+            plt.imshow(flat_image, cmap='gray', aspect='equal')
+            indices = []
+            for k, c in enumerate(fibers):
+                plt.plot(*c, '-c')
+                plt.text(*c.mean(axis=1), str(k + 1), color='c')
+                indices.append(k + 1)
+            plt.title('Fibers of {}'.format(name))
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(os.path.join(
+                _create_if_not_existing(args.output, 'fibers'),
+                '{}_fibers.pdf'.format(name)))
+            plt.close()
 
-            # extraction
-            # the coordinates of the fibers are sorted such that the profiles
-            # are extracted in the same orientation for any input.
-            extracted_fibers = ex.unfold_fibers(
-                image, [fiber[:, np.lexsort((*fiber,))]
-                        for fiber in ut.resample_fibers(fibers, 1)],
-                radius=radius)
+        # extraction
+        # the coordinates of the fibers are sorted such that the profiles
+        # are extracted in the same orientation for any input.
+        extracted_fibers = ex.unfold_fibers(
+            image, [fiber[:, np.lexsort((*fiber,))]
+                    for fiber in ut.resample_fibers(fibers, 1)],
+            radius=radius)
 
-            extracted_profiles = [
-                ex.extract_profiles_from_fiber(extracted_fiber,
-                                               pixel_size=args.pixel_size)
-                for extracted_fiber in extracted_fibers]
+        extracted_profiles = [
+            ex.extract_profiles_from_fiber(extracted_fiber,
+                                           pixel_size=args.pixel_size)
+            for extracted_fiber in extracted_fibers]
 
-            if args.save_all or args.save_extracted_profiles:
-                ut.write_profiles(_create_if_not_existing(args.output,
-                                                          'profiles'),
-                                  name, extracted_profiles)
+        if args.save_all or args.save_extracted_profiles:
+            ut.write_profiles(_create_if_not_existing(args.output,
+                                                      'profiles'),
+                              name, extracted_profiles)
 
-            if args.save_all or args.save_grouped_fibers:
-                figures = ut.create_figures_from_fibers_images(
-                    [name], [extracted_fibers], radius, group_fibers=True)
+        if args.save_all or args.save_grouped_fibers:
+            figures = ut.create_figures_from_fibers_images(
+                [name], [extracted_fibers], radius, group_fibers=True)
 
-                for filename, fig in figures:
-                    fig.savefig(os.path.join(
-                        _create_if_not_existing(args.output, 'profiles'),
-                        filename))
-                    plt.close(fig)
+            for filename, fig in figures:
+                fig.savefig(os.path.join(
+                    _create_if_not_existing(args.output, 'profiles'),
+                    filename))
+                plt.close(fig)
 
-            # analysis
-            keys = [tuple(name.split('-')[-len(args.scheme):]) + (num + 1,)
-                    for num in range(len(extracted_profiles))]
+        # analysis
+        keys = [tuple(name.split('-')[-len(args.scheme):]) + (num + 1,)
+                for num in range(len(extracted_profiles))]
 
-            current_analysis = ana.analyzes(
-                extracted_profiles, model=model, update_model=False,
-                keys=keys, keys_names=scheme,
-                discrepancy=args.discrepancy, contrast=args.contrast)
+        current_analysis = ana.analyzes(
+            extracted_profiles, model=model, update_model=False,
+            keys=keys, keys_names=scheme,
+            discrepancy=args.discrepancy, contrast=args.contrast)
 
-            if args.save_all or args.save_extracted_fibers:
-                figures = ut.create_figures_from_fibers_images(
-                    [name], [extracted_fibers], radius, group_fibers=False,
-                    analysis=current_analysis, pixel_size=args.pixel_size)
+        if args.save_all or args.save_extracted_fibers:
+            figures = ut.create_figures_from_fibers_images(
+                [name], [extracted_fibers], radius, group_fibers=False,
+                analysis=current_analysis, pixel_size=args.pixel_size)
 
-                for filename, fig in figures:
-                    fig.savefig(os.path.join(
-                        _create_if_not_existing(args.output, 'profiles'),
-                        filename))
-                    plt.close(fig)
+            for filename, fig in figures:
+                fig.savefig(os.path.join(
+                    _create_if_not_existing(args.output, 'profiles'),
+                    filename))
+                plt.close(fig)
 
-            detailed_analysis = detailed_analysis.append(current_analysis)
-
-            bar.update(num + 1)
+        detailed_analysis = detailed_analysis.append(current_analysis)
 
     detailed_analysis.to_csv(
         os.path.join(_create_if_not_existing(args.output, 'analysis'),
@@ -181,7 +181,8 @@ def pipeline_command(args):
 
 
 def detection_command(args):
-    """Run the fiber detection process.
+    """
+    Run the fiber detection process.
 
     Parameters
     ----------
@@ -189,54 +190,60 @@ def detection_command(args):
         Input namespace containing command line arguments.
     """
     from os import path as op
-    import progressbar
+    import tqdm
     from matplotlib import pyplot as plt
+
+    from dfa import utilities as ut
     from dfa import detection as det
+
+    if args.output is None:
+        plt.switch_backend(default_backend)
 
     images, names, masks = ut.read_inputs(args.input, args.mask, '.tif')
 
-    with progressbar.ProgressBar(max_value=len(images)) as bar:
-        for num, (image, name, mask) in enumerate(zip(images, names, masks)):
-            if len(image.shape) == 2:
-                fiber_image = image
-            else:
-                fiber_image = image.sum(axis=0)
+    for num, (image, name, mask) in enumerate(zip(
+            tqdm.tqdm(images, desc='Detecting fibers'), names, masks)):
+        if len(image.shape) == 2:
+            fiber_image = image
+        else:
+            fiber_image = image.sum(axis=0)
 
-            coordinates = det.detect_fibers(
-                fiber_image,
-                scales=np.linspace(args.scales[0], args.scales[1],
-                                   int(args.scales[2])).tolist(),
-                alpha=args.fiber_sensitivity,
-                beta=1 / args.intensity_sensitivity,
-                length=args.reconstruction_extent,
-                size=(args.scales[0]+args.scales[1])/2,
-                smoothing=args.smoothing,
-                min_length=args.fibers_minimal_length,
-                user_mask=mask)
+        coordinates = det.detect_fibers(
+            fiber_image,
+            scales=np.linspace(args.scales[0], args.scales[1],
+                               int(args.scales[2])).tolist(),
+            alpha=args.fiber_sensitivity,
+            beta=1 / args.intensity_sensitivity,
+            length=args.reconstruction_extent,
+            size=(args.scales[0]+args.scales[1])/2,
+            smoothing=args.smoothing,
+            min_length=args.fibers_minimal_length,
+            user_mask=mask)
 
-            plt.imshow(fiber_image, cmap='gray', aspect='equal')
-            indices = []
-            for k, c in enumerate(coordinates):
-                plt.plot(*c, '-c')
-                plt.text(*c.mean(axis=1), str(k + 1), color='c')
-                indices.append(k + 1)
-            plt.title('Fibers of {}'.format(name))
-            plt.xticks([])
-            plt.yticks([])
-            plt.tight_layout()
+        plt.imshow(fiber_image, cmap='gray', aspect='equal')
+        indices = []
+        for k, c in enumerate(coordinates):
+            plt.plot(*c, '-c')
+            plt.text(*c.mean(axis=1), str(k + 1), color='c')
+            indices.append(k + 1)
+        plt.title('Fibers of {}'.format(name))
+        plt.xticks([])
+        plt.yticks([])
+        plt.tight_layout()
 
-            if args.output is None:
-                plt.show()
-            else:
-                plt.savefig(op.join(args.output, '{}_fibers.pdf'.format(name)))
-                ut.write_fibers(coordinates, args.output, name, indices=indices,
-                                zipped=True, roi_ij=args.ij)
+        if args.output is None:
+            plt.show()
+        else:
+            plt.savefig(op.join(args.output, '{}_fibers.pdf'.format(name)))
+            ut.write_fibers(coordinates, args.output, name, indices=indices,
+                            zipped=True, roi_ij=args.ij)
 
-            bar.update(num + 1)
+        plt.close(plt.gcf())
 
 
 def extraction_command(args):
-    """Run the fiber extraction process.
+    """
+    Run the fiber extraction process.
 
     Parameters
     ----------
@@ -244,9 +251,16 @@ def extraction_command(args):
         Input namespace containing command line arguments.
     """
     import os
+    import tqdm
+
     from matplotlib import pyplot as plt
     from skimage import io
+
+    from dfa import utilities as ut
     from dfa import extraction as ex
+
+    if args.output is None:
+        plt.switch_backend(default_backend)
 
     # list image files and path
     if os.path.isdir(args.input):
@@ -284,7 +298,7 @@ def extraction_command(args):
 
     # process
     extracted_fibers = ex.extract_fibers(
-        input_images, input_fibers, radius=args.radius)
+        input_images, input_fibers, radius=args.radius, progress_bar=True)
 
     # output
     if args.profiles_only:
@@ -299,7 +313,8 @@ def extraction_command(args):
     else:
         # export to csv the profiles
         for image_extracted_fiber, input_name, input_fibers_index \
-                in zip(extracted_fibers, input_names, input_fibers_indices):
+                in zip(tqdm.tqdm(extracted_fibers, desc='Saving profiles'),
+                       input_names, input_fibers_indices):
             profiles = [ex.extract_profiles_from_fiber(
                 extracted_fiber, pixel_size=args.pixel_size)
                         for extracted_fiber in image_extracted_fiber]
@@ -313,7 +328,8 @@ def extraction_command(args):
 
 
 def analysis_command(args):
-    """Run the profiles analysis process.
+    """
+    Run the profiles analysis process.
 
     Parameters
     ----------
@@ -322,6 +338,8 @@ def analysis_command(args):
     """
     import os
     import copy
+
+    from dfa import utilities as ut
     from dfa import modeling as mod
     from dfa import analysis as ana
 
@@ -388,7 +406,7 @@ def analysis_command(args):
     detailed_analysis = ana.analyzes(
         profiles, model=model, keys=keys, keys_names=args.scheme,
         discrepancy=args.discrepancy, contrast=args.contrast,
-        channels_names=args.channels_names)
+        channels_names=args.channels_names, progress_bar=True)
 
     # Display or save results
     if args.output is None:
@@ -431,7 +449,8 @@ def quantification_command(args):
 
 
 def simulate_command(args):
-    """Run the fibers image simulation process.
+    """
+    Run the fibers image simulation process.
 
     Parameters
     ----------
@@ -441,10 +460,11 @@ def simulate_command(args):
     import os
     import pickle
     from skimage import io
+    from matplotlib import pyplot as plt
+
+    from dfa import utilities as ut
     from dfa import modeling as mod
     from dfa import simulation as sim
-    from dfa import utilities as _ut
-    from matplotlib import pyplot as plt
 
     if args.model is None:
         args.model = mod.standard
@@ -522,15 +542,15 @@ def simulate_command(args):
             zindex_range=args.z_index, psf=simulated_psf, snr=args.snr)
 
     if args.output is None:
-        from matplotlib import pyplot as plt
+        plt.switch_backend(default_backend)
 
         if degraded_image is not None:
             display_image = np.zeros(degraded_image.shape[1:] + (3,),
                                      dtype='uint8')
             display_image[:, :, 0] = 255 * \
-                _ut.norm_min_max(degraded_image[0], degraded_image)
+                ut.norm_min_max(degraded_image[0], degraded_image)
             display_image[:, :, 1] = 255 * \
-                _ut.norm_min_max(degraded_image[1], degraded_image)
+                ut.norm_min_max(degraded_image[1], degraded_image)
 
             plt.imshow(display_image, aspect='equal')
 
@@ -587,7 +607,11 @@ def compare_fibers_command(args):
     args : argparse.Namespace
         Input namespace containing command line arguments.
     """
+    import tqdm
+
     import pandas as pd
+
+    from dfa import utilities as ut
     from dfa import compare as cmp
 
     def _indices_with_name(names, name):
@@ -626,7 +650,8 @@ def compare_fibers_command(args):
         unique_image_names = np.unique(
             np.concatenate((expected_fibers[1], actual_fibers[1])))
 
-        for image_name in unique_image_names:
+        for image_name in tqdm.tqdm(unique_image_names,
+                                    desc='Comparing fibers'):
             image_info = image_name.split('-', maxsplit=len(scheme)-3)
 
             expected_with_name = _indices_with_name(expected_fibers[1],
@@ -764,6 +789,7 @@ def create_dataset(args):
         Input namespace containing command line arguments.
     """
     from dfa import dataset as dat
+
     dat.Dataset.create(
         args.summary, args.images, args.fibers,
         args.profiles, args.output,
@@ -773,13 +799,14 @@ def create_dataset(args):
 if __name__ == '__main__':
     import argparse
 
+    from dfa import utilities as ut
+
     parser = argparse.ArgumentParser(
         prog='python3 -m dfa',
         description='DNA fibers analysis pipeline in python.')
     subparsers = parser.add_subparsers(
         title='available commands', dest='command')
     subparsers.required = True
-    parser.add_argument('--batch', action='store_true')
 
     # pipeline command
     parser_pipeline = subparsers.add_parser(
@@ -1214,10 +1241,6 @@ if __name__ == '__main__':
 
     # parsing and dispatch
     args = parser.parse_args()
-
-    if args.batch:
-        from matplotlib import pyplot as plt
-        plt.switch_backend('Agg')
 
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=UserWarning)

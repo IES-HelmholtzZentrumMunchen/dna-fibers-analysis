@@ -3,12 +3,15 @@ Extraction module of the DNA fiber analysis package.
 
 Use this module to compare fiber paths, extract fiber profiles and images.
 """
+import tqdm
+
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
 
 
 def _compute_normals(fiber):
-    """Compute normals along a fiber path.
+    """
+    Compute normals along a fiber path.
 
     Computing the tangent needs 5 points; therefore 2 points at the
     beginning and 2 points at the end will not be used for the unfolding.
@@ -82,7 +85,8 @@ def _compute_normals(fiber):
 
 
 def unfold_fibers(image, fibers, radius=4):
-    """Unfold the fibers in image.
+    """
+    Unfold the fibers in image.
 
     Sampled points of normals along the multiple fibers axis are interpolated
     and returned as an image.
@@ -131,8 +135,9 @@ def unfold_fibers(image, fibers, radius=4):
     return unfolded_fibers
 
 
-def extract_fibers(images, fibers, radius=5):
-    """Extract the fibers in images.
+def extract_fibers(images, fibers, radius=5, progress_bar=False):
+    """
+    Extract the fibers in images.
 
     Parameters
     ----------
@@ -145,6 +150,9 @@ def extract_fibers(images, fibers, radius=5):
     radius : 0 < int
         Radius of the band along fiber axis to extract (default is 5).
 
+    progress_bar : bool
+        If True, displays a progress bar (command line); default is False.
+
     Returns
     -------
     List[List[numpy.ndarray]]
@@ -156,14 +164,18 @@ def extract_fibers(images, fibers, radius=5):
     """
     extracted_fibers = []
 
-    for image, image_fibers in zip(images, fibers):
+    for image, image_fibers in zip(
+            tqdm.tqdm(images, desc='Extracting profiles',
+                      disable=not progress_bar),
+            fibers):
         extracted_fibers.append(unfold_fibers(image, image_fibers, radius))
 
     return extracted_fibers
 
 
 def extract_profiles_from_fiber(fiber, func=np.mean, pixel_size=1):
-    """Extract profiles from fiber.
+    """
+    Extract profiles from fiber.
 
     The fiber is an image of the unfolded fiber path with a given height
     (corresponding to the radius). The profiles are extracted by applying the
