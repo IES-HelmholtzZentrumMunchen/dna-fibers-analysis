@@ -1,0 +1,13 @@
+# Use containers instead of full VMs for faster startup.
+sudo: false
+
+language: python
+python:
+    - 3.6
+
+install:
+    - pip install -r requirements.txt
+
+script:
+    - nosetests --with-coverage --cover-package=dfa
+    
