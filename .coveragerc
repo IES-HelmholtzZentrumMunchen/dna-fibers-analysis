@@ -1,0 +1,8 @@
+[report]
+omit =
+    */venv/*
+    */tests/*
+    dfa/simulation.py
+    dfa/dataset.py
+    dfa/compare.py
+    dfa/__main__.py
