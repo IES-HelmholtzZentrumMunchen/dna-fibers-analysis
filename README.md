@@ -1,6 +1,6 @@
 # dna-fibers-analysis
 
-[![Build Status](https://travis-ci.org/IES-HelmholtzZentrumMunchen/dna-fibers-analysis.svg?branch=master)](https://travis-ci.org/IES-HelmholtzZentrumMunchen/dna-fibers-analysis)  [![Coverage Status](https://coveralls.io/repos/github/IES-HelmholtzZentrumMunchen/dna-fibers-analysis/badge.svg?branch=master)](https://coveralls.io/github/IES-HelmholtzZentrumMunchen/dna-fibers-analysis?branch=master)
+[![Build Status](https://travis-ci.org/IES-HelmholtzZentrumMunchen/dna-fibers-analysis.svg?branch=master)](https://travis-ci.org/IES-HelmholtzZentrumMunchen/dna-fibers-analysis)  [![Coverage Status](https://coveralls.io/repos/github/IES-HelmholtzZentrumMunchen/dna-fibers-analysis/badge.svg?branch=master&service=github)](https://coveralls.io/github/IES-HelmholtzZentrumMunchen/dna-fibers-analysis?branch=master&service=github)
 
 This python package contains useful tools for analyzing the microscopy images obtained from a DNA fibers experiment.
 
