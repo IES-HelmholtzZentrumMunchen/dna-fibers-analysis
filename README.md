@@ -73,7 +73,7 @@ For clarity, we put the images and the fibers paths into separate folders; for i
 
 ### Batch processing
 
-The easiest way to process the images is to use the `pipeline` command, that is running the whole pipeline in batch processing on the input images. The usage is simply the following.
+The easiest way to process the images is to use the `pipeline` command, that is running the whole pipeline in batch processing on the input images. The usage is simply the following. Right now, the expected image format is `.tif`.
 
 ```
 python -m dfa pipeline ./images .
@@ -99,7 +99,7 @@ Three files containing the quantifications are outputed: the fork rate, the fork
 
 When the interesting part of a huge image is located in a small area or some parts of the image are not usable (in case of overlapping of fibers or in the presence of dust for instance), using masks is a good practice.
 
-The masks must be created with any image editor. They are simply images with non-zero pixels defining valid areas. To make them, it is possible to use ImageJ by drawing a region of interest, then using the tool `Create Mask` and finally save the them to a directory.
+The masks must be created with any image editor. They are simply images with non-zero pixels defining valid areas. To make them, it is possible to use ImageJ by drawing a region of interest, then using the tool `Create Mask` and finally saving them to a directory with the identical image name and the suffix `_mask`, e.g. `<image name>_mask.tif`.
 
 Assuming that we did so for all the images and we put the masks in the folder `./masks`, running the pipeline with the masks is simply done by typing the following command.
 
