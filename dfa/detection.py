@@ -213,8 +213,9 @@ def estimate_medial_axis(reconstruction, threshold=0.5, smoothing=10,
                 inset = slice(isk.min() - 10, isk.max() + 10), \
                     slice(jsk.min() - 10, jsk.max() + 10)
 
+                # TODO use a variable for threshold or estimate it from input
                 fiber_piece[inset] = np.greater_equal(
-                    gaussian(fiber_piece[inset], 3), 0.5)
+                    gaussian(fiber_piece[inset], size), 0.25)
 
                 fiber_skeleton = np.zeros(fiber_piece.shape).astype('int')
                 fiber_skeleton[inset] = skeletonize(fiber_piece[inset])
