@@ -8,10 +8,11 @@ Note that for patterns with only one segment (no splits), the results might
 be biased since then we have to rely on the intensity ratio, instead of the
 intensity ratio derivative, to choose the channels pattern.
 """
-import numpy as np
-import pandas as pd
 import copy
 import sys
+
+import numpy as np
+import pandas as pd
 import tqdm
 
 from dfa import modeling, _tree
@@ -378,7 +379,7 @@ def analyzes(profiles, model=modeling.standard, update_model=True, keys=None,
                               labels=[[] for _ in range(len(keys_names))],
                               names=keys_names)
     else:
-        keys = range(len(profiles))
+        keys = [(i,) for i in range(len(profiles))]
         index = pd.MultiIndex(levels=[[]], labels=[[]],
                               names=['profile'])
 

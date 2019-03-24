@@ -3,8 +3,9 @@ Tests of the analysis module of the DNA fiber analysis package.
 """
 
 import unittest
-from dfa import analysis as ana
 from os import path as op
+
+from dfa import analysis as ana
 
 
 class TestAnalysis(unittest.TestCase):
@@ -165,8 +166,10 @@ class TestAnalysis(unittest.TestCase):
                        18.164060, 25.685120, 12.493894, 13.203773, 5.821019,
                        100., 88.]},
             columns=['pattern', 'channel', 'length'],
-            index=ana.pd.Int64Index(
-                [0, 0, 0, 1, 1, 1, 2, 3, 4, 4, 5, 5], name='profile'))
+            index=ana.pd.MultiIndex(
+                levels=[[0, 1, 2, 3, 4, 5]],
+                labels=[[0, 0, 0, 1, 1, 1, 2, 3, 4, 4, 5, 5]],
+                name=['profile']))
 
         self.fork_rate = ana.pd.Series(
             data=[1.049180308930711, 6.8333346578917489], index=[1, 4],
@@ -251,14 +254,11 @@ class TestAnalysis(unittest.TestCase):
 
     def test_analyzes(self):
         data = self.get_data()
-        self.assertTrue(
-            data.index.equals(self.data.index) and
-            data['pattern'].equals(self.data['pattern']) and
-            data['channel'].equals(self.data['channel']) and
-            ana.np.isclose(data['length'], self.data['length']).all(),
-            msg='\n\nactual data is:\n {}\n\n'
-                'expected data is:\n {}\n\n'.format(data,
-                                                    self.data))
+        message = '\n\nactual data is:\n {}\n\nexpected data is:\n {}\n\n'.format(data, self.data)
+        self.assertTrue(data.index.equals(self.data.index), msg='Index not equal ' + message)
+        self.assertTrue(data['pattern'].equals(self.data['pattern']), msg='Patterns not equal ' + message)
+        self.assertTrue(data['channel'].equals(self.data['channel']), msg='Channel not equal ' + message)
+        self.assertTrue(ana.np.isclose(data['length'], self.data['length']).all(), msg='Length not equal ' + message)
 
     def test_fork_speed(self):
         data = self.get_data()
