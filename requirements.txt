@@ -11,7 +11,7 @@ numpy==1.16.2
 olefile==0.44
 pandas==0.23.4
 pbr==3.1.1
-Pillow==5.4.1
+Pillow==6.2.0
 pyparsing==2.2.0
 python-dateutil==2.6.1
 python-utils==2.2.0
