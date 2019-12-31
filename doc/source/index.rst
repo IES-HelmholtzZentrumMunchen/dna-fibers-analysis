@@ -4,16 +4,18 @@
    contain the root `toctree` directive.
 
 Welcome to DNA Fibers Analysis Tool's documentation!
-====================================================
+####################################################
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Contents
 
+   quickdoc
+   modules
 
 
 Indices and tables
-==================
+##################
 
 * :ref:`genindex`
 * :ref:`modindex`
