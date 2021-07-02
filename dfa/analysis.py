@@ -240,7 +240,7 @@ def analyze(profile, model=modeling.standard, channels_names=('CIdU', 'IdU'),
         raise TypeError('Input model must by of type dfa.modeling.Model!\n'
                         'It is of type {}...'.format(type(model)))
 
-    if type(channels_names) != tuple and type(channels_names) != list:
+    if type(channels_names) not in [tuple, list]:
         raise TypeError('Input channels names must be of type tuple or list!\n'
                         'It is of type {}...'.format(type(channels_names)))
 

@@ -59,8 +59,7 @@ def coarse_fibers_orientation_distance(f1, f2):
                    (np.linalg.norm(orient_f1, ord=2) *
                     np.linalg.norm(orient_f2, ord=2)))
 
-    if angle > 1:
-        angle = 1
+    angle = min(angle, 1)
 
     return 180 * np.arccos(angle) / np.pi
 
@@ -112,7 +111,7 @@ def match_fibers_pairs(l1, l2, max_spatial_distance=50,
             orientation_dist[i, j] = coarse_fibers_orientation_distance(f1, f2)
 
     # Find pairs
-    for k in range(min(spatial_dist.shape)):
+    for _ in range(min(spatial_dist.shape)):
         i, j = np.unravel_index(spatial_dist.argmin(), spatial_dist.shape)
 
         if spatial_dist[i, j] <= max_spatial_distance and \
