@@ -198,7 +198,7 @@ def fiber_disconnections(fiber_points, disc_prob=0.2, return_prob=0.5):
 
     for _ in fiber_points[0]:
         if state == 1:
-            select.append(1-np.random.binomial(1, disc_prob) == 1)
+            select.append(np.random.binomial(1, disc_prob) == 0)
         else:
             select.append(np.random.binomial(1, return_prob) == 1)
 
@@ -220,12 +220,7 @@ def fiber_paths(geom_props):
         The list of fibers paths (list of coordinates of the points as
         (2,N) arrays).
     """
-    paths = []
-
-    for geom_prop in geom_props:
-        paths.append(fiber(**geom_prop))
-
-    return paths
+    return [fiber(**geom_prop) for geom_prop in geom_props]
 
 
 def fibers(number_of_channels, patterns, lengths, paths, disc_props,
@@ -304,8 +299,6 @@ def rpaths(number, angle_range, shift_range, perturbations_force_range,
     """
     patterns, lengths = model.simulate_patterns(number)
 
-    geom_props = []
-
     angles = _uniform_sample_within_range(angle_range, number)
     shifts_x = _uniform_sample_within_range(shift_range[0], number)
     shifts_y = _uniform_sample_within_range(shift_range[1], number)
@@ -315,13 +308,12 @@ def rpaths(number, angle_range, shift_range, perturbations_force_range,
         bending_elasticity_range, number)
     bending_forces = _uniform_sample_within_range(bending_force_range, number)
 
-    for i in range(number):
-        geom_props.append({
+    geom_props = [{
             'angle': angles[i], 'length': sum(lengths[i]),
             'shift': (shifts_x[i], shifts_y[i]),
             'perturbations_force': perturbations_forces[i],
             'bending_elasticity': bending_elasticities[i],
-            'bending_force': bending_forces[i]})
+            'bending_force': bending_forces[i]} for i in range(number)]
 
     return fiber_paths(geom_props), patterns, lengths
 

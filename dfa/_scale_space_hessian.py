@@ -53,10 +53,8 @@ def gaussian_kernel(sigma, k):
         derivative.
     """
     x = discrete_centered_space(k)
-    v = 1/(sigma * np.sqrt(2 * np.pi)) * \
+    return 1/(sigma * np.sqrt(2 * np.pi)) * \
         np.exp(-0.5 * np.power(x, 2) / sigma ** 2)
-
-    return v
 
 
 def gaussian_first_derivative_kernel(sigma, k):
@@ -88,10 +86,8 @@ def gaussian_first_derivative_kernel(sigma, k):
         derivative.
     """
     x = discrete_centered_space(k)
-    v = -x/(sigma ** 3 * np.sqrt(2 * np.pi)) * \
+    return -x/(sigma ** 3 * np.sqrt(2 * np.pi)) * \
         np.exp(-0.5 * np.power(x, 2) / sigma ** 2)
-
-    return v
 
 
 def gaussian_second_derivative_kernel(sigma, k):
@@ -124,10 +120,8 @@ def gaussian_second_derivative_kernel(sigma, k):
         derivative.
     """
     x = discrete_centered_space(k)
-    v = -(sigma ** 2 - np.power(x, 2)) / (sigma ** 5 * np.sqrt(2 * np.pi)) * \
+    return -(sigma ** 2 - np.power(x, 2)) / (sigma ** 5 * np.sqrt(2 * np.pi)) * \
         np.exp(-0.5 * np.power(x, 2) / sigma ** 2)
-
-    return v
 
 
 def single_scale_hessian(image, size, gamma=1):

@@ -98,7 +98,7 @@ class BinaryNode:
         """
         nodes_to_visit = [self]
 
-        while len(nodes_to_visit) > 0:
+        while nodes_to_visit:
             node = nodes_to_visit.pop(0)
 
             if node is not None:
@@ -125,7 +125,7 @@ class BinaryNode:
         """
         nodes_to_visit = [(self, func(self))]
 
-        while len(nodes_to_visit) > 0:
+        while nodes_to_visit:
             nodes_to_visit.sort(key=lambda e: e[1])
             node, _ = nodes_to_visit.pop(0)
 

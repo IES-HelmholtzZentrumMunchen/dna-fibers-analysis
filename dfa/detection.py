@@ -308,8 +308,6 @@ def detect_fibers(image, scales, alpha, beta, length, size, smoothing,
         fiberness, directions, length=length, size=size, mask=mask,
         extent_mask=extent_mask)
 
-    coordinates = estimate_medial_axis(
+    return estimate_medial_axis(
         reconstructed_vesselness, smoothing=smoothing, min_length=min_length,
         size=size)
-
-    return coordinates

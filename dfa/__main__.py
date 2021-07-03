@@ -203,11 +203,7 @@ def detection_command(args):
 
     for num, (image, name, mask) in enumerate(zip(
             tqdm.tqdm(images, desc='Detecting fibers'), names, masks)):
-        if len(image.shape) == 2:
-            fiber_image = image
-        else:
-            fiber_image = image.sum(axis=0)
-
+        fiber_image = image if len(image.shape) == 2 else image.sum(axis=0)
         coordinates = det.detect_fibers(
             fiber_image,
             scales=np.linspace(args.scales[0], args.scales[1],
@@ -285,7 +281,7 @@ def extraction_command(args):
             current_fibers = list(zip(*ut.read_fibers(args.fibers,
                                                       image_name=basename)))
 
-            if len(current_fibers) > 0:
+            if current_fibers:
                 # the coordinates of the fibers are sorted such that the
                 # profiles are extracted in the same orientation for any input.
                 input_fibers.append(
@@ -373,7 +369,7 @@ def analysis_command(args):
                      for filename in os.listdir(args.input)
                      if filename.endswith('.csv')]
 
-        if len(paths) == 0:
+        if not paths:
             raise ValueError('The input folder does not contain any csv file!')
     else:
         raise ValueError('The input is neither a valid file nor '
@@ -395,11 +391,11 @@ def analysis_command(args):
     # Quantify
     if args.model is None:
         model = copy.deepcopy(mod.standard)
-    else:
-        if not os.path.isfile(args.model):
-            raise ValueError('The input model argument must be a valid path'
-                             ' to a text file!')
+    elif not os.path.isfile(args.model):
+        raise ValueError('The input model argument must be a valid path'
+                         ' to a text file!')
 
+    else:
         model = mod.Model.load(args.model)
 
     model.initialize_model()
@@ -466,11 +462,7 @@ def simulate_command(args):
     from dfa import modeling as mod
     from dfa import simulation as sim
 
-    if args.model is None:
-        args.model = mod.standard
-    else:
-        args.model = mod.Model.load(args.model)
-
+    args.model = mod.standard if args.model is None else mod.Model.load(args.model)
     if args.output is not None and \
             not os.path.exists(os.path.dirname(args.output)):
         raise ValueError('The output path does not exist!')
@@ -554,11 +546,10 @@ def simulate_command(args):
 
             plt.imshow(display_image, aspect='equal')
 
-            plt.show()
         else:
             for fiber_object, signal in fibers_objects:
                 plt.scatter(*fiber_object, 1, signal[0], cmap='gray')
-            plt.show()
+        plt.show()
     else:
         path = os.path.dirname(args.output)
         name, _ = os.path.splitext(os.path.basename(args.output))

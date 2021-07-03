@@ -190,31 +190,10 @@ def flat_structuring_segment(direction, thickness, length, k):
         direction = np.divide(direction, v_norm)
 
         if thickness > 1:
-            vn = np.array([-direction[1], direction[0]])
-            t = thickness // 2
-            p1 = np.round(np.multiply(-b, direction) +
-                          np.multiply(-t, vn)).astype('int').tolist()
-            p2 = np.round(np.multiply(-b, direction) +
-                          np.multiply(t, vn)).astype('int').tolist()
-            p3 = np.round(np.multiply(b, direction) +
-                          np.multiply(t, vn)).astype('int').tolist()
-            p4 = np.round(np.multiply(b, direction) +
-                          np.multiply(-t, vn)).astype('int').tolist()
-            segment = bresenham_segment(p1, p2, (k, k)) + \
-                bresenham_segment(p2, p3, (k, k)) + \
-                bresenham_segment(p3, p4, (k, k)) + \
-                bresenham_segment(p4, p1, (k, k))
-            segment[segment > 0] = 1
+            segment = _extracted_from_flat_structuring_segment_10(
+                direction, thickness, b, k
+            )
 
-            x, y = np.meshgrid(range(-k, k + 1), range(-k, k + 1))
-            inside = np.bitwise_and(
-                _lineq(p1, p2)(y, x) >= 0,
-                np.bitwise_and(
-                    _lineq(p2, p3)(y, x) >= 0,
-                    np.bitwise_and(
-                        _lineq(p3, p4)(y, x) >= 0,
-                        _lineq(p4, p1)(y, x) >= 0)))
-            segment[inside] = 1
         else:
             p1 = np.round(np.multiply(-b, direction)).astype('int').tolist()
             p2 = np.round(np.multiply(b, direction)).astype('int').tolist()
@@ -228,6 +207,34 @@ def flat_structuring_segment(direction, thickness, length, k):
     segment[segment == 1] = 0
 
     return segment
+
+def _extracted_from_flat_structuring_segment_10(direction, thickness, b, k):
+    vn = np.array([-direction[1], direction[0]])
+    t = thickness // 2
+    p1 = np.round(np.multiply(-b, direction) +
+                  np.multiply(-t, vn)).astype('int').tolist()
+    p2 = np.round(np.multiply(-b, direction) +
+                  np.multiply(t, vn)).astype('int').tolist()
+    p3 = np.round(np.multiply(b, direction) +
+                  np.multiply(t, vn)).astype('int').tolist()
+    p4 = np.round(np.multiply(b, direction) +
+                  np.multiply(-t, vn)).astype('int').tolist()
+    result = bresenham_segment(p1, p2, (k, k)) + \
+                bresenham_segment(p2, p3, (k, k)) + \
+                bresenham_segment(p3, p4, (k, k)) + \
+                bresenham_segment(p4, p1, (k, k))
+    result[result > 0] = 1
+
+    x, y = np.meshgrid(range(-k, k + 1), range(-k, k + 1))
+    inside = np.bitwise_and(
+        _lineq(p1, p2)(y, x) >= 0,
+        np.bitwise_and(
+            _lineq(p2, p3)(y, x) >= 0,
+            np.bitwise_and(
+                _lineq(p3, p4)(y, x) >= 0,
+                _lineq(p4, p1)(y, x) >= 0)))
+    result[inside] = 1
+    return result
 
 
 def bandlimited_structuring_segment(direction, thickness, length, k, scaling):
@@ -355,14 +362,13 @@ def _segments_family(angles, thickness, length, k, scaling=100, flat=True):
         Family of segments.
     """
     vectors = _angles2vectors(angles)
-    family = dict()
+    family = {}
 
-    if flat:
-        for angle, vector in zip(angles, vectors):
+    for angle, vector in zip(angles, vectors):
+        if flat:
             family[angle] = flat_structuring_segment(vector, thickness,
                                                      length, k)
-    else:
-        for angle, vector in zip(angles, vectors):
+        else:
             family[angle] = bandlimited_structuring_segment(vector, thickness,
                                                             length, k,
                                                             scaling)
@@ -413,7 +419,7 @@ def structuring_segments(directions, thickness, length, scaling=100, flat=True):
     family = _segments_family(range(180), thickness, length, k, scaling, flat)
     angles = np.mod(np.round(_vectors2angles(directions)), 180).astype('int')
 
-    segments = dict()
+    segments = {}
     for i in range(directions.shape[1]):
         for j in range(directions.shape[2]):
             segments[i, j] = family[angles[i, j]]
