@@ -1,7 +1,7 @@
 tqdm
 coverage==4.4.1
 cycler==0.10.0
-dask==1.1.3
+dask==2021.10.0
 debtcollector==1.12.0
 decorator==4.1.1
 matplotlib==2.2.3
