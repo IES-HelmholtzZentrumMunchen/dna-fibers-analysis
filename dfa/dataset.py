@@ -287,11 +287,11 @@ class Dataset:
                               index_col=['experiment', 'image', 'fiber'])
 
         with zipfile.ZipFile(output_path, mode='w',
-                             compression=zipfile.ZIP_DEFLATED) as archive:
+                                 compression=zipfile.ZIP_DEFLATED) as archive:
             for ix in tqdm.tqdm(summary.index.droplevel('fiber').unique(),
                                 desc='Compressing images, masks and fibers',
                                 disable=not progress_bar):
-                name = '-'.join([str(e) for e in ix])
+                name = '-'.join(str(e) for e in ix)
 
                 archive.write(
                     filename=os.path.join(images_path,
@@ -316,9 +316,9 @@ class Dataset:
                                 desc='Compressing profiles',
                                 disable=not progress_bar):
                 name = '{}{}{}.csv'.format(
-                    '-'.join([str(e) for e in ix[:-1]]),
-                    ut.fiber_indicator,
-                    ix[-1])
+                    '-'.join(str(e) for e in ix[:-1]), ut.fiber_indicator, ix[-1]
+                )
+
 
                 archive.write(
                     filename=os.path.join(profiles_path, name),
